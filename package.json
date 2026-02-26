@@ -1,0 +1,14 @@
+{
+  "name": "new-arcana-stats-engine",
+  "version": "2.0.0",
+  "description": "Monte Carlo simulation engine for the card game New Arcana",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "start": "node index.js"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
