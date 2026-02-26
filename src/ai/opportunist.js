@@ -8,6 +8,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { getHandSize, getEffectiveHandLimit } from '../state.js';
 import { RandomAI } from './base.js';
+import { checkCelestialThreat } from './awareness.js';
 
 export class OpportunistAI extends RandomAI {
   constructor() {
@@ -21,11 +22,17 @@ export class OpportunistAI extends RandomAI {
     const maxOpponentVp = Math.max(...state.players.filter((_, i) => i !== playerIndex).map(p => p.vp));
     const behind = maxOpponentVp - myVp;
 
+    const threat = checkCelestialThreat(state, playerIndex);
+
     let bestAction = null;
     let bestScore = -Infinity;
 
     for (const action of legalActions) {
-      const score = this.scoreAction(state, playerIndex, action, behind);
+      let score = this.scoreAction(state, playerIndex, action, behind);
+      // Boost disruption actions when Celestial threat exists
+      if (threat.threatening && this.targetsThreatCelestials(action, state, threat.threatPlayer)) {
+        score += 5000;
+      }
       if (score > bestScore) {
         bestScore = score;
         bestAction = action;
@@ -134,7 +141,26 @@ export class OpportunistAI extends RandomAI {
     return scores.slice(0, numToDiscard).map(s => s.index).sort((a, b) => b - a);
   }
 
+  targetsThreatCelestials(action, state, threatPlayer) {
+    if (action.type === 'PLAY_MAJOR_ACTION') {
+      if (action.card?.number === 12 && action.targets?.playerIndex === threatPlayer) return true; // Hanged Man
+      if (action.card?.number === 16) return true; // Tower
+      if (action.card?.number === 8 && action.targets?.playerIndex === threatPlayer) return true; // Strength
+      if (action.card?.number === 7) return true; // Chariot
+    }
+    if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === threatPlayer) {
+      const targetCard = state.players[threatPlayer].realm[action.target.realmIndex];
+      if (targetCard && targetCard.type === 'major') return true;
+    }
+    return false;
+  }
+
   shouldBlockWithAce(state, playerIndex, action) {
+    // Block Celestials being played to Tome by threat players
+    if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
+      const threat = checkCelestialThreat(state, playerIndex);
+      if (threat.threatening) return true;
+    }
     // Block based on threat level
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
       const realmSize = state.players[playerIndex].realm.length;

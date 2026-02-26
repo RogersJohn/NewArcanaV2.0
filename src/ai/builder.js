@@ -7,7 +7,9 @@
  */
 
 import { evaluateHand } from '../poker.js';
+import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
+import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 
 export class BuilderAI extends RandomAI {
   constructor() {
@@ -17,6 +19,13 @@ export class BuilderAI extends RandomAI {
 
   chooseAction(state, legalActions, playerIndex) {
     const player = state.players[playerIndex];
+
+    // Celestial threat check
+    const threat = checkCelestialThreat(state, playerIndex);
+    if (threat.threatening) {
+      const disruption = findCelestialDisruption(state, playerIndex, legalActions, threat.threatPlayer);
+      if (disruption) return disruption;
+    }
 
     // Priority 1: Play best set to realm
     const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
@@ -113,6 +122,11 @@ export class BuilderAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
+    // Block Celestials being played to Tome by threat players
+    if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
+      const threat = checkCelestialThreat(state, playerIndex);
+      if (threat.threatening) return true;
+    }
     // Only block if attack targets our realm
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
       return state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'ACE');
