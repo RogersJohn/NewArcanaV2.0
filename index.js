@@ -13,7 +13,7 @@
  */
 
 import { runSimulation, runSingleGame } from './src/simulation.js';
-import { aggregateStats, formatReport } from './src/stats.js';
+import { aggregateStats, formatReport, computeCardAnalytics, formatCardReport } from './src/stats.js';
 import { writeFileSync, mkdirSync } from 'fs';
 
 function parseArgs(argv) {
@@ -25,6 +25,7 @@ function parseArgs(argv) {
     verbose: false,
     json: null,
     single: false,
+    report: false,
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -50,6 +51,9 @@ function parseArgs(argv) {
       case '--single':
         args.single = true;
         break;
+      case '--report':
+        args.report = true;
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -60,7 +64,8 @@ Usage: node index.js [options]
   --ai TYPE       AI assignment: diverse|random|all-random|all-builder|etc
   --verbose       Log individual games
   --json FILE     Output stats as JSON
-  --single        Run one game with verbose logging`);
+  --single        Run one game with verbose logging
+  --report        Generate card analytics report`);
         process.exit(0);
     }
   }
@@ -96,12 +101,20 @@ if (args.single) {
   const report = formatReport(stats);
   console.log(report);
 
+  let cardAnalytics = null;
+  if (args.report) {
+    cardAnalytics = computeCardAnalytics(simResults.results);
+    const cardReport = formatCardReport(cardAnalytics);
+    console.log(cardReport);
+  }
+
   if (args.json) {
     try {
       // Ensure directory exists
       const dir = args.json.includes('/') ? args.json.substring(0, args.json.lastIndexOf('/')) : '.';
       if (dir !== '.') mkdirSync(dir, { recursive: true });
-      writeFileSync(args.json, JSON.stringify(stats, null, 2));
+      const jsonOutput = cardAnalytics ? { ...stats, cardAnalytics } : stats;
+      writeFileSync(args.json, JSON.stringify(jsonOutput, null, 2));
       console.log(`\nJSON stats saved to ${args.json}`);
     } catch (e) {
       console.error(`Failed to write JSON: ${e.message}`);

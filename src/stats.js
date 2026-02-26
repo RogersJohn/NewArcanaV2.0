@@ -194,6 +194,268 @@ function computeStrategyEffectiveness(results) {
 }
 
 /**
+ * Compute card analytics from per-game cardEvents data.
+ * @param {object[]} results - Game results with cardEvents
+ * @returns {object} Card analytics
+ */
+export function computeCardAnalytics(results) {
+  const totalGames = results.length;
+  const cards = {};
+
+  function ensure(num, name) {
+    if (!cards[num]) {
+      cards[num] = {
+        name: name || `Card ${num}`, number: num,
+        purchased: 0, purchasedByWinner: 0,
+        toTome: 0, toTomeByWinner: 0,
+        actionPlayed: 0, wildPlayed: 0,
+        bonusScored: 0, bonusFailed: 0, bonusVpTotal: 0,
+        bonusScoredByWinner: 0,
+        inWinnerTome: 0,
+      };
+    }
+  }
+
+  // Aggregate per-game card events
+  for (const game of results) {
+    if (!game.cardEvents) continue;
+    for (const [numStr, data] of Object.entries(game.cardEvents)) {
+      const num = parseInt(numStr);
+      ensure(num, data.name);
+      const c = cards[num];
+      c.purchased += data.purchased;
+      c.purchasedByWinner += data.purchasedByWinner;
+      c.toTome += data.toTome;
+      c.toTomeByWinner += data.toTomeByWinner;
+      c.actionPlayed += data.actionPlayed;
+      c.wildPlayed += data.wildPlayed;
+      c.bonusScored += data.bonusScored;
+      c.bonusFailed += data.bonusFailed;
+      c.bonusVpTotal += data.bonusVpTotal;
+      c.bonusScoredByWinner += data.bonusScoredByWinner;
+    }
+
+    // Count cards in winner's tome
+    const winnerPi = game.winner.playerIndex;
+    const winnerTome = game.players[winnerPi]?.tomeCards || [];
+    for (const name of winnerTome) {
+      if (name === 'minor') continue;
+      // Find matching card number
+      const entry = Object.values(cards).find(c => c.name === name);
+      if (entry) entry.inWinnerTome++;
+    }
+  }
+
+  const cardList = Object.values(cards).sort((a, b) => a.number - b.number);
+
+  return {
+    totalGames,
+    purchaseFrequency: computePurchaseFrequency(cardList, totalGames),
+    winnerTomePresence: computeWinnerTomePresence(cardList, totalGames),
+    bonusSuccessRates: computeBonusSuccessRates(cardList),
+    winCorrelation: computeWinCorrelation(cardList, totalGames),
+    actionUsage: computeActionUsage(cardList, totalGames),
+    wildUsage: computeWildUsage(cardList, totalGames),
+    powerRankings: computePowerRankings(cardList, totalGames),
+    rawCards: cards,
+  };
+}
+
+function computePurchaseFrequency(cardList, totalGames) {
+  return cardList
+    .filter(c => c.purchased > 0)
+    .sort((a, b) => b.purchased - a.purchased)
+    .map(c => ({
+      number: c.number, name: c.name,
+      total: c.purchased,
+      perGame: Math.round((c.purchased / totalGames) * 1000) / 1000,
+      byWinner: c.purchasedByWinner,
+      winnerShare: c.purchased > 0 ? Math.round((c.purchasedByWinner / c.purchased) * 1000) / 1000 : 0,
+    }));
+}
+
+function computeWinnerTomePresence(cardList, totalGames) {
+  return cardList
+    .filter(c => c.inWinnerTome > 0)
+    .sort((a, b) => b.inWinnerTome - a.inWinnerTome)
+    .map(c => ({
+      number: c.number, name: c.name,
+      count: c.inWinnerTome,
+      rate: Math.round((c.inWinnerTome / totalGames) * 1000) / 1000,
+    }));
+}
+
+function computeBonusSuccessRates(cardList) {
+  return cardList
+    .filter(c => c.bonusScored > 0 || c.bonusFailed > 0)
+    .sort((a, b) => (b.bonusScored + b.bonusFailed) - (a.bonusScored + a.bonusFailed))
+    .map(c => {
+      const total = c.bonusScored + c.bonusFailed;
+      return {
+        number: c.number, name: c.name,
+        scored: c.bonusScored, failed: c.bonusFailed,
+        successRate: total > 0 ? Math.round((c.bonusScored / total) * 1000) / 1000 : 0,
+        avgVp: c.bonusScored > 0 ? Math.round((c.bonusVpTotal / c.bonusScored) * 100) / 100 : 0,
+        totalVp: c.bonusVpTotal,
+      };
+    });
+}
+
+function computeWinCorrelation(cardList, totalGames) {
+  return cardList
+    .filter(c => c.toTome > 0)
+    .sort((a, b) => {
+      const rateA = a.toTome > 0 ? a.toTomeByWinner / a.toTome : 0;
+      const rateB = b.toTome > 0 ? b.toTomeByWinner / b.toTome : 0;
+      return rateB - rateA;
+    })
+    .map(c => ({
+      number: c.number, name: c.name,
+      timesInTome: c.toTome, timesInWinnerTome: c.toTomeByWinner,
+      winRate: c.toTome > 0 ? Math.round((c.toTomeByWinner / c.toTome) * 1000) / 1000 : 0,
+    }));
+}
+
+function computeActionUsage(cardList, totalGames) {
+  return cardList
+    .filter(c => c.actionPlayed > 0)
+    .sort((a, b) => b.actionPlayed - a.actionPlayed)
+    .map(c => ({
+      number: c.number, name: c.name,
+      total: c.actionPlayed,
+      perGame: Math.round((c.actionPlayed / totalGames) * 1000) / 1000,
+    }));
+}
+
+function computeWildUsage(cardList, totalGames) {
+  return cardList
+    .filter(c => c.wildPlayed > 0)
+    .sort((a, b) => b.wildPlayed - a.wildPlayed)
+    .map(c => ({
+      number: c.number, name: c.name,
+      total: c.wildPlayed,
+      perGame: Math.round((c.wildPlayed / totalGames) * 1000) / 1000,
+    }));
+}
+
+/**
+ * Composite power ranking: 50% winner-tome presence, 30% purchase demand, 20% VP generation.
+ */
+function computePowerRankings(cardList, totalGames) {
+  // Normalize each dimension to 0-1
+  const maxTomePresence = Math.max(1, ...cardList.map(c => c.inWinnerTome));
+  const maxPurchased = Math.max(1, ...cardList.map(c => c.purchased));
+  const maxVp = Math.max(1, ...cardList.map(c => c.bonusVpTotal));
+
+  return cardList
+    .filter(c => c.purchased > 0 || c.toTome > 0 || c.inWinnerTome > 0)
+    .map(c => {
+      const tomeScore = c.inWinnerTome / maxTomePresence;
+      const purchaseScore = c.purchased / maxPurchased;
+      const vpScore = c.bonusVpTotal / maxVp;
+      const composite = tomeScore * 0.5 + purchaseScore * 0.3 + vpScore * 0.2;
+      return {
+        number: c.number, name: c.name,
+        composite: Math.round(composite * 1000) / 1000,
+        tomeScore: Math.round(tomeScore * 1000) / 1000,
+        purchaseScore: Math.round(purchaseScore * 1000) / 1000,
+        vpScore: Math.round(vpScore * 1000) / 1000,
+      };
+    })
+    .sort((a, b) => b.composite - a.composite);
+}
+
+/**
+ * Format card analytics as a console report.
+ * @param {object} analytics - From computeCardAnalytics()
+ * @returns {string}
+ */
+export function formatCardReport(analytics) {
+  const lines = [];
+  lines.push('');
+  lines.push('='.repeat(60));
+  lines.push('  CARD ANALYTICS REPORT');
+  lines.push('='.repeat(60));
+  lines.push(`Based on ${analytics.totalGames} games`);
+  lines.push('');
+
+  // Power Rankings
+  lines.push('--- POWER RANKINGS (composite score) ---');
+  lines.push('  Rank  Card                     Score  Tome  Buy   VP');
+  const pr = analytics.powerRankings.slice(0, 15);
+  for (let i = 0; i < pr.length; i++) {
+    const c = pr[i];
+    const rank = String(i + 1).padStart(2);
+    const name = `[${c.number}] ${c.name}`.padEnd(24);
+    lines.push(`  ${rank}.  ${name} ${c.composite.toFixed(3)}  ${c.tomeScore.toFixed(2)}  ${c.purchaseScore.toFixed(2)}  ${c.vpScore.toFixed(2)}`);
+  }
+  lines.push('');
+
+  // Purchase Frequency
+  lines.push('--- PURCHASE FREQUENCY ---');
+  lines.push('  Card                     Total  Per Game  Winner%');
+  for (const c of analytics.purchaseFrequency.slice(0, 15)) {
+    const name = `[${c.number}] ${c.name}`.padEnd(24);
+    lines.push(`  ${name} ${String(c.total).padStart(5)}  ${c.perGame.toFixed(3).padStart(8)}  ${(c.winnerShare * 100).toFixed(1).padStart(6)}%`);
+  }
+  lines.push('');
+
+  // Winner Tome Presence
+  lines.push('--- CARDS IN WINNING TOMES ---');
+  lines.push('  Card                     Count  Rate');
+  for (const c of analytics.winnerTomePresence.slice(0, 15)) {
+    const name = `[${c.number}] ${c.name}`.padEnd(24);
+    lines.push(`  ${name} ${String(c.count).padStart(5)}  ${(c.rate * 100).toFixed(1).padStart(5)}%`);
+  }
+  lines.push('');
+
+  // Bonus Success Rates
+  if (analytics.bonusSuccessRates.length > 0) {
+    lines.push('--- BONUS SUCCESS RATES ---');
+    lines.push('  Card                     OK   Fail  Rate    AvgVP  TotalVP');
+    for (const c of analytics.bonusSuccessRates) {
+      const name = `[${c.number}] ${c.name}`.padEnd(24);
+      lines.push(`  ${name} ${String(c.scored).padStart(4)}  ${String(c.failed).padStart(4)}  ${(c.successRate * 100).toFixed(1).padStart(5)}%  ${c.avgVp.toFixed(2).padStart(5)}  ${String(c.totalVp).padStart(7)}`);
+    }
+    lines.push('');
+  }
+
+  // Win Correlation
+  lines.push('--- CARD-IN-TOME WIN CORRELATION ---');
+  lines.push('  Card                     In Tome  In Winner  Win%');
+  for (const c of analytics.winCorrelation.slice(0, 15)) {
+    const name = `[${c.number}] ${c.name}`.padEnd(24);
+    lines.push(`  ${name} ${String(c.timesInTome).padStart(7)}  ${String(c.timesInWinnerTome).padStart(9)}  ${(c.winRate * 100).toFixed(1).padStart(5)}%`);
+  }
+  lines.push('');
+
+  // Action Usage
+  if (analytics.actionUsage.length > 0) {
+    lines.push('--- ACTION CARD USAGE ---');
+    lines.push('  Card                     Total  Per Game');
+    for (const c of analytics.actionUsage) {
+      const name = `[${c.number}] ${c.name}`.padEnd(24);
+      lines.push(`  ${name} ${String(c.total).padStart(5)}  ${c.perGame.toFixed(3).padStart(8)}`);
+    }
+    lines.push('');
+  }
+
+  // Wild Usage
+  if (analytics.wildUsage.length > 0) {
+    lines.push('--- WILD CARD USAGE ---');
+    lines.push('  Card                     Total  Per Game');
+    for (const c of analytics.wildUsage) {
+      const name = `[${c.number}] ${c.name}`.padEnd(24);
+      lines.push(`  ${name} ${String(c.total).padStart(5)}  ${c.perGame.toFixed(3).padStart(8)}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('='.repeat(60));
+  return lines.join('\n');
+}
+
+/**
  * Format stats as a console report.
  * @param {object} stats - From aggregateStats()
  * @returns {string}

@@ -4,7 +4,7 @@
 
 import { evaluateHand, compareHands } from './poker.js';
 import { isCelestial, cardName, SUITS } from './cards.js';
-import { log } from './state.js';
+import { log, recordEvent } from './state.js';
 
 /**
  * Score the end of a round.
@@ -30,10 +30,22 @@ export function scoreRoundEnd(state, ais) {
       if (bonus > 0) {
         player.vp += bonus;
         log(state, `${player.name} earns ${bonus}vp from ${cardName(tomeCard)}`);
+        recordEvent(state, 'BONUS_SCORED', {
+          cardNumber: tomeCard.number, cardName: tomeCard.name,
+          player: pi, vp: bonus, hierophant: false,
+        });
       } else if (hasHierophant && isBonusCard(tomeCard) && tomeCard.number !== 5) {
         // Hierophant: failed bonuses score 1vp
         player.vp += 1;
         log(state, `${player.name} earns 1vp from Hierophant (failed ${cardName(tomeCard)})`);
+        recordEvent(state, 'BONUS_SCORED', {
+          cardNumber: tomeCard.number, cardName: tomeCard.name,
+          player: pi, vp: 1, hierophant: true,
+        });
+      } else if (isBonusCard(tomeCard) && tomeCard.number !== 5) {
+        recordEvent(state, 'BONUS_FAILED', {
+          cardNumber: tomeCard.number, cardName: tomeCard.name, player: pi,
+        });
       }
     }
   }
@@ -64,6 +76,9 @@ function awardPot(state) {
   if (bestPi !== -1 && state.pot > 0) {
     state.players[bestPi].vp += state.pot;
     log(state, `${state.players[bestPi].name} wins pot of ${state.pot}vp with ${bestEval.type}`);
+    recordEvent(state, 'POT_AWARDED', {
+      player: bestPi, amount: state.pot, handType: bestEval.type,
+    });
     state.pot = 0;
   } else if (state.pot > 0) {
     log(state, 'No player has cards in Realm. Pot not awarded.');

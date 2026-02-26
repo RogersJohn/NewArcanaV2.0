@@ -47,7 +47,18 @@ export function createInitialState(numPlayers, extended = false) {
       handSizeLimit: 6,
     },
     log: [],
+    events: [],
   };
+}
+
+/**
+ * Record a structured event for analytics.
+ * @param {object} state
+ * @param {string} type - Event type (e.g. 'CARD_PURCHASED')
+ * @param {object} data - Event payload
+ */
+export function recordEvent(state, type, data) {
+  state.events.push({ type, round: state.roundNumber, ...data });
 }
 
 /**

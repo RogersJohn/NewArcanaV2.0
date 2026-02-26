@@ -5,7 +5,7 @@
 import { shuffle, cardName, PROTECTION_MAP, isCelestial } from './cards.js';
 import {
   createInitialState, getHandSize, getEffectiveHandLimit,
-  drawMinorCard, drawMajorCard, log, refillDisplay
+  drawMinorCard, drawMajorCard, log, refillDisplay, recordEvent
 } from './state.js';
 import { getLegalActions } from './actions.js';
 import { scoreRoundEnd, scoreGameEnd, checkCelestialWin } from './scoring.js';
@@ -454,6 +454,9 @@ function executeMajorTome(state, ais, playerIndex, action) {
 
   player.tome.push(card);
   log(state, `${player.name} plays ${cardName(card)} to Tome`);
+  recordEvent(state, 'CARD_TO_TOME', {
+    cardNumber: card.number, cardName: card.name, player: playerIndex,
+  });
 
   // Apply on-play Tome effects
   applyTomeEffect(state, ais, playerIndex, card);
@@ -530,6 +533,9 @@ function executeMajorAction(state, ais, playerIndex, action) {
   if (cardIdx === -1) return;
   player.hand.splice(cardIdx, 1);
   state.pit.push(card);
+  recordEvent(state, 'CARD_ACTION_PLAYED', {
+    cardNumber: card.number, cardName: card.name, player: playerIndex,
+  });
 
   switch (card.number) {
     case 7: // Chariot
@@ -767,6 +773,10 @@ function executeWild(state, ais, playerIndex, action) {
   }
 
   log(state, `${player.name} plays ${cardName(card)} as wild to Realm`);
+  recordEvent(state, 'CARD_WILD_PLAYED', {
+    cardNumber: card.number, cardName: card.name,
+    player: playerIndex, companionCount: withCards.length,
+  });
 }
 
 /**
@@ -809,6 +819,11 @@ function executeBuy(state, ais, playerIndex, action) {
     }
     player.hand.push(bought);
     log(state, `${player.name} buys ${cardName(bought)} from ${source}`);
+    recordEvent(state, 'CARD_PURCHASED', {
+      cardNumber: bought.number, cardName: bought.name,
+      player: playerIndex, source,
+      paymentValue: payment.reduce((s, c) => s + (c.purchaseValue || 0), 0),
+    });
   }
 }
 

@@ -109,7 +109,66 @@ function extractGameResult(state, ais) {
     isCelestialWin,
     players: playerResults,
     vpDistribution: state.players.map(p => p.vp),
+    cardEvents: summarizeCardEvents(state.events, winnerPi),
   };
+}
+
+/**
+ * Summarize card events from a single game into compact per-card data.
+ * @param {object[]} events - Raw events from state.events
+ * @param {number} winnerPi - Winner's player index
+ * @returns {object} Per-card summary keyed by card number
+ */
+function summarizeCardEvents(events, winnerPi) {
+  const cards = {};
+
+  function ensure(num, name) {
+    if (!cards[num]) {
+      cards[num] = {
+        name: name || `Card ${num}`,
+        purchased: 0, purchasedByWinner: 0,
+        toTome: 0, toTomeByWinner: 0,
+        actionPlayed: 0, wildPlayed: 0,
+        bonusScored: 0, bonusFailed: 0, bonusVpTotal: 0,
+        bonusScoredByWinner: 0,
+      };
+    }
+  }
+
+  for (const e of events) {
+    const num = e.cardNumber;
+    if (num === undefined) continue;
+    ensure(num, e.cardName);
+    const c = cards[num];
+    const isWinner = e.player === winnerPi;
+
+    switch (e.type) {
+      case 'CARD_PURCHASED':
+        c.purchased++;
+        if (isWinner) c.purchasedByWinner++;
+        break;
+      case 'CARD_TO_TOME':
+        c.toTome++;
+        if (isWinner) c.toTomeByWinner++;
+        break;
+      case 'CARD_ACTION_PLAYED':
+        c.actionPlayed++;
+        break;
+      case 'CARD_WILD_PLAYED':
+        c.wildPlayed++;
+        break;
+      case 'BONUS_SCORED':
+        c.bonusScored++;
+        c.bonusVpTotal += e.vp;
+        if (isWinner) c.bonusScoredByWinner++;
+        break;
+      case 'BONUS_FAILED':
+        c.bonusFailed++;
+        break;
+    }
+  }
+
+  return cards;
 }
 
 /**
