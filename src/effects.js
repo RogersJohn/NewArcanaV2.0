@@ -60,7 +60,7 @@ export function resolveRoyalAttack(state, attackerIndex, card, targetPlayerIndex
             attacker.hand.splice(attackIdx, 1);
             state.pit.push(card);
           }
-          log(state, `${defender.name} blocks with King! Both go to Pit`);
+          log(state, `${defender.name} blocks [${cardName(card)} attack on ${cardName(targetCard)}] with King! Both go to Pit`);
           return false;
         }
       }
@@ -116,7 +116,7 @@ export function checkAceBlock(state, ais, actorIndex, action) {
 
     if (ais[pi].shouldBlockWithAce(state, pi, action)) {
       const ace = playerHand.splice(aceIdx, 1)[0];
-      log(state, `${state.players[pi].name} blocks with ${cardName(ace)}!`);
+      log(state, `${state.players[pi].name} blocks [${action.description || action.type}] with ${cardName(ace)}!`);
 
       // Check Ace chain
       const aceAction = { type: 'ACE_BLOCK', card: ace, playerIndex: pi, originalAction: action };

@@ -271,6 +271,7 @@ export function discardPhase(state, playerIndex, ai) {
         if (idx >= 0 && idx < player.hand.length) {
           const card = player.hand.splice(idx, 1)[0];
           state.minorDiscard.push(card);
+          log(state, `${player.name} discards ${cardName(card)} from hand`);
         }
       }
     }
@@ -378,7 +379,7 @@ function executeRoyalAttack(state, ais, playerIndex, action) {
             player.hand.splice(attackIdx, 1);
             state.pit.push(card);
           }
-          log(state, `${defender.name} blocks with King! Both go to Pit`);
+          log(state, `${defender.name} blocks [${cardName(card)} attack on ${cardName(targetCard)}] with King! Both go to Pit`);
           return;
         }
       }
@@ -840,7 +841,7 @@ function checkAceBlock(state, ais, actorIndex, action) {
 
     if (ais[pi].shouldBlockWithAce(state, pi, action)) {
       const ace = playerHand.splice(aceIdx, 1)[0];
-      log(state, `${state.players[pi].name} blocks with ${cardName(ace)}!`);
+      log(state, `${state.players[pi].name} blocks [${action.description || action.type}] with ${cardName(ace)}!`);
 
       // Check if someone blocks the Ace with another Ace
       const aceAction = { type: 'ACE_BLOCK', card: ace, playerIndex: pi, originalAction: action };
