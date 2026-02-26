@@ -1,0 +1,1599 @@
+{
+  "config": {
+    "games": 1000,
+    "players": 5,
+    "extended": false,
+    "aiAssignment": "diverse"
+  },
+  "totalGames": 1000,
+  "errors": 0,
+  "aiWinRates": {
+    "Builder": {
+      "wins": 224,
+      "games": 1000,
+      "winRate": 0.224,
+      "ci95": [
+        0.1992430020288567,
+        0.25086944599083094
+      ]
+    },
+    "Controller": {
+      "wins": 225,
+      "games": 1000,
+      "winRate": 0.225,
+      "ci95": [
+        0.20019851963259613,
+        0.25190627458991877
+      ]
+    },
+    "Celestial": {
+      "wins": 200,
+      "games": 1000,
+      "winRate": 0.2,
+      "ci95": [
+        0.17637667806123578,
+        0.2259194610905986
+      ]
+    },
+    "Aggressor": {
+      "wins": 54,
+      "games": 1000,
+      "winRate": 0.054,
+      "ci95": [
+        0.04162111458513981,
+        0.06979247895392054
+      ]
+    },
+    "Opportunist": {
+      "wins": 297,
+      "games": 1000,
+      "winRate": 0.297,
+      "ci95": [
+        0.26949921031879487,
+        0.32605451050727974
+      ]
+    }
+  },
+  "gameEndReasons": {
+    "death_revealed": 752,
+    "death_purchased": 199,
+    "celestial_win": 49
+  },
+  "celestialWinRate": {
+    "count": 49,
+    "rate": 0.049
+  },
+  "averageGameLength": {
+    "mean": 6.422,
+    "median": 6,
+    "min": 1,
+    "max": 12,
+    "stddev": 1.9570171179629503
+  },
+  "vpDistribution": {
+    "all": {
+      "mean": 10.69,
+      "median": 9,
+      "stddev": 8.68,
+      "min": 0,
+      "max": 52
+    },
+    "winners": {
+      "mean": 20.12,
+      "median": 19,
+      "stddev": 8.6,
+      "min": 5,
+      "max": 52
+    }
+  },
+  "firstPlayerAdvantage": {
+    "position_0": {
+      "wins": 195,
+      "games": 1000,
+      "winRate": 0.195
+    },
+    "position_1": {
+      "wins": 165,
+      "games": 1000,
+      "winRate": 0.165
+    },
+    "position_2": {
+      "wins": 202,
+      "games": 1000,
+      "winRate": 0.202
+    },
+    "position_3": {
+      "wins": 205,
+      "games": 1000,
+      "winRate": 0.205
+    },
+    "position_4": {
+      "wins": 233,
+      "games": 1000,
+      "winRate": 0.233
+    }
+  },
+  "strategyEffectiveness": {
+    "Builder": {
+      "avgVp": 11.77,
+      "totalGames": 1000
+    },
+    "Controller": {
+      "avgVp": 12.21,
+      "totalGames": 1000
+    },
+    "Celestial": {
+      "avgVp": 10.08,
+      "totalGames": 1000
+    },
+    "Aggressor": {
+      "avgVp": 5.43,
+      "totalGames": 1000
+    },
+    "Opportunist": {
+      "avgVp": 13.97,
+      "totalGames": 1000
+    }
+  },
+  "cardStats": {
+    "0": {
+      "name": "The Fool",
+      "purchased": 241,
+      "purchasedByWinner": 34,
+      "toTome": 345,
+      "toTomeByWinner": 64,
+      "actionPlayed": 0,
+      "wildPlayed": 78,
+      "bonusScored": 152,
+      "bonusFailed": 797,
+      "bonusVpTotal": 157,
+      "bonusScoredByWinner": 42,
+      "gamesAppearing": 466,
+      "bonusSuccessRate": 0.1601685985247629,
+      "winnerAffinity": 0.14107883817427386,
+      "avgBonusVp": 1.0328947368421053
+    },
+    "1": {
+      "name": "The Magician",
+      "purchased": 256,
+      "purchasedByWinner": 44,
+      "toTome": 367,
+      "toTomeByWinner": 74,
+      "actionPlayed": 0,
+      "wildPlayed": 127,
+      "bonusScored": 306,
+      "bonusFailed": 752,
+      "bonusVpTotal": 306,
+      "bonusScoredByWinner": 96,
+      "gamesAppearing": 491,
+      "bonusSuccessRate": 0.2892249527410208,
+      "winnerAffinity": 0.171875,
+      "avgBonusVp": 1
+    },
+    "2": {
+      "name": "The High Priestess",
+      "purchased": 250,
+      "purchasedByWinner": 39,
+      "toTome": 358,
+      "toTomeByWinner": 78,
+      "actionPlayed": 0,
+      "wildPlayed": 94,
+      "bonusScored": 275,
+      "bonusFailed": 677,
+      "bonusVpTotal": 275,
+      "bonusScoredByWinner": 81,
+      "gamesAppearing": 475,
+      "bonusSuccessRate": 0.28886554621848737,
+      "winnerAffinity": 0.156,
+      "avgBonusVp": 1
+    },
+    "3": {
+      "name": "The Empress",
+      "purchased": 281,
+      "purchasedByWinner": 38,
+      "toTome": 321,
+      "toTomeByWinner": 65,
+      "actionPlayed": 0,
+      "wildPlayed": 91,
+      "bonusScored": 258,
+      "bonusFailed": 621,
+      "bonusVpTotal": 258,
+      "bonusScoredByWinner": 60,
+      "gamesAppearing": 471,
+      "bonusSuccessRate": 0.2935153583617747,
+      "winnerAffinity": 0.13523131672597866,
+      "avgBonusVp": 1
+    },
+    "4": {
+      "name": "The Emperor",
+      "purchased": 261,
+      "purchasedByWinner": 30,
+      "toTome": 321,
+      "toTomeByWinner": 64,
+      "actionPlayed": 0,
+      "wildPlayed": 89,
+      "bonusScored": 215,
+      "bonusFailed": 652,
+      "bonusVpTotal": 215,
+      "bonusScoredByWinner": 79,
+      "gamesAppearing": 449,
+      "bonusSuccessRate": 0.24798154555940022,
+      "winnerAffinity": 0.11494252873563218,
+      "avgBonusVp": 1
+    },
+    "5": {
+      "name": "The Hierophant",
+      "purchased": 272,
+      "purchasedByWinner": 53,
+      "toTome": 305,
+      "toTomeByWinner": 68,
+      "actionPlayed": 0,
+      "wildPlayed": 146,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 474,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.1948529411764706,
+      "avgBonusVp": 0
+    },
+    "6": {
+      "name": "The Lovers",
+      "purchased": 270,
+      "purchasedByWinner": 45,
+      "toTome": 338,
+      "toTomeByWinner": 67,
+      "actionPlayed": 0,
+      "wildPlayed": 104,
+      "bonusScored": 440,
+      "bonusFailed": 514,
+      "bonusVpTotal": 528,
+      "bonusScoredByWinner": 91,
+      "gamesAppearing": 482,
+      "bonusSuccessRate": 0.4612159329140461,
+      "winnerAffinity": 0.16666666666666666,
+      "avgBonusVp": 1.2
+    },
+    "7": {
+      "name": "The Chariot",
+      "purchased": 236,
+      "purchasedByWinner": 34,
+      "toTome": 0,
+      "toTomeByWinner": 0,
+      "actionPlayed": 631,
+      "wildPlayed": 67,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 424,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.1440677966101695,
+      "avgBonusVp": 0
+    },
+    "8": {
+      "name": "Strength",
+      "purchased": 260,
+      "purchasedByWinner": 40,
+      "toTome": 0,
+      "toTomeByWinner": 0,
+      "actionPlayed": 261,
+      "wildPlayed": 53,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 379,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.15384615384615385,
+      "avgBonusVp": 0
+    },
+    "9": {
+      "name": "The Hermit",
+      "purchased": 291,
+      "purchasedByWinner": 52,
+      "toTome": 329,
+      "toTomeByWinner": 42,
+      "actionPlayed": 0,
+      "wildPlayed": 134,
+      "bonusScored": 168,
+      "bonusFailed": 0,
+      "bonusVpTotal": 168,
+      "bonusScoredByWinner": 32,
+      "gamesAppearing": 485,
+      "bonusSuccessRate": 1,
+      "winnerAffinity": 0.17869415807560138,
+      "avgBonusVp": 1
+    },
+    "10": {
+      "name": "Wheel of Fortune",
+      "purchased": 239,
+      "purchasedByWinner": 32,
+      "toTome": 0,
+      "toTomeByWinner": 0,
+      "actionPlayed": 0,
+      "wildPlayed": 64,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 268,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.13389121338912133,
+      "avgBonusVp": 0
+    },
+    "11": {
+      "name": "Justice",
+      "purchased": 282,
+      "purchasedByWinner": 50,
+      "toTome": 358,
+      "toTomeByWinner": 64,
+      "actionPlayed": 0,
+      "wildPlayed": 89,
+      "bonusScored": 284,
+      "bonusFailed": 709,
+      "bonusVpTotal": 284,
+      "bonusScoredByWinner": 68,
+      "gamesAppearing": 497,
+      "bonusSuccessRate": 0.28600201409869086,
+      "winnerAffinity": 0.1773049645390071,
+      "avgBonusVp": 1
+    },
+    "12": {
+      "name": "The Hanged Man",
+      "purchased": 254,
+      "purchasedByWinner": 37,
+      "toTome": 0,
+      "toTomeByWinner": 0,
+      "actionPlayed": 234,
+      "wildPlayed": 54,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 362,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.14566929133858267,
+      "avgBonusVp": 0
+    },
+    "14": {
+      "name": "Temperance",
+      "purchased": 331,
+      "purchasedByWinner": 58,
+      "toTome": 464,
+      "toTomeByWinner": 103,
+      "actionPlayed": 0,
+      "wildPlayed": 121,
+      "bonusScored": 462,
+      "bonusFailed": 899,
+      "bonusVpTotal": 462,
+      "bonusScoredByWinner": 137,
+      "gamesAppearing": 608,
+      "bonusSuccessRate": 0.33945628214548124,
+      "winnerAffinity": 0.17522658610271905,
+      "avgBonusVp": 1
+    },
+    "15": {
+      "name": "The Devil",
+      "purchased": 295,
+      "purchasedByWinner": 48,
+      "toTome": 459,
+      "toTomeByWinner": 95,
+      "actionPlayed": 0,
+      "wildPlayed": 140,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 571,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.16271186440677965,
+      "avgBonusVp": 0
+    },
+    "16": {
+      "name": "The Tower",
+      "purchased": 284,
+      "purchasedByWinner": 39,
+      "toTome": 0,
+      "toTomeByWinner": 0,
+      "actionPlayed": 336,
+      "wildPlayed": 74,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 399,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.13732394366197184,
+      "avgBonusVp": 0
+    },
+    "17": {
+      "name": "The Star",
+      "purchased": 640,
+      "purchasedByWinner": 122,
+      "toTome": 743,
+      "toTomeByWinner": 151,
+      "actionPlayed": 0,
+      "wildPlayed": 124,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 868,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.190625,
+      "avgBonusVp": 0
+    },
+    "18": {
+      "name": "The Moon",
+      "purchased": 647,
+      "purchasedByWinner": 133,
+      "toTome": 720,
+      "toTomeByWinner": 158,
+      "actionPlayed": 0,
+      "wildPlayed": 138,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 875,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.20556414219474498,
+      "avgBonusVp": 0
+    },
+    "19": {
+      "name": "The Sun",
+      "purchased": 623,
+      "purchasedByWinner": 134,
+      "toTome": 697,
+      "toTomeByWinner": 153,
+      "actionPlayed": 0,
+      "wildPlayed": 125,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 861,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.21508828250401285,
+      "avgBonusVp": 0
+    },
+    "20": {
+      "name": "Judgement",
+      "purchased": 255,
+      "purchasedByWinner": 31,
+      "toTome": 0,
+      "toTomeByWinner": 0,
+      "actionPlayed": 2,
+      "wildPlayed": 46,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 281,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.12156862745098039,
+      "avgBonusVp": 0
+    },
+    "21": {
+      "name": "The World",
+      "purchased": 639,
+      "purchasedByWinner": 119,
+      "toTome": 718,
+      "toTomeByWinner": 164,
+      "actionPlayed": 0,
+      "wildPlayed": 136,
+      "bonusScored": 0,
+      "bonusFailed": 0,
+      "bonusVpTotal": 0,
+      "bonusScoredByWinner": 0,
+      "gamesAppearing": 869,
+      "bonusSuccessRate": null,
+      "winnerAffinity": 0.18622848200312989,
+      "avgBonusVp": 0
+    }
+  },
+  "cardAnalytics": {
+    "totalGames": 1000,
+    "purchaseFrequency": [
+      {
+        "number": 18,
+        "name": "The Moon",
+        "total": 647,
+        "perGame": 0.647,
+        "byWinner": 133,
+        "winnerShare": 0.206
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "total": 640,
+        "perGame": 0.64,
+        "byWinner": 122,
+        "winnerShare": 0.191
+      },
+      {
+        "number": 21,
+        "name": "The World",
+        "total": 639,
+        "perGame": 0.639,
+        "byWinner": 119,
+        "winnerShare": 0.186
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "total": 623,
+        "perGame": 0.623,
+        "byWinner": 134,
+        "winnerShare": 0.215
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "total": 331,
+        "perGame": 0.331,
+        "byWinner": 58,
+        "winnerShare": 0.175
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "total": 295,
+        "perGame": 0.295,
+        "byWinner": 48,
+        "winnerShare": 0.163
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "total": 291,
+        "perGame": 0.291,
+        "byWinner": 52,
+        "winnerShare": 0.179
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "total": 284,
+        "perGame": 0.284,
+        "byWinner": 39,
+        "winnerShare": 0.137
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "total": 282,
+        "perGame": 0.282,
+        "byWinner": 50,
+        "winnerShare": 0.177
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "total": 281,
+        "perGame": 0.281,
+        "byWinner": 38,
+        "winnerShare": 0.135
+      },
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "total": 272,
+        "perGame": 0.272,
+        "byWinner": 53,
+        "winnerShare": 0.195
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "total": 270,
+        "perGame": 0.27,
+        "byWinner": 45,
+        "winnerShare": 0.167
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "total": 261,
+        "perGame": 0.261,
+        "byWinner": 30,
+        "winnerShare": 0.115
+      },
+      {
+        "number": 8,
+        "name": "Strength",
+        "total": 260,
+        "perGame": 0.26,
+        "byWinner": 40,
+        "winnerShare": 0.154
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "total": 256,
+        "perGame": 0.256,
+        "byWinner": 44,
+        "winnerShare": 0.172
+      },
+      {
+        "number": 20,
+        "name": "Judgement",
+        "total": 255,
+        "perGame": 0.255,
+        "byWinner": 31,
+        "winnerShare": 0.122
+      },
+      {
+        "number": 12,
+        "name": "The Hanged Man",
+        "total": 254,
+        "perGame": 0.254,
+        "byWinner": 37,
+        "winnerShare": 0.146
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "total": 250,
+        "perGame": 0.25,
+        "byWinner": 39,
+        "winnerShare": 0.156
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "total": 241,
+        "perGame": 0.241,
+        "byWinner": 34,
+        "winnerShare": 0.141
+      },
+      {
+        "number": 10,
+        "name": "Wheel of Fortune",
+        "total": 239,
+        "perGame": 0.239,
+        "byWinner": 32,
+        "winnerShare": 0.134
+      },
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "total": 236,
+        "perGame": 0.236,
+        "byWinner": 34,
+        "winnerShare": 0.144
+      }
+    ],
+    "winnerTomePresence": [
+      {
+        "number": 21,
+        "name": "The World",
+        "count": 148,
+        "rate": 0.148
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "count": 137,
+        "rate": 0.137
+      },
+      {
+        "number": 18,
+        "name": "The Moon",
+        "count": 136,
+        "rate": 0.136
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "count": 127,
+        "rate": 0.127
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "count": 73,
+        "rate": 0.073
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "count": 66,
+        "rate": 0.066
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "count": 51,
+        "rate": 0.051
+      },
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "count": 50,
+        "rate": 0.05
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "count": 49,
+        "rate": 0.049
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "count": 45,
+        "rate": 0.045
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "count": 45,
+        "rate": 0.045
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "count": 43,
+        "rate": 0.043
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "count": 40,
+        "rate": 0.04
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "count": 39,
+        "rate": 0.039
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "count": 24,
+        "rate": 0.024
+      }
+    ],
+    "bonusSuccessRates": [
+      {
+        "number": 14,
+        "name": "Temperance",
+        "scored": 462,
+        "failed": 899,
+        "successRate": 0.339,
+        "avgVp": 1,
+        "totalVp": 462
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "scored": 306,
+        "failed": 752,
+        "successRate": 0.289,
+        "avgVp": 1,
+        "totalVp": 306
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "scored": 284,
+        "failed": 709,
+        "successRate": 0.286,
+        "avgVp": 1,
+        "totalVp": 284
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "scored": 440,
+        "failed": 514,
+        "successRate": 0.461,
+        "avgVp": 1.2,
+        "totalVp": 528
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "scored": 275,
+        "failed": 677,
+        "successRate": 0.289,
+        "avgVp": 1,
+        "totalVp": 275
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "scored": 152,
+        "failed": 797,
+        "successRate": 0.16,
+        "avgVp": 1.03,
+        "totalVp": 157
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "scored": 258,
+        "failed": 621,
+        "successRate": 0.294,
+        "avgVp": 1,
+        "totalVp": 258
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "scored": 215,
+        "failed": 652,
+        "successRate": 0.248,
+        "avgVp": 1,
+        "totalVp": 215
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "scored": 168,
+        "failed": 0,
+        "successRate": 1,
+        "avgVp": 1,
+        "totalVp": 168
+      }
+    ],
+    "winCorrelation": [
+      {
+        "number": 21,
+        "name": "The World",
+        "timesInTome": 718,
+        "timesInWinnerTome": 164,
+        "winRate": 0.228
+      },
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "timesInTome": 305,
+        "timesInWinnerTome": 68,
+        "winRate": 0.223
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "timesInTome": 464,
+        "timesInWinnerTome": 103,
+        "winRate": 0.222
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "timesInTome": 697,
+        "timesInWinnerTome": 153,
+        "winRate": 0.22
+      },
+      {
+        "number": 18,
+        "name": "The Moon",
+        "timesInTome": 720,
+        "timesInWinnerTome": 158,
+        "winRate": 0.219
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "timesInTome": 358,
+        "timesInWinnerTome": 78,
+        "winRate": 0.218
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "timesInTome": 459,
+        "timesInWinnerTome": 95,
+        "winRate": 0.207
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "timesInTome": 743,
+        "timesInWinnerTome": 151,
+        "winRate": 0.203
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "timesInTome": 321,
+        "timesInWinnerTome": 65,
+        "winRate": 0.202
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "timesInTome": 367,
+        "timesInWinnerTome": 74,
+        "winRate": 0.202
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "timesInTome": 321,
+        "timesInWinnerTome": 64,
+        "winRate": 0.199
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "timesInTome": 338,
+        "timesInWinnerTome": 67,
+        "winRate": 0.198
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "timesInTome": 345,
+        "timesInWinnerTome": 64,
+        "winRate": 0.186
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "timesInTome": 358,
+        "timesInWinnerTome": 64,
+        "winRate": 0.179
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "timesInTome": 329,
+        "timesInWinnerTome": 42,
+        "winRate": 0.128
+      }
+    ],
+    "actionUsage": [
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "total": 631,
+        "perGame": 0.631
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "total": 336,
+        "perGame": 0.336
+      },
+      {
+        "number": 8,
+        "name": "Strength",
+        "total": 261,
+        "perGame": 0.261
+      },
+      {
+        "number": 12,
+        "name": "The Hanged Man",
+        "total": 234,
+        "perGame": 0.234
+      },
+      {
+        "number": 20,
+        "name": "Judgement",
+        "total": 2,
+        "perGame": 0.002
+      }
+    ],
+    "wildUsage": [
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "total": 146,
+        "perGame": 0.146
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "total": 140,
+        "perGame": 0.14
+      },
+      {
+        "number": 18,
+        "name": "The Moon",
+        "total": 138,
+        "perGame": 0.138
+      },
+      {
+        "number": 21,
+        "name": "The World",
+        "total": 136,
+        "perGame": 0.136
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "total": 134,
+        "perGame": 0.134
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "total": 127,
+        "perGame": 0.127
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "total": 125,
+        "perGame": 0.125
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "total": 124,
+        "perGame": 0.124
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "total": 121,
+        "perGame": 0.121
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "total": 104,
+        "perGame": 0.104
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "total": 94,
+        "perGame": 0.094
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "total": 91,
+        "perGame": 0.091
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "total": 89,
+        "perGame": 0.089
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "total": 89,
+        "perGame": 0.089
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "total": 78,
+        "perGame": 0.078
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "total": 74,
+        "perGame": 0.074
+      },
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "total": 67,
+        "perGame": 0.067
+      },
+      {
+        "number": 10,
+        "name": "Wheel of Fortune",
+        "total": 64,
+        "perGame": 0.064
+      },
+      {
+        "number": 12,
+        "name": "The Hanged Man",
+        "total": 54,
+        "perGame": 0.054
+      },
+      {
+        "number": 8,
+        "name": "Strength",
+        "total": 53,
+        "perGame": 0.053
+      },
+      {
+        "number": 20,
+        "name": "Judgement",
+        "total": 46,
+        "perGame": 0.046
+      }
+    ],
+    "powerRankings": [
+      {
+        "number": 21,
+        "name": "The World",
+        "composite": 0.796,
+        "tomeScore": 1,
+        "purchaseScore": 0.988,
+        "vpScore": 0
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "composite": 0.76,
+        "tomeScore": 0.926,
+        "purchaseScore": 0.989,
+        "vpScore": 0
+      },
+      {
+        "number": 18,
+        "name": "The Moon",
+        "composite": 0.759,
+        "tomeScore": 0.919,
+        "purchaseScore": 1,
+        "vpScore": 0
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "composite": 0.718,
+        "tomeScore": 0.858,
+        "purchaseScore": 0.963,
+        "vpScore": 0
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "composite": 0.575,
+        "tomeScore": 0.493,
+        "purchaseScore": 0.512,
+        "vpScore": 0.875
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "composite": 0.497,
+        "tomeScore": 0.345,
+        "purchaseScore": 0.417,
+        "vpScore": 1
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "composite": 0.4,
+        "tomeScore": 0.331,
+        "purchaseScore": 0.396,
+        "vpScore": 0.58
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "composite": 0.372,
+        "tomeScore": 0.304,
+        "purchaseScore": 0.386,
+        "vpScore": 0.521
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "composite": 0.37,
+        "tomeScore": 0.264,
+        "purchaseScore": 0.436,
+        "vpScore": 0.538
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "composite": 0.363,
+        "tomeScore": 0.27,
+        "purchaseScore": 0.434,
+        "vpScore": 0.489
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "composite": 0.36,
+        "tomeScore": 0.446,
+        "purchaseScore": 0.456,
+        "vpScore": 0
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "composite": 0.348,
+        "tomeScore": 0.291,
+        "purchaseScore": 0.403,
+        "vpScore": 0.407
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "composite": 0.323,
+        "tomeScore": 0.304,
+        "purchaseScore": 0.372,
+        "vpScore": 0.297
+      },
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "composite": 0.295,
+        "tomeScore": 0.338,
+        "purchaseScore": 0.42,
+        "vpScore": 0
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "composite": 0.28,
+        "tomeScore": 0.162,
+        "purchaseScore": 0.45,
+        "vpScore": 0.318
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "composite": 0.132,
+        "tomeScore": 0,
+        "purchaseScore": 0.439,
+        "vpScore": 0
+      },
+      {
+        "number": 8,
+        "name": "Strength",
+        "composite": 0.121,
+        "tomeScore": 0,
+        "purchaseScore": 0.402,
+        "vpScore": 0
+      },
+      {
+        "number": 12,
+        "name": "The Hanged Man",
+        "composite": 0.118,
+        "tomeScore": 0,
+        "purchaseScore": 0.393,
+        "vpScore": 0
+      },
+      {
+        "number": 20,
+        "name": "Judgement",
+        "composite": 0.118,
+        "tomeScore": 0,
+        "purchaseScore": 0.394,
+        "vpScore": 0
+      },
+      {
+        "number": 10,
+        "name": "Wheel of Fortune",
+        "composite": 0.111,
+        "tomeScore": 0,
+        "purchaseScore": 0.369,
+        "vpScore": 0
+      },
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "composite": 0.109,
+        "tomeScore": 0,
+        "purchaseScore": 0.365,
+        "vpScore": 0
+      }
+    ],
+    "rawCards": {
+      "0": {
+        "name": "The Fool",
+        "number": 0,
+        "purchased": 241,
+        "purchasedByWinner": 34,
+        "toTome": 345,
+        "toTomeByWinner": 64,
+        "actionPlayed": 0,
+        "wildPlayed": 78,
+        "bonusScored": 152,
+        "bonusFailed": 797,
+        "bonusVpTotal": 157,
+        "bonusScoredByWinner": 42,
+        "inWinnerTome": 45
+      },
+      "1": {
+        "name": "The Magician",
+        "number": 1,
+        "purchased": 256,
+        "purchasedByWinner": 44,
+        "toTome": 367,
+        "toTomeByWinner": 74,
+        "actionPlayed": 0,
+        "wildPlayed": 127,
+        "bonusScored": 306,
+        "bonusFailed": 752,
+        "bonusVpTotal": 306,
+        "bonusScoredByWinner": 96,
+        "inWinnerTome": 49
+      },
+      "2": {
+        "name": "The High Priestess",
+        "number": 2,
+        "purchased": 250,
+        "purchasedByWinner": 39,
+        "toTome": 358,
+        "toTomeByWinner": 78,
+        "actionPlayed": 0,
+        "wildPlayed": 94,
+        "bonusScored": 275,
+        "bonusFailed": 677,
+        "bonusVpTotal": 275,
+        "bonusScoredByWinner": 81,
+        "inWinnerTome": 45
+      },
+      "3": {
+        "name": "The Empress",
+        "number": 3,
+        "purchased": 281,
+        "purchasedByWinner": 38,
+        "toTome": 321,
+        "toTomeByWinner": 65,
+        "actionPlayed": 0,
+        "wildPlayed": 91,
+        "bonusScored": 258,
+        "bonusFailed": 621,
+        "bonusVpTotal": 258,
+        "bonusScoredByWinner": 60,
+        "inWinnerTome": 40
+      },
+      "4": {
+        "name": "The Emperor",
+        "number": 4,
+        "purchased": 261,
+        "purchasedByWinner": 30,
+        "toTome": 321,
+        "toTomeByWinner": 64,
+        "actionPlayed": 0,
+        "wildPlayed": 89,
+        "bonusScored": 215,
+        "bonusFailed": 652,
+        "bonusVpTotal": 215,
+        "bonusScoredByWinner": 79,
+        "inWinnerTome": 43
+      },
+      "5": {
+        "name": "The Hierophant",
+        "number": 5,
+        "purchased": 272,
+        "purchasedByWinner": 53,
+        "toTome": 305,
+        "toTomeByWinner": 68,
+        "actionPlayed": 0,
+        "wildPlayed": 146,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 50
+      },
+      "6": {
+        "name": "The Lovers",
+        "number": 6,
+        "purchased": 270,
+        "purchasedByWinner": 45,
+        "toTome": 338,
+        "toTomeByWinner": 67,
+        "actionPlayed": 0,
+        "wildPlayed": 104,
+        "bonusScored": 440,
+        "bonusFailed": 514,
+        "bonusVpTotal": 528,
+        "bonusScoredByWinner": 91,
+        "inWinnerTome": 51
+      },
+      "7": {
+        "name": "The Chariot",
+        "number": 7,
+        "purchased": 236,
+        "purchasedByWinner": 34,
+        "toTome": 0,
+        "toTomeByWinner": 0,
+        "actionPlayed": 631,
+        "wildPlayed": 67,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 0
+      },
+      "8": {
+        "name": "Strength",
+        "number": 8,
+        "purchased": 260,
+        "purchasedByWinner": 40,
+        "toTome": 0,
+        "toTomeByWinner": 0,
+        "actionPlayed": 261,
+        "wildPlayed": 53,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 0
+      },
+      "9": {
+        "name": "The Hermit",
+        "number": 9,
+        "purchased": 291,
+        "purchasedByWinner": 52,
+        "toTome": 329,
+        "toTomeByWinner": 42,
+        "actionPlayed": 0,
+        "wildPlayed": 134,
+        "bonusScored": 168,
+        "bonusFailed": 0,
+        "bonusVpTotal": 168,
+        "bonusScoredByWinner": 32,
+        "inWinnerTome": 24
+      },
+      "10": {
+        "name": "Wheel of Fortune",
+        "number": 10,
+        "purchased": 239,
+        "purchasedByWinner": 32,
+        "toTome": 0,
+        "toTomeByWinner": 0,
+        "actionPlayed": 0,
+        "wildPlayed": 64,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 0
+      },
+      "11": {
+        "name": "Justice",
+        "number": 11,
+        "purchased": 282,
+        "purchasedByWinner": 50,
+        "toTome": 358,
+        "toTomeByWinner": 64,
+        "actionPlayed": 0,
+        "wildPlayed": 89,
+        "bonusScored": 284,
+        "bonusFailed": 709,
+        "bonusVpTotal": 284,
+        "bonusScoredByWinner": 68,
+        "inWinnerTome": 39
+      },
+      "12": {
+        "name": "The Hanged Man",
+        "number": 12,
+        "purchased": 254,
+        "purchasedByWinner": 37,
+        "toTome": 0,
+        "toTomeByWinner": 0,
+        "actionPlayed": 234,
+        "wildPlayed": 54,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 0
+      },
+      "14": {
+        "name": "Temperance",
+        "number": 14,
+        "purchased": 331,
+        "purchasedByWinner": 58,
+        "toTome": 464,
+        "toTomeByWinner": 103,
+        "actionPlayed": 0,
+        "wildPlayed": 121,
+        "bonusScored": 462,
+        "bonusFailed": 899,
+        "bonusVpTotal": 462,
+        "bonusScoredByWinner": 137,
+        "inWinnerTome": 73
+      },
+      "15": {
+        "name": "The Devil",
+        "number": 15,
+        "purchased": 295,
+        "purchasedByWinner": 48,
+        "toTome": 459,
+        "toTomeByWinner": 95,
+        "actionPlayed": 0,
+        "wildPlayed": 140,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 66
+      },
+      "16": {
+        "name": "The Tower",
+        "number": 16,
+        "purchased": 284,
+        "purchasedByWinner": 39,
+        "toTome": 0,
+        "toTomeByWinner": 0,
+        "actionPlayed": 336,
+        "wildPlayed": 74,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 0
+      },
+      "17": {
+        "name": "The Star",
+        "number": 17,
+        "purchased": 640,
+        "purchasedByWinner": 122,
+        "toTome": 743,
+        "toTomeByWinner": 151,
+        "actionPlayed": 0,
+        "wildPlayed": 124,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 137
+      },
+      "18": {
+        "name": "The Moon",
+        "number": 18,
+        "purchased": 647,
+        "purchasedByWinner": 133,
+        "toTome": 720,
+        "toTomeByWinner": 158,
+        "actionPlayed": 0,
+        "wildPlayed": 138,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 136
+      },
+      "19": {
+        "name": "The Sun",
+        "number": 19,
+        "purchased": 623,
+        "purchasedByWinner": 134,
+        "toTome": 697,
+        "toTomeByWinner": 153,
+        "actionPlayed": 0,
+        "wildPlayed": 125,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 127
+      },
+      "20": {
+        "name": "Judgement",
+        "number": 20,
+        "purchased": 255,
+        "purchasedByWinner": 31,
+        "toTome": 0,
+        "toTomeByWinner": 0,
+        "actionPlayed": 2,
+        "wildPlayed": 46,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 0
+      },
+      "21": {
+        "name": "The World",
+        "number": 21,
+        "purchased": 639,
+        "purchasedByWinner": 119,
+        "toTome": 718,
+        "toTomeByWinner": 164,
+        "actionPlayed": 0,
+        "wildPlayed": 136,
+        "bonusScored": 0,
+        "bonusFailed": 0,
+        "bonusVpTotal": 0,
+        "bonusScoredByWinner": 0,
+        "inWinnerTome": 148
+      }
+    }
+  }
+}
