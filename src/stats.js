@@ -24,6 +24,7 @@ export function aggregateStats(simResults) {
     vpDistribution: computeVPDistribution(results),
     firstPlayerAdvantage: computeFirstPlayerAdvantage(results),
     strategyEffectiveness: computeStrategyEffectiveness(results),
+    cardStats: computeCardStats(results),
   };
 }
 
@@ -191,6 +192,60 @@ function computeStrategyEffectiveness(results) {
   }
 
   return effectiveness;
+}
+
+/**
+ * Compute per-card statistics across all games.
+ */
+function computeCardStats(results) {
+  const cards = {};
+
+  for (const game of results) {
+    if (!game.cardEvents) continue;
+    for (const [numStr, events] of Object.entries(game.cardEvents)) {
+      const num = Number(numStr);
+      if (!cards[num]) {
+        cards[num] = {
+          name: events.name,
+          purchased: 0, purchasedByWinner: 0,
+          toTome: 0, toTomeByWinner: 0,
+          actionPlayed: 0, wildPlayed: 0,
+          bonusScored: 0, bonusFailed: 0, bonusVpTotal: 0,
+          bonusScoredByWinner: 0,
+          gamesAppearing: 0,
+        };
+      }
+      const c = cards[num];
+      c.purchased += events.purchased;
+      c.purchasedByWinner += events.purchasedByWinner;
+      c.toTome += events.toTome;
+      c.toTomeByWinner += events.toTomeByWinner;
+      c.actionPlayed += events.actionPlayed;
+      c.wildPlayed += events.wildPlayed;
+      c.bonusScored += events.bonusScored;
+      c.bonusFailed += events.bonusFailed;
+      c.bonusVpTotal += events.bonusVpTotal;
+      c.bonusScoredByWinner += events.bonusScoredByWinner;
+      if (events.purchased || events.toTome || events.actionPlayed || events.wildPlayed) {
+        c.gamesAppearing++;
+      }
+    }
+  }
+
+  // Calculate derived stats
+  for (const c of Object.values(cards)) {
+    c.bonusSuccessRate = c.bonusScored + c.bonusFailed > 0
+      ? c.bonusScored / (c.bonusScored + c.bonusFailed)
+      : null;
+    c.winnerAffinity = c.purchased > 0
+      ? c.purchasedByWinner / c.purchased
+      : null;
+    c.avgBonusVp = c.bonusScored > 0
+      ? c.bonusVpTotal / c.bonusScored
+      : 0;
+  }
+
+  return cards;
 }
 
 /**
@@ -522,6 +577,44 @@ export function formatReport(stats) {
   }
 
   lines.push('');
+
+  // Major Arcana Card Stats
+  if (stats.cardStats && Object.keys(stats.cardStats).length > 0) {
+    lines.push('--- MAJOR ARCANA CARD STATS ---');
+    const header = '  ' +
+      'Card Name'.padEnd(24) + '| ' +
+      'Purchased'.padEnd(11) + '| ' +
+      'In Winner Tome'.padEnd(16) + '| ' +
+      'Bonus Rate'.padEnd(12) + '| ' +
+      'Avg Bonus VP'.padEnd(14) + '| ' +
+      'Used as Wild';
+    lines.push(header);
+    lines.push('  ' + '-'.repeat(header.length - 2));
+
+    // Sort by purchasedByWinner descending
+    const sortedCards = Object.entries(stats.cardStats)
+      .sort((a, b) => b[1].purchasedByWinner - a[1].purchasedByWinner);
+
+    for (const [num, c] of sortedCards) {
+      const name = `${c.name} (${num})`;
+      const bonusRate = c.bonusSuccessRate !== null
+        ? `${(c.bonusSuccessRate * 100).toFixed(0)}%`
+        : '-';
+      const avgBonusVp = c.bonusScored > 0
+        ? c.avgBonusVp.toFixed(1)
+        : '-';
+      const row = '  ' +
+        name.padEnd(24) + '| ' +
+        String(c.purchased).padStart(5).padEnd(11) + '| ' +
+        String(c.toTomeByWinner).padStart(8).padEnd(16) + '| ' +
+        bonusRate.padStart(6).padEnd(12) + '| ' +
+        avgBonusVp.padStart(8).padEnd(14) + '| ' +
+        String(c.wildPlayed).padStart(5);
+      lines.push(row);
+    }
+    lines.push('');
+  }
+
   lines.push('='.repeat(60));
 
   return lines.join('\n');

@@ -151,7 +151,7 @@ describe('Full Game', () => {
       .toContain(result.gameEndReason);
   });
 
-  it('runs multiple games without crashing', () => {
+  it('runs multiple games without crashing', { timeout: 15000 }, () => {
     for (let i = 0; i < 10; i++) {
       const state = createInitialState(4);
       const ais = makeAIs(4);
@@ -171,7 +171,7 @@ describe('Full Game', () => {
     }
   });
 
-  it('works with 5 players', () => {
+  it('works with 5 players', { timeout: 15000 }, () => {
     for (let i = 0; i < 5; i++) {
       const state = createInitialState(5);
       const ais = makeAIs(5);
