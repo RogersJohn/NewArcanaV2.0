@@ -12,8 +12,15 @@ import { log, recordEvent } from './state.js';
  * @param {object[]} ais
  */
 export function scoreRoundEnd(state, ais) {
+  // Guard against double-scoring the same round (e.g. handleRoundEnd scores it,
+  // then ageDisplay triggers Death/Celestial win, and playGame calls us again)
+  if (state.lastScoredRound === state.roundNumber) return;
+  state.lastScoredRound = state.roundNumber;
+
   // Award pot to player with best poker hand
-  if (state.roundEndMarkerHolder !== -1) {
+  // Pot is awarded when a round-end marker holder triggered the round end,
+  // OR when the game has ended (Death, Celestial win, etc.) so the final pot isn't lost
+  if (state.roundEndMarkerHolder !== -1 || state.gameEnded) {
     awardPot(state);
   }
 

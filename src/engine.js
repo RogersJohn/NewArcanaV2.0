@@ -119,6 +119,11 @@ export function playGame(state, ais) {
     log(state, 'Game ended: maximum rounds reached');
   }
 
+  // Final round scoring — award pot and evaluate Tome bonuses
+  // (handleRoundEnd is not called when Death ends the game mid-round,
+  // so the last round's pot and bonuses would otherwise be skipped)
+  scoreRoundEnd(state, ais);
+
   // Game-end scoring
   scoreGameEnd(state);
 

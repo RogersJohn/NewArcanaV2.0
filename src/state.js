@@ -40,6 +40,7 @@ export function createInitialState(numPlayers, extended = false) {
     gameEnded: false,
     gameEndReason: null,
     roundEndMarkerHolder: -1,
+    lastScoredRound: -1,
     turnCount: 0,
     config: {
       extended,

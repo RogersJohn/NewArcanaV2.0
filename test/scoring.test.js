@@ -338,3 +338,49 @@ describe('Fool Duplication', () => {
     expect(bonus).toBe(1);
   });
 });
+
+describe('Fix #8: Final round scoring when Death ends the game', () => {
+  it('awards pot when game ends via Death (gameEnded=true, no marker holder)', () => {
+    const state = makeTestState(4);
+    state.pot = 4;
+    state.roundEndMarkerHolder = -1; // No marker holder — Death ended the game mid-round
+    state.gameEnded = true;
+    state.gameEndReason = 'death_purchased';
+    state.roundNumber = 1;
+
+    // Player 0 has the best realm hand
+    state.players[0].realm = [mc('CUPS', 'KING'), mc('CUPS', 'QUEEN'), mc('CUPS', 'KNIGHT')];
+    // Player 1 has a weaker realm hand
+    state.players[1].realm = [mc('SWORDS', 3), mc('SWORDS', 5)];
+
+    const ais = [new RandomAI(), new RandomAI(), new RandomAI(), new RandomAI()];
+    scoreRoundEnd(state, ais);
+
+    // Pot should have been awarded to player 0 (best hand)
+    expect(state.players[0].vp).toBeGreaterThan(0);
+    expect(state.pot).toBe(0);
+  });
+
+  it('does not double-score if scoreRoundEnd is called twice for the same round', () => {
+    const state = makeTestState(2);
+    state.pot = 10;
+    state.roundEndMarkerHolder = 0;
+    state.roundNumber = 1;
+
+    // Player 0 has realm cards and a bonus (Empress = CUPS bonus)
+    state.players[0].realm = [mc('CUPS', 5), mc('CUPS', 8), mc('CUPS', 'KING')];
+    state.players[0].tome = [major(3)]; // Empress
+    // Player 1 has weaker realm
+    state.players[1].realm = [mc('SWORDS', 2)];
+
+    const ais = [new RandomAI(), new RandomAI()];
+    scoreRoundEnd(state, ais);
+
+    const vpAfterFirst = state.players[0].vp;
+    expect(vpAfterFirst).toBeGreaterThan(0); // Got pot + bonus
+
+    // Call again for the same round — should be a no-op
+    scoreRoundEnd(state, ais);
+    expect(state.players[0].vp).toBe(vpAfterFirst);
+  });
+});
