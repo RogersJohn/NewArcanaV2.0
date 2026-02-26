@@ -4,7 +4,7 @@
 
 import { SUITS, RANK_VALUES, cardName, canPlayToTome, isCelestial } from './cards.js';
 import { getHandSize, getEffectiveHandLimit } from './state.js';
-import { evaluateHand } from './poker.js';
+import { evaluateHand, compareHands } from './poker.js';
 
 /**
  * Get all legal actions for a player.
@@ -457,20 +457,28 @@ function addWildActions(state, playerIndex, actions) {
       description: `Play ${cardName(card)} as wild card to Realm`,
     });
 
-    // Play wild with minor cards as part of a set
+    // Play wild with minor cards: only generate the top 3 best-scoring combinations
     const minors = player.hand.filter(c => c.type === 'minor');
     if (minors.length > 0) {
-      // Add with 1-4 minor cards
+      let bestCombos = [];
       for (let n = 1; n <= Math.min(4, minors.length); n++) {
         const combos = combinations(minors, n);
         for (const combo of combos) {
-          actions.push({
-            type: 'PLAY_WILD',
-            card,
-            withCards: combo,
-            description: `Play ${cardName(card)} as wild with ${combo.map(cardName).join(', ')}`,
-          });
+          const testRealm = [...player.realm, ...combo, { type: 'major' }];
+          const score = evaluateHand(testRealm);
+          bestCombos.push({ combo, score });
         }
+      }
+      bestCombos.sort((a, b) => compareHands(b.score, a.score));
+      bestCombos = bestCombos.slice(0, 3);
+
+      for (const { combo } of bestCombos) {
+        actions.push({
+          type: 'PLAY_WILD',
+          card,
+          withCards: combo,
+          description: `Play ${cardName(card)} as wild with ${combo.map(cardName).join(', ')}`,
+        });
       }
     }
   }
@@ -502,7 +510,12 @@ function addBuyActions(state, playerIndex, actions) {
   for (const { source, price } of sources) {
     // Find all payment combinations (1-3 cards from hand) that meet the price
     const payments = findPayments(hand, price);
-    for (const payment of payments) {
+    // Only keep the 3 cheapest payments (by total value)
+    payments.sort((a, b) =>
+      a.reduce((s, c) => s + c.purchaseValue, 0) - b.reduce((s, c) => s + c.purchaseValue, 0)
+    );
+    const topPayments = payments.slice(0, 3);
+    for (const payment of topPayments) {
       actions.push({
         type: 'BUY',
         source,
