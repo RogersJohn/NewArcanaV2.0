@@ -8,6 +8,7 @@ import {
   drawMinorCard, drawMajorCard, log, refillDisplay
 } from './state.js';
 import { getLegalActions } from './actions.js';
+import { scoreRoundEnd, scoreGameEnd, checkCelestialWin } from './scoring.js';
 
 const MAX_TURNS_PER_ROUND = 50;
 const MAX_ROUNDS = 20;
@@ -118,6 +119,9 @@ export function playGame(state, ais) {
     log(state, 'Game ended: maximum rounds reached');
   }
 
+  // Game-end scoring
+  scoreGameEnd(state);
+
   return state;
 }
 
@@ -150,6 +154,13 @@ export function playRound(state, ais) {
     playTurn(state, ais, pi);
 
     if (state.gameEnded) break;
+
+    // Check Judgement-triggered round end
+    if (state.judgementTriggered) {
+      state.judgementTriggered = false;
+      roundActive = false;
+      break;
+    }
 
     // Check turn-end: if player has 5 cards in realm, take/check marker
     checkRoundEndMarker(state, pi);
@@ -891,20 +902,17 @@ export function handleRoundEnd(state, ais) {
   // Import scoring dynamically to avoid circular deps - for now inline basic scoring
   log(state, `--- Round ${state.roundNumber} End ---`);
 
-  // Score round (will be replaced by scoring.js)
-  scoreRoundBasic(state, ais);
+  // Score round
+  scoreRoundEnd(state, ais);
 
   // Check celestial win
-  for (let pi = 0; pi < state.players.length; pi++) {
-    const p = state.players[pi];
-    const celestials = [...p.tome, ...p.realm, ...p.vault].filter(c => isCelestial(c));
-    if (celestials.length >= 3) {
-      state.gameEnded = true;
-      state.gameEndReason = 'celestial_win';
-      state.celestialWinner = pi;
-      log(state, `${p.name} wins by Celestial victory!`);
-      return;
-    }
+  const celestialWinner = checkCelestialWin(state);
+  if (celestialWinner !== -1) {
+    state.gameEnded = true;
+    state.gameEndReason = 'celestial_win';
+    state.celestialWinner = celestialWinner;
+    log(state, `${state.players[celestialWinner].name} wins by Celestial victory!`);
+    return;
   }
 
   // Age display: slot 2 -> major discard, slide right, new card to slot 0
@@ -915,40 +923,6 @@ export function handleRoundEnd(state, ais) {
   resetForNextRound(state);
 }
 
-/**
- * Basic round scoring (pot to best hand).
- */
-function scoreRoundBasic(state, ais) {
-  // Placeholder - will be replaced by scoring.js
-  const { evaluateHand } = await_evaluateHand();
-
-  if (state.roundEndMarkerHolder !== -1) {
-    let bestPi = -1;
-    let bestEval = null;
-
-    for (let pi = 0; pi < state.players.length; pi++) {
-      if (state.players[pi].realm.length === 0) continue;
-      // Dynamic import workaround - inline evaluation
-      const eval_ = evaluateHandInline(state.players[pi].realm);
-      if (!bestEval || compareHandsInline(eval_, bestEval) > 0) {
-        bestEval = eval_;
-        bestPi = pi;
-      }
-    }
-
-    if (bestPi !== -1) {
-      state.players[bestPi].vp += state.pot;
-      log(state, `${state.players[bestPi].name} wins pot of ${state.pot}vp`);
-      state.pot = 0;
-    }
-  }
-
-  // Reset marker
-  state.roundEndMarkerHolder = -1;
-  for (const p of state.players) {
-    p.hasRoundEndMarker = false;
-  }
-}
 
 /**
  * Age the Major Arcana display.
@@ -1040,56 +1014,3 @@ function dealRoundCards(state) {
   }
 }
 
-// Inline hand evaluation to avoid circular import issues at this stage
-// Will be properly refactored when scoring.js is added
-function evaluateHandInline(cards) {
-  const wilds = cards.filter(c => c.type === 'major');
-  const normals = cards.filter(c => c.type === 'minor');
-
-  if (normals.length === 0 && wilds.length === 0) {
-    return { rank: -1, tiebreakers: [] };
-  }
-
-  const ranks = normals.map(c => c.numericRank).sort((a, b) => b - a);
-  const rankCounts = {};
-  for (const r of ranks) rankCounts[r] = (rankCounts[r] || 0) + 1;
-
-  const groups = Object.entries(rankCounts)
-    .map(([r, c]) => ({ rank: Number(r), count: c }))
-    .sort((a, b) => b.count - a.count || b.rank - a.rank);
-
-  // Add wilds to the best group
-  let wildCount = wilds.length;
-  if (groups.length > 0) {
-    groups[0].count += wildCount;
-  } else if (wildCount > 0) {
-    return { rank: 0, tiebreakers: [14] }; // Wild alone = high card King
-  }
-
-  const maxCount = groups[0]?.count || 0;
-  const suits = normals.map(c => c.suit);
-  const isFlush = normals.length + wilds.length >= 5 && new Set(suits).size <= 1;
-
-  if (maxCount >= 5) return { rank: 9, tiebreakers: [groups[0].rank] };
-  if (maxCount === 4) return { rank: 7, tiebreakers: [groups[0].rank] };
-  if (maxCount === 3 && groups[1]?.count >= 2) return { rank: 6, tiebreakers: [groups[0].rank, groups[1].rank] };
-  if (isFlush) return { rank: 5, tiebreakers: ranks };
-  if (maxCount === 3) return { rank: 3, tiebreakers: [groups[0].rank] };
-  if (maxCount === 2 && groups[1]?.count >= 2) return { rank: 2, tiebreakers: [Math.max(groups[0].rank, groups[1].rank)] };
-  if (maxCount === 2) return { rank: 1, tiebreakers: [groups[0].rank] };
-  return { rank: 0, tiebreakers: ranks.length > 0 ? [ranks[0]] : [0] };
-}
-
-function compareHandsInline(a, b) {
-  if (a.rank !== b.rank) return a.rank - b.rank;
-  for (let i = 0; i < Math.max(a.tiebreakers.length, b.tiebreakers.length); i++) {
-    const av = a.tiebreakers[i] || 0;
-    const bv = b.tiebreakers[i] || 0;
-    if (av !== bv) return av - bv;
-  }
-  return 0;
-}
-
-function await_evaluateHand() {
-  return { evaluateHand: evaluateHandInline };
-}
