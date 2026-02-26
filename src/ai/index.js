@@ -9,6 +9,7 @@ import { CelestialAI } from './celestial.js';
 import { ControllerAI } from './controller.js';
 import { OpportunistAI } from './opportunist.js';
 import { PassiveAI } from './passive.js';
+import { shuffle } from '../cards.js';
 
 const AI_CLASSES = {
   'random': RandomAI,
@@ -57,11 +58,14 @@ export function getAllAINames() {
  */
 export function createAIPool(numPlayers) {
   const nonRandom = AI_NAMES.filter(n => n !== 'random' && n !== 'passive');
+  // Shuffle available AIs so different combinations play each game
+  const shuffledNames = shuffle([...nonRandom]);
   const ais = [];
   for (let i = 0; i < numPlayers; i++) {
-    const aiName = nonRandom[i % nonRandom.length];
+    const aiName = shuffledNames[i % shuffledNames.length];
     ais.push(getAI(aiName));
   }
+  shuffle(ais); // Also randomize seat order
   return ais;
 }
 
