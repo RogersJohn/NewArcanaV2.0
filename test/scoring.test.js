@@ -229,6 +229,36 @@ describe('Hierophant', () => {
     // Emperor failed, but Hierophant gives 1vp for the failure
     expect(state.players[0].vp).toBe(1);
   });
+
+  it('Hierophant blesses bonus cards even when realm is empty', () => {
+    const state = makeTestState(2);
+    state.roundEndMarkerHolder = -1;
+
+    const hierophant = major(5);
+    const magician = major(1);
+    state.players[0].tome = [hierophant, magician];
+    state.players[0].realm = []; // Empty realm
+
+    const ais = [new TestMagicianAI('CUPS'), new RandomAI()];
+    scoreRoundEnd(state, ais);
+
+    // Magician failed (no realm), but Hierophant gives 1vp
+    expect(state.players[0].vp).toBe(1);
+  });
+
+  it('Without Hierophant, bonus cards score 0 with empty realm', () => {
+    const state = makeTestState(2);
+    state.roundEndMarkerHolder = -1;
+
+    const magician = major(1);
+    state.players[0].tome = [magician];
+    state.players[0].realm = []; // Empty realm, no Hierophant
+
+    const ais = [new TestMagicianAI('CUPS'), new RandomAI()];
+    scoreRoundEnd(state, ais);
+
+    expect(state.players[0].vp).toBe(0);
+  });
 });
 
 describe('Celestial Win', () => {

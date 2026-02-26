@@ -20,31 +20,64 @@ export function scoreRoundEnd(state, ais) {
   // Evaluate bonus cards for all players
   for (let pi = 0; pi < state.players.length; pi++) {
     const player = state.players[pi];
-    if (player.realm.length === 0) continue; // Bonuses require at least 1 realm card
-
-    let hasHierophant = player.tome.some(c => c.type === 'major' && c.number === 5);
+    const hasHierophant = player.tome.some(c => c.type === 'major' && c.number === 5);
+    const hasRealmCards = player.realm.length > 0;
 
     for (const tomeCard of player.tome) {
       if (tomeCard.type !== 'major') continue;
-      const bonus = resolveBonus(state, pi, tomeCard, ais);
-      if (bonus > 0) {
-        player.vp += bonus;
-        log(state, `${player.name} earns ${bonus}vp from ${cardName(tomeCard)}`);
-        recordEvent(state, 'BONUS_SCORED', {
-          cardNumber: tomeCard.number, cardName: tomeCard.name,
-          player: pi, vp: bonus, hierophant: false,
-        });
-      } else if (hasHierophant && isBonusCard(tomeCard) && tomeCard.number !== 5) {
-        // Hierophant: failed bonuses score 1vp
+      if (!isBonusCard(tomeCard)) continue;
+      if (tomeCard.number === 5) continue; // Hierophant itself is not a bonus
+      if (tomeCard.number === 9) continue; // Hermit handled separately below
+
+      if (hasRealmCards) {
+        // Normal bonus evaluation
+        const bonus = resolveBonus(state, pi, tomeCard, ais);
+        if (bonus > 0) {
+          player.vp += bonus;
+          log(state, `${player.name} earns ${bonus}vp from ${cardName(tomeCard)}`);
+          recordEvent(state, 'BONUS_SCORED', {
+            cardNumber: tomeCard.number, cardName: tomeCard.name,
+            player: pi, vp: bonus, hierophant: false,
+          });
+        } else if (hasHierophant) {
+          // Hierophant blesses failed bonus
+          player.vp += 1;
+          log(state, `${player.name} earns 1vp from Hierophant (failed ${cardName(tomeCard)})`);
+          recordEvent(state, 'BONUS_SCORED', {
+            cardNumber: tomeCard.number, cardName: tomeCard.name,
+            player: pi, vp: 1, hierophant: true,
+          });
+        } else {
+          recordEvent(state, 'BONUS_FAILED', {
+            cardNumber: tomeCard.number, cardName: tomeCard.name, player: pi,
+          });
+        }
+      } else {
+        // No realm cards — bonuses don't fire
+        if (hasHierophant) {
+          // Hierophant makes them score 1vp anyway
+          player.vp += 1;
+          log(state, `${player.name} earns 1vp from Hierophant (no realm, ${cardName(tomeCard)})`);
+          recordEvent(state, 'BONUS_SCORED', {
+            cardNumber: tomeCard.number, cardName: tomeCard.name,
+            player: pi, vp: 1, hierophant: true,
+          });
+        } else {
+          recordEvent(state, 'BONUS_FAILED', {
+            cardNumber: tomeCard.number, cardName: tomeCard.name, player: pi,
+          });
+        }
+      }
+    }
+
+    // Hermit bonus: 1vp if Hermit is the only card in Tome (separate check)
+    if (hasRealmCards) {
+      const hermit = player.tome.find(c => c.type === 'major' && c.number === 9);
+      if (hermit && player.tome.length === 1) {
         player.vp += 1;
-        log(state, `${player.name} earns 1vp from Hierophant (failed ${cardName(tomeCard)})`);
+        log(state, `${player.name} earns 1vp from Hermit (only card in Tome)`);
         recordEvent(state, 'BONUS_SCORED', {
-          cardNumber: tomeCard.number, cardName: tomeCard.name,
-          player: pi, vp: 1, hierophant: true,
-        });
-      } else if (isBonusCard(tomeCard) && tomeCard.number !== 5) {
-        recordEvent(state, 'BONUS_FAILED', {
-          cardNumber: tomeCard.number, cardName: tomeCard.name, player: pi,
+          cardNumber: 9, cardName: 'The Hermit', player: pi, vp: 1, hierophant: false,
         });
       }
     }
