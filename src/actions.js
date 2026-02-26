@@ -160,6 +160,81 @@ function addCompletionActions(state, playerIndex, actions, hand) {
       }
     }
   }
+
+  // Straight completions
+  addStraightCompletionActions(realmMinors, hand, actions);
+
+  // Flush completions
+  addFlushCompletionActions(realmMinors, hand, actions);
+}
+
+/**
+ * Add actions for completing straights using realm + hand cards.
+ */
+function addStraightCompletionActions(realm, hand, actions) {
+  const realmRanks = new Set(realm.map(c => c.numericRank));
+  const handByRank = groupBy(hand, c => c.numericRank);
+
+  for (let startRank = 1; startRank <= 10; startRank++) {
+    const straightRanks = [startRank, startRank + 1, startRank + 2, startRank + 3, startRank + 4];
+    const inRealm = straightRanks.filter(r => realmRanks.has(r));
+    const needed = straightRanks.filter(r => !realmRanks.has(r));
+
+    if (inRealm.length === 0 || needed.length === 0 || needed.length > hand.length) continue;
+    if (needed.length > 4) continue;
+
+    const handHasAll = needed.every(r => handByRank[r] && handByRank[r].length > 0);
+    if (!handHasAll) continue;
+
+    const cardsToPlay = needed.map(r => handByRank[r][0]);
+    const cardIds = new Set(cardsToPlay.map(c => c.id));
+    const alreadyExists = actions.some(a =>
+      a.type === 'PLAY_SET' && a.cards.length === cardsToPlay.length &&
+      a.cards.every(c => cardIds.has(c.id))
+    );
+    if (alreadyExists) continue;
+
+    actions.push({
+      type: 'PLAY_SET',
+      cards: cardsToPlay,
+      isCompletion: true,
+      description: `Complete straight (${startRank}-${startRank + 4}) in Realm`,
+    });
+  }
+}
+
+/**
+ * Add actions for completing flushes using realm + hand cards.
+ */
+function addFlushCompletionActions(realm, hand, actions) {
+  const realmBySuit = groupBy(realm, c => c.suit);
+  const handBySuit = groupBy(hand, c => c.suit);
+
+  for (const [suit, realmCards] of Object.entries(realmBySuit)) {
+    const handCards = handBySuit[suit] || [];
+    const totalPossible = realmCards.length + handCards.length;
+    if (totalPossible < 5 || handCards.length === 0) continue;
+
+    const needed = 5 - realmCards.length;
+    if (needed <= 0 || needed > handCards.length || needed > 4) continue;
+
+    const combos = combinations(handCards, needed);
+    for (const combo of combos) {
+      const cardIds = new Set(combo.map(c => c.id));
+      const alreadyExists = actions.some(a =>
+        a.type === 'PLAY_SET' && a.cards.length === combo.length &&
+        a.cards.every(c => cardIds.has(c.id))
+      );
+      if (alreadyExists) continue;
+
+      actions.push({
+        type: 'PLAY_SET',
+        cards: combo,
+        isCompletion: true,
+        description: `Complete ${suit} flush in Realm`,
+      });
+    }
+  }
 }
 
 /**
