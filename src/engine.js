@@ -804,14 +804,30 @@ function executeBuy(state, ais, playerIndex, action) {
     const slot = parseInt(source.slice(-1));
     bought = state.display[slot];
     state.display[slot] = null;
+    // Log the purchase BEFORE refilling so Death log comes after
+    if (bought) {
+      if (bought.number === 13) {
+        state.gameEnded = true;
+        state.gameEndReason = 'death_purchased';
+        log(state, `${player.name} purchased Death! Game ends!`);
+        return;
+      }
+      player.hand.push(bought);
+      log(state, `${player.name} buys ${cardName(bought)} from ${source}`);
+      recordEvent(state, 'CARD_PURCHASED', {
+        cardNumber: bought.number, cardName: bought.name,
+        player: playerIndex, source,
+        paymentValue: payment.reduce((s, c) => s + (c.purchaseValue || 0), 0),
+      });
+    }
     refillDisplay(state, slot);
     checkDeathInDisplay(state);
   } else if (source === 'discard') {
     bought = state.majorDiscard.pop();
   }
 
-  if (bought) {
-    // Check for Death
+  if (bought && !source.startsWith('display')) {
+    // Check for Death (draw/discard sources only — display handled above)
     if (bought.number === 13) {
       state.gameEnded = true;
       state.gameEndReason = 'death_purchased';
