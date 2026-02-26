@@ -1,0 +1,120 @@
+{
+  "config": {
+    "games": 1000,
+    "players": 4,
+    "extended": false,
+    "aiAssignment": "diverse"
+  },
+  "totalGames": 1000,
+  "errors": 0,
+  "aiWinRates": {
+    "Builder": {
+      "wins": 197,
+      "games": 1000,
+      "winRate": 0.197,
+      "ci95": [
+        0.173527752304166,
+        0.22279134823918673
+      ]
+    },
+    "Aggressor": {
+      "wins": 66,
+      "games": 1000,
+      "winRate": 0.066,
+      "ci95": [
+        0.052212125206787474,
+        0.08310962276619951
+      ]
+    },
+    "Celestial": {
+      "wins": 456,
+      "games": 1000,
+      "winRate": 0.456,
+      "ci95": [
+        0.42535695507448296,
+        0.48697981200111956
+      ]
+    },
+    "Controller": {
+      "wins": 281,
+      "games": 1000,
+      "winRate": 0.281,
+      "ci95": [
+        0.2540192993057282,
+        0.309656882275111
+      ]
+    }
+  },
+  "gameEndReasons": {
+    "death_purchased": 377,
+    "death_revealed": 505,
+    "celestial_win": 118
+  },
+  "celestialWinRate": {
+    "count": 118,
+    "rate": 0.118
+  },
+  "averageGameLength": {
+    "mean": 3.37,
+    "median": 3,
+    "min": 1,
+    "max": 13,
+    "stddev": 1.789161814928995
+  },
+  "vpDistribution": {
+    "all": {
+      "mean": 5.09,
+      "median": 4,
+      "stddev": 5.47,
+      "min": 0,
+      "max": 56
+    },
+    "winners": {
+      "mean": 9.39,
+      "median": 8,
+      "stddev": 5.99,
+      "min": 0,
+      "max": 56
+    }
+  },
+  "firstPlayerAdvantage": {
+    "position_0": {
+      "wins": 197,
+      "games": 1000,
+      "winRate": 0.197
+    },
+    "position_1": {
+      "wins": 66,
+      "games": 1000,
+      "winRate": 0.066
+    },
+    "position_2": {
+      "wins": 456,
+      "games": 1000,
+      "winRate": 0.456
+    },
+    "position_3": {
+      "wins": 281,
+      "games": 1000,
+      "winRate": 0.281
+    }
+  },
+  "strategyEffectiveness": {
+    "Builder": {
+      "avgVp": 4.98,
+      "totalGames": 1000
+    },
+    "Aggressor": {
+      "avgVp": 2.65,
+      "totalGames": 1000
+    },
+    "Celestial": {
+      "avgVp": 6.58,
+      "totalGames": 1000
+    },
+    "Controller": {
+      "avgVp": 6.16,
+      "totalGames": 1000
+    }
+  }
+}

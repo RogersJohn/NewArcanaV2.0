@@ -1,0 +1,102 @@
+{
+  "config": {
+    "games": 1000,
+    "players": 3,
+    "extended": false,
+    "aiAssignment": "diverse"
+  },
+  "totalGames": 1000,
+  "errors": 0,
+  "aiWinRates": {
+    "Builder": {
+      "wins": 242,
+      "games": 1000,
+      "winRate": 0.242,
+      "ci95": [
+        0.2164738374441772,
+        0.26950084222640036
+      ]
+    },
+    "Aggressor": {
+      "wins": 128,
+      "games": 1000,
+      "winRate": 0.128,
+      "ci95": [
+        0.10870719327761863,
+        0.15014001927065596
+      ]
+    },
+    "Celestial": {
+      "wins": 630,
+      "games": 1000,
+      "winRate": 0.63,
+      "ci95": [
+        0.5996311529703994,
+        0.659373853397139
+      ]
+    }
+  },
+  "gameEndReasons": {
+    "death_revealed": 520,
+    "death_purchased": 393,
+    "celestial_win": 87
+  },
+  "celestialWinRate": {
+    "count": 87,
+    "rate": 0.087
+  },
+  "averageGameLength": {
+    "mean": 2.842,
+    "median": 3,
+    "min": 1,
+    "max": 9,
+    "stddev": 1.4936652904851133
+  },
+  "vpDistribution": {
+    "all": {
+      "mean": 4.28,
+      "median": 3,
+      "stddev": 4.22,
+      "min": 0,
+      "max": 29
+    },
+    "winners": {
+      "mean": 7.26,
+      "median": 7,
+      "stddev": 4.37,
+      "min": 0,
+      "max": 29
+    }
+  },
+  "firstPlayerAdvantage": {
+    "position_0": {
+      "wins": 242,
+      "games": 1000,
+      "winRate": 0.242
+    },
+    "position_1": {
+      "wins": 128,
+      "games": 1000,
+      "winRate": 0.128
+    },
+    "position_2": {
+      "wins": 630,
+      "games": 1000,
+      "winRate": 0.63
+    }
+  },
+  "strategyEffectiveness": {
+    "Builder": {
+      "avgVp": 4.26,
+      "totalGames": 1000
+    },
+    "Aggressor": {
+      "avgVp": 2.6,
+      "totalGames": 1000
+    },
+    "Celestial": {
+      "avgVp": 5.99,
+      "totalGames": 1000
+    }
+  }
+}

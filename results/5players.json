@@ -1,0 +1,138 @@
+{
+  "config": {
+    "games": 1000,
+    "players": 5,
+    "extended": false,
+    "aiAssignment": "diverse"
+  },
+  "totalGames": 1000,
+  "errors": 0,
+  "aiWinRates": {
+    "Builder": {
+      "wins": 133,
+      "games": 1000,
+      "winRate": 0.133,
+      "ci95": [
+        0.11335082497407287,
+        0.15545811858833783
+      ]
+    },
+    "Aggressor": {
+      "wins": 22,
+      "games": 1000,
+      "winRate": 0.022,
+      "ci95": [
+        0.014572598673771597,
+        0.03308591637481774
+      ]
+    },
+    "Celestial": {
+      "wins": 406,
+      "games": 1000,
+      "winRate": 0.406,
+      "ci95": [
+        0.3759781620944279,
+        0.4367412948398136
+      ]
+    },
+    "Controller": {
+      "wins": 187,
+      "games": 1000,
+      "winRate": 0.187,
+      "ci95": [
+        0.16404741574204446,
+        0.21234822277303605
+      ]
+    },
+    "Opportunist": {
+      "wins": 252,
+      "games": 1000,
+      "winRate": 0.252,
+      "ci95": [
+        0.22607425342832418,
+        0.2798238882705255
+      ]
+    }
+  },
+  "gameEndReasons": {
+    "death_revealed": 565,
+    "death_purchased": 182,
+    "celestial_win": 253
+  },
+  "celestialWinRate": {
+    "count": 253,
+    "rate": 0.253
+  },
+  "averageGameLength": {
+    "mean": 5.874,
+    "median": 6,
+    "min": 1,
+    "max": 11,
+    "stddev": 1.9768975694253799
+  },
+  "vpDistribution": {
+    "all": {
+      "mean": 9.82,
+      "median": 8,
+      "stddev": 8.27,
+      "min": 0,
+      "max": 53
+    },
+    "winners": {
+      "mean": 17.12,
+      "median": 16,
+      "stddev": 8.66,
+      "min": 2,
+      "max": 53
+    }
+  },
+  "firstPlayerAdvantage": {
+    "position_0": {
+      "wins": 133,
+      "games": 1000,
+      "winRate": 0.133
+    },
+    "position_1": {
+      "wins": 22,
+      "games": 1000,
+      "winRate": 0.022
+    },
+    "position_2": {
+      "wins": 406,
+      "games": 1000,
+      "winRate": 0.406
+    },
+    "position_3": {
+      "wins": 187,
+      "games": 1000,
+      "winRate": 0.187
+    },
+    "position_4": {
+      "wins": 252,
+      "games": 1000,
+      "winRate": 0.252
+    }
+  },
+  "strategyEffectiveness": {
+    "Builder": {
+      "avgVp": 9.72,
+      "totalGames": 1000
+    },
+    "Aggressor": {
+      "avgVp": 3.62,
+      "totalGames": 1000
+    },
+    "Celestial": {
+      "avgVp": 10.56,
+      "totalGames": 1000
+    },
+    "Controller": {
+      "avgVp": 11.85,
+      "totalGames": 1000
+    },
+    "Opportunist": {
+      "avgVp": 13.33,
+      "totalGames": 1000
+    }
+  }
+}
