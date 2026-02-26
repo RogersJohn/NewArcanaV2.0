@@ -14,6 +14,7 @@
 
 import { runSimulation, runSingleGame } from './src/simulation.js';
 import { aggregateStats, formatReport, computeCardAnalytics, formatCardReport } from './src/stats.js';
+import { analyzeCardBalance } from './src/card-balance.js';
 import { writeFileSync, mkdirSync } from 'fs';
 
 function parseArgs(argv) {
@@ -26,6 +27,7 @@ function parseArgs(argv) {
     json: null,
     single: false,
     report: false,
+    cardBalance: false,
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -54,6 +56,9 @@ function parseArgs(argv) {
       case '--report':
         args.report = true;
         break;
+      case '--card-balance':
+        args.cardBalance = true;
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -65,7 +70,8 @@ Usage: node index.js [options]
   --verbose       Log individual games
   --json FILE     Output stats as JSON
   --single        Run one game with verbose logging
-  --report        Generate card analytics report`);
+  --report        Generate card analytics report
+  --card-balance  Run card balance analysis (5 metrics with anomaly flags)`);
         process.exit(0);
     }
   }
@@ -106,6 +112,15 @@ if (args.single) {
     cardAnalytics = computeCardAnalytics(simResults.results);
     const cardReport = formatCardReport(cardAnalytics);
     console.log(cardReport);
+  }
+
+  if (args.cardBalance) {
+    const balanceResult = analyzeCardBalance(simResults.results);
+    console.log(balanceResult.text);
+    if (args.json) {
+      cardAnalytics = cardAnalytics || {};
+      cardAnalytics.cardBalance = balanceResult.metrics;
+    }
   }
 
   if (args.json) {

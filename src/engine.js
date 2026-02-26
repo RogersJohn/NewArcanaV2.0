@@ -67,6 +67,11 @@ export function setup(state, ais) {
   // Fill display (3 cards from top of major deck)
   for (let i = 0; i < 3; i++) {
     state.display[i] = drawMajorCard(state);
+    if (state.display[i]) {
+      recordEvent(state, 'CARD_DISPLAYED', {
+        cardNumber: state.display[i].number, cardName: cardName(state.display[i]),
+      });
+    }
     // Check for Death in display
     if (state.display[i] && state.display[i].number === 13) {
       state.gameEnded = true;
@@ -385,6 +390,9 @@ function executeRoyalAttack(state, ais, playerIndex, action) {
             state.pit.push(card);
           }
           log(state, `${defender.name} blocks [${cardName(card)} attack on ${cardName(targetCard)}] with King! Both go to Pit`);
+          recordEvent(state, 'ROYAL_KING_BLOCKED', {
+            suit: card.suit, rank: card.rank,
+          });
           return;
         }
       }
@@ -882,6 +890,12 @@ function checkAceBlock(state, ais, actorIndex, action) {
         }
       }
       state.pit.push(ace);
+      if (action.card && action.card.type === 'major') {
+        recordEvent(state, 'ACE_BLOCKED', {
+          cardNumber: action.card.number,
+          cardName: cardName(action.card),
+        });
+      }
       return true;
     }
   }
@@ -967,6 +981,9 @@ export function handleRoundEnd(state, ais) {
 function ageDisplay(state) {
   // Slot 2 -> major discard
   if (state.display[2]) {
+    recordEvent(state, 'CARD_AGED_OFF', {
+      cardNumber: state.display[2].number, cardName: cardName(state.display[2]),
+    });
     state.majorDiscard.push(state.display[2]);
   }
 
@@ -976,6 +993,11 @@ function ageDisplay(state) {
 
   // New card to slot 0
   state.display[0] = drawMajorCard(state);
+  if (state.display[0]) {
+    recordEvent(state, 'CARD_DISPLAYED', {
+      cardNumber: state.display[0].number, cardName: cardName(state.display[0]),
+    });
+  }
 
   // Check for Death in any display slot
   checkDeathInDisplay(state);

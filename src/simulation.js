@@ -96,6 +96,9 @@ function extractGameResult(state, ais) {
     position: i,
     tomeCards: p.tome.map(c => c.type === 'major' ? c.name : 'minor'),
     realmSize: p.realm.length,
+    majorHoldings: [...p.tome, ...p.realm, ...p.vault]
+      .filter(c => c.type === 'major')
+      .map(c => c.number),
   }));
 
   return {
@@ -131,6 +134,9 @@ function summarizeCardEvents(events, winnerPi) {
         actionPlayed: 0, wildPlayed: 0,
         bonusScored: 0, bonusFailed: 0, bonusVpTotal: 0,
         bonusScoredByWinner: 0,
+        bonusScoredReal: 0, bonusScoredHierophant: 0,
+        aceBlocked: 0, kingBlocked: 0,
+        displayAppearances: 0, agedOff: 0,
       };
     }
   }
@@ -161,9 +167,23 @@ function summarizeCardEvents(events, winnerPi) {
         c.bonusScored++;
         c.bonusVpTotal += e.vp;
         if (isWinner) c.bonusScoredByWinner++;
+        if (e.hierophant) c.bonusScoredHierophant++;
+        else c.bonusScoredReal++;
         break;
       case 'BONUS_FAILED':
         c.bonusFailed++;
+        break;
+      case 'ACE_BLOCKED':
+        c.aceBlocked++;
+        break;
+      case 'KING_BLOCKED':
+        c.kingBlocked++;
+        break;
+      case 'CARD_DISPLAYED':
+        c.displayAppearances++;
+        break;
+      case 'CARD_AGED_OFF':
+        c.agedOff++;
         break;
     }
   }

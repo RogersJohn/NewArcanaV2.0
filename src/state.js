@@ -146,6 +146,11 @@ export function refillDisplay(state, takenSlot) {
   }
   // Refill leftmost slot
   state.display[0] = drawMajorCard(state);
+  if (state.display[0]) {
+    recordEvent(state, 'CARD_DISPLAYED', {
+      cardNumber: state.display[0].number, cardName: state.display[0].name,
+    });
+  }
 }
 
 /**

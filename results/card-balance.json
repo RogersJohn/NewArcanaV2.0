@@ -1,0 +1,502 @@
+{
+  "config": {
+    "games": 20,
+    "players": 4,
+    "aiAssignment": "diverse"
+  },
+  "totalGames": 20,
+  "metrics": {
+    "winnerAffinity": [
+      {
+        "number": 8,
+        "name": "Strength",
+        "purchased": 7,
+        "purchasedByWinner": 4,
+        "rate": 0.5714285714285714,
+        "flag": "HIGH"
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "purchased": 5,
+        "purchasedByWinner": 2,
+        "rate": 0.4,
+        "flag": ""
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "purchased": 5,
+        "purchasedByWinner": 2,
+        "rate": 0.4,
+        "flag": ""
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "purchased": 8,
+        "purchasedByWinner": 3,
+        "rate": 0.375,
+        "flag": ""
+      },
+      {
+        "number": 18,
+        "name": "The Moon",
+        "purchased": 17,
+        "purchasedByWinner": 6,
+        "rate": 0.35294117647058826,
+        "flag": ""
+      },
+      {
+        "number": 21,
+        "name": "The World",
+        "purchased": 13,
+        "purchasedByWinner": 4,
+        "rate": 0.3076923076923077,
+        "flag": ""
+      },
+      {
+        "number": 10,
+        "name": "Wheel of Fortune",
+        "purchased": 10,
+        "purchasedByWinner": 3,
+        "rate": 0.3,
+        "flag": ""
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "purchased": 7,
+        "purchasedByWinner": 2,
+        "rate": 0.2857142857142857,
+        "flag": ""
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "purchased": 7,
+        "purchasedByWinner": 2,
+        "rate": 0.2857142857142857,
+        "flag": ""
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "purchased": 15,
+        "purchasedByWinner": 4,
+        "rate": 0.26666666666666666,
+        "flag": ""
+      },
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "purchased": 9,
+        "purchasedByWinner": 1,
+        "rate": 0.1111111111111111,
+        "flag": "LOW"
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "purchased": 5,
+        "purchasedByWinner": 0,
+        "rate": 0,
+        "flag": "LOW"
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "purchased": 6,
+        "purchasedByWinner": 0,
+        "rate": 0,
+        "flag": "LOW"
+      },
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "purchased": 5,
+        "purchasedByWinner": 0,
+        "rate": 0,
+        "flag": "LOW"
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "purchased": 10,
+        "purchasedByWinner": 0,
+        "rate": 0,
+        "flag": "LOW"
+      }
+    ],
+    "vpDelta": [
+      {
+        "number": 15,
+        "name": "The Devil",
+        "gamesHeld": 5,
+        "meanDelta": 3.466666666666666,
+        "flag": ""
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "gamesHeld": 5,
+        "meanDelta": 1,
+        "flag": ""
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "gamesHeld": 10,
+        "meanDelta": -0.33333333333333304,
+        "flag": ""
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "gamesHeld": 7,
+        "meanDelta": -2.0476190476190474,
+        "flag": "WEAK"
+      },
+      {
+        "number": 18,
+        "name": "The Moon",
+        "gamesHeld": 11,
+        "meanDelta": -2.3030303030303028,
+        "flag": "WEAK"
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "gamesHeld": 8,
+        "meanDelta": -4,
+        "flag": "WEAK"
+      },
+      {
+        "number": 21,
+        "name": "The World",
+        "gamesHeld": 9,
+        "meanDelta": -4.2592592592592595,
+        "flag": "WEAK"
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "gamesHeld": 5,
+        "meanDelta": -4.266666666666667,
+        "flag": "WEAK"
+      }
+    ],
+    "actionEffectiveness": [
+      {
+        "number": 8,
+        "name": "Strength",
+        "played": 6,
+        "aceBlocked": 6,
+        "kingBlocked": 0,
+        "successRate": 0.5,
+        "flag": ""
+      },
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "played": 17,
+        "aceBlocked": 8,
+        "kingBlocked": 0,
+        "successRate": 0.68,
+        "flag": ""
+      },
+      {
+        "number": 12,
+        "name": "The Hanged Man",
+        "played": 3,
+        "aceBlocked": 0,
+        "kingBlocked": 0,
+        "successRate": 1,
+        "flag": ""
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "played": 6,
+        "aceBlocked": 0,
+        "kingBlocked": 0,
+        "successRate": 1,
+        "flag": ""
+      }
+    ],
+    "bonusHitRate": [
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "scored": 5,
+        "hierophant": 0,
+        "failed": 0,
+        "rate": 1,
+        "flag": ""
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "scored": 3,
+        "hierophant": 0,
+        "failed": 4,
+        "rate": 0.42857142857142855,
+        "flag": ""
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "scored": 7,
+        "hierophant": 3,
+        "failed": 10,
+        "rate": 0.4117647058823529,
+        "flag": ""
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "scored": 6,
+        "hierophant": 0,
+        "failed": 9,
+        "rate": 0.4,
+        "flag": ""
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "scored": 9,
+        "hierophant": 1,
+        "failed": 14,
+        "rate": 0.391304347826087,
+        "flag": ""
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "scored": 15,
+        "hierophant": 0,
+        "failed": 26,
+        "rate": 0.36585365853658536,
+        "flag": ""
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "scored": 7,
+        "hierophant": 0,
+        "failed": 15,
+        "rate": 0.3181818181818182,
+        "flag": ""
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "scored": 2,
+        "hierophant": 2,
+        "failed": 11,
+        "rate": 0.15384615384615385,
+        "flag": "LOW"
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "scored": 1,
+        "hierophant": 4,
+        "failed": 7,
+        "rate": 0.125,
+        "flag": "LOW"
+      }
+    ],
+    "purchaseRate": [
+      {
+        "number": 18,
+        "name": "The Moon",
+        "purchased": 17,
+        "displayed": 14,
+        "agedOff": 0,
+        "purchaseRate": 1,
+        "flag": ""
+      },
+      {
+        "number": 17,
+        "name": "The Star",
+        "purchased": 15,
+        "displayed": 13,
+        "agedOff": 1,
+        "purchaseRate": 0.9375,
+        "flag": ""
+      },
+      {
+        "number": 21,
+        "name": "The World",
+        "purchased": 13,
+        "displayed": 15,
+        "agedOff": 1,
+        "purchaseRate": 0.9285714285714286,
+        "flag": ""
+      },
+      {
+        "number": 19,
+        "name": "The Sun",
+        "purchased": 8,
+        "displayed": 9,
+        "agedOff": 1,
+        "purchaseRate": 0.8888888888888888,
+        "flag": ""
+      },
+      {
+        "number": 15,
+        "name": "The Devil",
+        "purchased": 5,
+        "displayed": 9,
+        "agedOff": 2,
+        "purchaseRate": 0.7142857142857143,
+        "flag": ""
+      },
+      {
+        "number": 5,
+        "name": "The Hierophant",
+        "purchased": 9,
+        "displayed": 13,
+        "agedOff": 7,
+        "purchaseRate": 0.5625,
+        "flag": ""
+      },
+      {
+        "number": 16,
+        "name": "The Tower",
+        "purchased": 10,
+        "displayed": 16,
+        "agedOff": 8,
+        "purchaseRate": 0.5555555555555556,
+        "flag": ""
+      },
+      {
+        "number": 2,
+        "name": "The High Priestess",
+        "purchased": 7,
+        "displayed": 12,
+        "agedOff": 6,
+        "purchaseRate": 0.5384615384615384,
+        "flag": ""
+      },
+      {
+        "number": 10,
+        "name": "Wheel of Fortune",
+        "purchased": 10,
+        "displayed": 15,
+        "agedOff": 9,
+        "purchaseRate": 0.5263157894736842,
+        "flag": ""
+      },
+      {
+        "number": 7,
+        "name": "The Chariot",
+        "purchased": 5,
+        "displayed": 10,
+        "agedOff": 5,
+        "purchaseRate": 0.5,
+        "flag": ""
+      },
+      {
+        "number": 14,
+        "name": "Temperance",
+        "purchased": 7,
+        "displayed": 11,
+        "agedOff": 7,
+        "purchaseRate": 0.5,
+        "flag": ""
+      },
+      {
+        "number": 4,
+        "name": "The Emperor",
+        "purchased": 6,
+        "displayed": 10,
+        "agedOff": 7,
+        "purchaseRate": 0.46153846153846156,
+        "flag": ""
+      },
+      {
+        "number": 8,
+        "name": "Strength",
+        "purchased": 7,
+        "displayed": 12,
+        "agedOff": 9,
+        "purchaseRate": 0.4375,
+        "flag": ""
+      },
+      {
+        "number": 3,
+        "name": "The Empress",
+        "purchased": 5,
+        "displayed": 11,
+        "agedOff": 7,
+        "purchaseRate": 0.4166666666666667,
+        "flag": ""
+      },
+      {
+        "number": 9,
+        "name": "The Hermit",
+        "purchased": 5,
+        "displayed": 12,
+        "agedOff": 8,
+        "purchaseRate": 0.38461538461538464,
+        "flag": ""
+      },
+      {
+        "number": 11,
+        "name": "Justice",
+        "purchased": 4,
+        "displayed": 10,
+        "agedOff": 8,
+        "purchaseRate": 0.3333333333333333,
+        "flag": ""
+      },
+      {
+        "number": 20,
+        "name": "Judgement",
+        "purchased": 3,
+        "displayed": 12,
+        "agedOff": 7,
+        "purchaseRate": 0.3,
+        "flag": ""
+      },
+      {
+        "number": 1,
+        "name": "The Magician",
+        "purchased": 2,
+        "displayed": 12,
+        "agedOff": 6,
+        "purchaseRate": 0.25,
+        "flag": "IGNORED"
+      },
+      {
+        "number": 6,
+        "name": "The Lovers",
+        "purchased": 3,
+        "displayed": 10,
+        "agedOff": 9,
+        "purchaseRate": 0.25,
+        "flag": "IGNORED"
+      },
+      {
+        "number": 12,
+        "name": "The Hanged Man",
+        "purchased": 3,
+        "displayed": 16,
+        "agedOff": 11,
+        "purchaseRate": 0.21428571428571427,
+        "flag": "IGNORED"
+      },
+      {
+        "number": 0,
+        "name": "The Fool",
+        "purchased": 1,
+        "displayed": 14,
+        "agedOff": 9,
+        "purchaseRate": 0.1,
+        "flag": "IGNORED"
+      }
+    ]
+  }
+}
