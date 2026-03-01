@@ -3,7 +3,12 @@
  * Handles Royal attacks, Ace/King blocking, Major Arcana actions, Tome effects.
  */
 
-import { cardName, PROTECTION_MAP, isCelestial } from './cards.js';
+import { cardName, PROTECTION_MAP as DEFAULT_PROTECTION_MAP, isCelestial } from './cards.js';
+
+/** Get the protection suit for a card number, using config if available. */
+function getProtection(state, cardNumber) {
+  return state.config?.protectionMap?.[cardNumber] ?? DEFAULT_PROTECTION_MAP[cardNumber];
+}
 import { drawMinorCard, drawMajorCard, refillDisplay, getHandSize, log } from './state.js';
 
 /**
@@ -187,8 +192,8 @@ export function resolveChariot(state, ais, playerIndex, targets) {
     celestial = state.players[targets.playerIndex].realm.splice(targets.cardIndex, 1)[0];
   } else if (targets.source === 'tome') {
     celestial = state.players[targets.playerIndex].tome.splice(targets.cardIndex, 1)[0];
-    if (PROTECTION_MAP[celestial?.number]) {
-      state.players[targets.playerIndex].tomeProtections.delete(PROTECTION_MAP[celestial.number]);
+    if (getProtection(state, celestial?.number)) {
+      state.players[targets.playerIndex].tomeProtections.delete(getProtection(state, celestial.number));
     }
   } else if (targets.source === 'display') {
     celestial = state.display[targets.slotIndex];
@@ -203,8 +208,8 @@ export function resolveChariot(state, ais, playerIndex, targets) {
       const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
       const discarded = player.tome.splice(Math.min(discardIdx, player.tome.length - 1), 1)[0];
       state.pit.push(discarded);
-      if (PROTECTION_MAP[discarded?.number]) {
-        player.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
+      if (getProtection(state, discarded?.number)) {
+        player.tomeProtections.delete(getProtection(state, discarded.number));
       }
     }
     player.tome.push(celestial);
@@ -223,8 +228,8 @@ export function resolveStrength(state, ais, playerIndex, targets) {
     majorCard = state.players[targets.playerIndex].realm.splice(targets.cardIndex, 1)[0];
   } else if (targets.source === 'tome') {
     majorCard = state.players[targets.playerIndex].tome.splice(targets.cardIndex, 1)[0];
-    if (PROTECTION_MAP[majorCard?.number]) {
-      state.players[targets.playerIndex].tomeProtections.delete(PROTECTION_MAP[majorCard.number]);
+    if (getProtection(state, majorCard?.number)) {
+      state.players[targets.playerIndex].tomeProtections.delete(getProtection(state, majorCard.number));
     }
   }
 
@@ -279,22 +284,22 @@ export function resolveHangedMan(state, ais, playerIndex, targets) {
   const card = source.tome.splice(targets.cardIndex, 1)[0];
   if (!card) return;
 
-  if (PROTECTION_MAP[card.number]) {
-    source.tomeProtections.delete(PROTECTION_MAP[card.number]);
+  if (getProtection(state, card.number)) {
+    source.tomeProtections.delete(getProtection(state, card.number));
   }
 
   if (player.tome.length >= 3) {
     const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
     const discarded = player.tome.splice(Math.min(discardIdx, player.tome.length - 1), 1)[0];
     state.pit.push(discarded);
-    if (PROTECTION_MAP[discarded?.number]) {
-      player.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
+    if (getProtection(state, discarded?.number)) {
+      player.tomeProtections.delete(getProtection(state, discarded.number));
     }
   }
 
   player.tome.push(card);
-  if (PROTECTION_MAP[card.number]) {
-    player.tomeProtections.add(PROTECTION_MAP[card.number]);
+  if (getProtection(state, card.number)) {
+    player.tomeProtections.add(getProtection(state, card.number));
   }
   log(state, `${player.name} takes ${cardName(card)} from ${source.name}'s Tome via Hanged Man`);
 }
@@ -310,8 +315,8 @@ export function resolveTower(state, ais, playerIndex, targets) {
     if (state.players[pi].tome.length > myTomeSize && state.players[pi].tome.length > 0) {
       const tomeIdx = state.players[pi].tome.length - 1;
       const card = state.players[pi].tome.splice(tomeIdx, 1)[0];
-      if (PROTECTION_MAP[card?.number]) {
-        state.players[pi].tomeProtections.delete(PROTECTION_MAP[card.number]);
+      if (getProtection(state, card?.number)) {
+        state.players[pi].tomeProtections.delete(getProtection(state, card.number));
       }
       state.pit.push(card);
       log(state, `Tower destroys ${cardName(card)} in ${state.players[pi].name}'s Tome`);
@@ -340,8 +345,8 @@ export function resolvePlague(state, ais, playerIndex, targets) {
   if (target.tome.length >= 3) {
     const discardIdx = ais[playerIndex].chooseTomeDiscard(state, targets.playerIndex);
     const discarded = target.tome.splice(Math.min(discardIdx, target.tome.length - 1), 1)[0];
-    if (PROTECTION_MAP[discarded?.number]) {
-      target.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
+    if (getProtection(state, discarded?.number)) {
+      target.tomeProtections.delete(getProtection(state, discarded.number));
     }
     state.pit.push(discarded);
   }
@@ -373,16 +378,16 @@ export function applyTomeEffect(state, ais, playerIndex, card) {
         if (idx !== -1) {
           player.tome.splice(idx, 1);
           player.hand.push(tc);
-          if (PROTECTION_MAP[tc.number]) {
-            player.tomeProtections.delete(PROTECTION_MAP[tc.number]);
+          if (getProtection(state, tc.number)) {
+            player.tomeProtections.delete(getProtection(state, tc.number));
           }
         }
       }
       log(state, `${player.name} takes Tome cards into hand via Hermit`);
       break;
     }
-    case 15: { // Devil: draw up to 7
-      const limit = 7;
+    case 15: { // Devil: draw up to devilHandSizeLimit
+      const limit = state.config?.gameRules?.devilHandSizeLimit ?? 7;
       const currentSize = getHandSize(player);
       const toDraw = Math.max(0, limit - currentSize);
       for (let i = 0; i < toDraw; i++) {
@@ -397,7 +402,7 @@ export function applyTomeEffect(state, ais, playerIndex, card) {
     case 22: // Faith
     case 23: // Hope
     case 25: { // Prudence
-      const suit = PROTECTION_MAP[card.number];
+      const suit = getProtection(state, card.number);
       if (suit) {
         player.tomeProtections.add(suit);
         log(state, `${player.name}'s ${suit} cards are now protected`);

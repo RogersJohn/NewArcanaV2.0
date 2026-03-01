@@ -81,11 +81,13 @@ export function scoreRoundEnd(state, ais) {
     // Hermit bonus: 1vp if Hermit is the only card in Tome (separate check)
     if (hasRealmCards) {
       const hermit = player.tome.find(c => c.type === 'major' && c.number === 9);
+      const hermitCfg = state.config?.bonusCards?.[9];
+      const hermitVp = hermitCfg?.vp ?? 1;
       if (hermit && player.tome.length === 1) {
-        player.vp += 1;
-        log(state, `${player.name} earns 1vp from Hermit (only card in Tome)`);
+        player.vp += hermitVp;
+        log(state, `${player.name} earns ${hermitVp}vp from Hermit (only card in Tome)`);
         recordEvent(state, 'BONUS_SCORED', {
-          cardNumber: 9, cardName: 'The Hermit', player: pi, vp: 1, hierophant: false,
+          cardNumber: 9, cardName: 'The Hermit', player: pi, vp: hermitVp, hierophant: false,
         });
       }
     }
@@ -145,46 +147,44 @@ function isBonusCard(card) {
  */
 export function resolveBonus(state, playerIndex, card, ais) {
   const player = state.players[playerIndex];
+  const bonusCfg = state.config?.bonusCards?.[card.number];
 
+  // Fool and Hierophant have special logic, not config-driven
+  if (card.number === 0) return resolveFool(state, playerIndex, ais);
+  if (card.number === 5) return 0; // Hierophant itself is not a bonus
+
+  // If we have a config entry, use config-driven resolution
+  if (bonusCfg) {
+    switch (bonusCfg.bonusType) {
+      case 'suitMajority':
+        return resolveMagician(state, playerIndex, ais);
+      case 'suitHighest':
+        return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1);
+      case 'pairCounting':
+        return resolveLovers(state, playerIndex, bonusCfg.vpPerPair ?? 1);
+      case 'hermitExclusive':
+        return player.tome.length === 1 && player.tome[0].number === 9 ? (bonusCfg.vp ?? 1) : 0;
+      case 'noSuitInRealm':
+        return resolveNoneOfSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.vp ?? 1);
+      default:
+        return 0;
+    }
+  }
+
+  // Fallback for cards without config entries (hardcoded defaults)
   switch (card.number) {
-    case 0: // The Fool - duplicate an opponent's bonus
-      return resolveFool(state, playerIndex, ais);
-
-    case 1: // Magician - 1vp if you have MORE of a named suit than ANY other player
-      return resolveMagician(state, playerIndex, ais);
-
-    case 2: // High Priestess - 1vp for highest WANDS (wilds NOT counted, ties OK)
-      return resolveSuitBonus(state, playerIndex, 'WANDS', false, true);
-
-    case 3: // Empress - 1vp for highest CUPS
-      return resolveSuitBonus(state, playerIndex, 'CUPS', false, true);
-
-    case 4: // Emperor - 1vp for highest COINS
-      return resolveSuitBonus(state, playerIndex, 'COINS', false, true);
-
-    case 6: // Lovers - 1vp per pair in realm
-      return resolveLovers(state, playerIndex);
-
-    case 9: // Hermit bonus - 1vp if Hermit is only card in Tome
-      return player.tome.length === 1 && player.tome[0].number === 9 ? 1 : 0;
-
-    case 11: // Justice - 1vp for highest SWORDS
-      return resolveSuitBonus(state, playerIndex, 'SWORDS', false, true);
-
-    case 14: // Temperance bonus - 1vp if no CUPS in realm (wilds NOT counted)
-      return resolveNoneOfSuitBonus(state, playerIndex, 'CUPS');
-
-    case 22: // Faith bonus - 1vp if no SWORDS in realm
-      return resolveNoneOfSuitBonus(state, playerIndex, 'SWORDS');
-
-    case 23: // Hope bonus - 1vp if no WANDS in realm
-      return resolveNoneOfSuitBonus(state, playerIndex, 'WANDS');
-
-    case 25: // Prudence bonus - 1vp if no COINS in realm
-      return resolveNoneOfSuitBonus(state, playerIndex, 'COINS');
-
-    default:
-      return 0;
+    case 1: return resolveMagician(state, playerIndex, ais);
+    case 2: return resolveSuitBonus(state, playerIndex, 'WANDS', false, true);
+    case 3: return resolveSuitBonus(state, playerIndex, 'CUPS', false, true);
+    case 4: return resolveSuitBonus(state, playerIndex, 'COINS', false, true);
+    case 6: return resolveLovers(state, playerIndex);
+    case 9: return player.tome.length === 1 && player.tome[0].number === 9 ? 1 : 0;
+    case 11: return resolveSuitBonus(state, playerIndex, 'SWORDS', false, true);
+    case 14: return resolveNoneOfSuitBonus(state, playerIndex, 'CUPS');
+    case 22: return resolveNoneOfSuitBonus(state, playerIndex, 'SWORDS');
+    case 23: return resolveNoneOfSuitBonus(state, playerIndex, 'WANDS');
+    case 25: return resolveNoneOfSuitBonus(state, playerIndex, 'COINS');
+    default: return 0;
   }
 }
 
@@ -222,23 +222,28 @@ function resolveMagician(state, playerIndex, ais) {
   const suit = ai.chooseMagicianSuit(state, playerIndex);
   recordDecision(state, DECISION_TYPES.MAGICIAN_SUIT, playerIndex, suit);
 
-  const myCount = countSuitInRealm(state.players[playerIndex], suit, true); // count wilds
+  const bonusCfg = state.config?.bonusCards?.[1];
+  const vp = bonusCfg?.vp ?? 1;
+  const countWilds = bonusCfg?.countWilds ?? true;
+  const myCount = countSuitInRealm(state.players[playerIndex], suit, countWilds);
 
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === playerIndex) continue;
-    const otherCount = countSuitInRealm(state.players[pi], suit, true);
+    const otherCount = countSuitInRealm(state.players[pi], suit, countWilds);
     if (otherCount >= myCount) return 0; // Must have strictly MORE
   }
 
-  return myCount > 0 ? 1 : 0;
+  return myCount > 0 ? vp : 0;
 }
 
 /**
- * Suit bonus: 1vp for having the highest count of a suit.
+ * Suit bonus: vp for having the highest count of a suit.
  * @param {boolean} countWilds - Whether to count wild cards
  * @param {boolean} allowTie - Whether ties still score
+ * @param {number} [vp=1] - VP to award
  */
-function resolveSuitBonus(state, playerIndex, suit, countWilds, allowTie) {
+function resolveSuitBonus(state, playerIndex, suit, countWilds, allowTie, vp) {
+  const award = vp ?? 1;
   const myCount = countSuitInRealm(state.players[playerIndex], suit, countWilds);
   if (myCount === 0) return 0;
 
@@ -253,7 +258,7 @@ function resolveSuitBonus(state, playerIndex, suit, countWilds, allowTie) {
   }
 
   if (tied && !allowTie) return 0;
-  return 1;
+  return award;
 }
 
 /**
@@ -269,9 +274,11 @@ function countSuitInRealm(player, suit, countWilds) {
 }
 
 /**
- * Lovers: 1vp per pair. 2vp for two pair. NOT for three/four/five of a kind.
+ * Lovers: vpPerPair per pair. NOT for three/four/five of a kind.
+ * @param {number} [vpPerPair=1] - VP per pair
  */
-function resolveLovers(state, playerIndex) {
+function resolveLovers(state, playerIndex, vpPerPair) {
+  const pairVp = vpPerPair ?? 1;
   const player = state.players[playerIndex];
   const minors = player.realm.filter(c => c.type === 'minor');
   const rankCounts = {};
@@ -292,21 +299,23 @@ function resolveLovers(state, playerIndex) {
     // With a wild, the hand would be evaluated as the strongest possible
     // Can't "downgrade" to count pairs. Evaluate naturally.
     const eval_ = evaluateHand(player.realm);
-    if (eval_.type === 'One Pair') return 1;
-    if (eval_.type === 'Two Pair') return 2;
+    if (eval_.type === 'One Pair') return pairVp;
+    if (eval_.type === 'Two Pair') return pairVp * 2;
     return 0;
   }
 
-  return pairCount;
+  return pairCount * pairVp;
 }
 
 /**
- * Protection card bonus: 1vp if no cards of that suit in realm (wilds not counted).
+ * Protection card bonus: vp if no cards of that suit in realm (wilds not counted).
+ * @param {number} [vp=1] - VP to award
  */
-function resolveNoneOfSuitBonus(state, playerIndex, suit) {
+function resolveNoneOfSuitBonus(state, playerIndex, suit, vp) {
+  const award = vp ?? 1;
   const player = state.players[playerIndex];
   const hasMinorOfSuit = player.realm.some(c => c.type === 'minor' && c.suit === suit);
-  return hasMinorOfSuit ? 0 : 1;
+  return hasMinorOfSuit ? 0 : award;
 }
 
 /**
@@ -314,23 +323,26 @@ function resolveNoneOfSuitBonus(state, playerIndex, suit) {
  * @param {object} state
  */
 export function scoreGameEnd(state) {
+  const celestialVp = state.config?.scoring?.celestialVp ?? 2;
+  const plagueVp = state.config?.scoring?.plagueVp ?? -3;
+
   for (let pi = 0; pi < state.players.length; pi++) {
     const player = state.players[pi];
 
-    // Celestials: 2vp each (in Tome, Realm, or Vault)
+    // Celestials: celestialVp each (in Tome, Realm, or Vault)
     const allCards = [...player.tome, ...player.realm, ...player.vault];
     for (const card of allCards) {
       if (isCelestial(card)) {
-        player.vp += 2;
-        log(state, `${player.name} earns 2vp for ${cardName(card)} (Celestial)`);
+        player.vp += celestialVp;
+        log(state, `${player.name} earns ${celestialVp}vp for ${cardName(card)} (Celestial)`);
       }
     }
 
-    // Plague: -3vp if in Tome
+    // Plague: plagueVp if in Tome
     for (const card of player.tome) {
       if (card.type === 'major' && card.number === 26) {
-        player.vp -= 3;
-        log(state, `${player.name} loses 3vp from Plague in Tome`);
+        player.vp += plagueVp;
+        log(state, `${player.name} loses ${Math.abs(plagueVp)}vp from Plague in Tome`);
       }
     }
 
@@ -361,10 +373,11 @@ export function scoreGameEnd(state) {
  * @returns {number} Player index or -1
  */
 export function checkCelestialWin(state) {
+  const winCount = state.config?.scoring?.celestialWinCount ?? 3;
   for (let pi = 0; pi < state.players.length; pi++) {
     const p = state.players[pi];
     const celestials = [...p.tome, ...p.realm, ...p.vault].filter(c => isCelestial(c));
-    if (celestials.length >= 3) return pi;
+    if (celestials.length >= winCount) return pi;
   }
   return -1;
 }

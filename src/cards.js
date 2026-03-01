@@ -117,11 +117,13 @@ export function createMinorDeck() {
 /**
  * Create the Major Arcana deck.
  * @param {boolean} extended - If true, include cards 22-26 for 6-player game
+ * @param {object[]} [majorDefs] - Optional major arcana definitions from config
  * @returns {object[]} Array of major cards
  */
-export function createMajorDeck(extended = false) {
+export function createMajorDeck(extended = false, majorDefs) {
+  const defs = majorDefs || MAJOR_ARCANA_DEFS;
   const maxNumber = extended ? 26 : 21;
-  return MAJOR_ARCANA_DEFS
+  return defs
     .filter(def => def.number <= maxNumber)
     .map(def => createMajorCard(def.number, def.name, def.category, def.keywords));
 }

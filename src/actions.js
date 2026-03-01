@@ -493,23 +493,25 @@ function addBuyActions(state, playerIndex, actions) {
 
   if (hand.length === 0) return;
 
-  // Prices: draw=6, display0=7, display1=8, display2=9, majorDiscard=10
+  const buyPrices = state.config?.buyPrices ?? { draw: 6, display0: 7, display1: 8, display2: 9, discard: 10 };
+  const maxCards = state.config?.maxPaymentCards ?? 3;
+
   const sources = [];
   if (state.majorDeck.length > 0) {
-    sources.push({ source: 'draw', price: 6 });
+    sources.push({ source: 'draw', price: buyPrices.draw ?? 6 });
   }
   for (let i = 0; i < 3; i++) {
     if (state.display[i]) {
-      sources.push({ source: `display${i}`, price: 7 + i });
+      sources.push({ source: `display${i}`, price: buyPrices[`display${i}`] ?? (7 + i) });
     }
   }
   if (state.majorDiscard.length > 0) {
-    sources.push({ source: 'discard', price: 10 });
+    sources.push({ source: 'discard', price: buyPrices.discard ?? 10 });
   }
 
   for (const { source, price } of sources) {
-    // Find all payment combinations (1-3 cards from hand) that meet the price
-    const payments = findPayments(hand, price);
+    // Find all payment combinations (up to maxCards from hand) that meet the price
+    const payments = findPayments(hand, price, maxCards);
     // Only keep the 3 cheapest payments (by total value)
     payments.sort((a, b) =>
       a.reduce((s, c) => s + c.purchaseValue, 0) - b.reduce((s, c) => s + c.purchaseValue, 0)
@@ -527,11 +529,12 @@ function addBuyActions(state, playerIndex, actions) {
 }
 
 /**
- * Find all valid payment combinations (1-3 cards) that total >= price.
+ * Find all valid payment combinations (1-maxCards cards) that total >= price.
+ * @param {number} [maxPayCards=3] - Maximum number of cards per payment
  */
-function findPayments(hand, price) {
+function findPayments(hand, price, maxPayCards) {
   const results = [];
-  const maxCards = Math.min(3, hand.length);
+  const maxCards = Math.min(maxPayCards ?? 3, hand.length);
 
   for (let n = 1; n <= maxCards; n++) {
     const combos = combinations(hand, n);

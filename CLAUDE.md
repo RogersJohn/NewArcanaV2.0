@@ -298,7 +298,7 @@ Phase 4 — Polish
 When completing any task, update this section by marking it done and noting the date/commit.
 
 - [x] A1. Seeded RNG — completed 2026-03-01
-- [ ] A2. Data-Driven Card Definitions
+- [x] A2. Data-Driven Card Definitions — completed 2026-03-01
 - [ ] A3. A/B Comparison Mode
 - [x] A4. Immutable State & History — completed 2026-03-01
 - [ ] A5. Test Coverage (ongoing)

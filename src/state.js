@@ -4,15 +4,19 @@
 
 import { createMinorDeck, createMajorDeck } from './cards.js';
 import { createRNG } from './rng.js';
+import { mergeConfig } from './config.js';
 
 /**
  * Create the initial game state.
  * @param {number} numPlayers - Number of players (2-6)
  * @param {boolean} extended - Use extended Major Arcana (6-player set)
  * @param {number|string} [seed] - Optional seed for deterministic RNG
+ * @param {object} [cardConfig] - Optional card/game config (merged over defaults)
  * @returns {object} Initial game state
  */
-export function createInitialState(numPlayers, extended = false, seed) {
+export function createInitialState(numPlayers, extended = false, seed, cardConfig) {
+  const config = mergeConfig(cardConfig);
+
   const players = [];
   for (let i = 0; i < numPlayers; i++) {
     players.push({
@@ -36,7 +40,7 @@ export function createInitialState(numPlayers, extended = false, seed) {
     minorDeck: createMinorDeck(),
     minorDiscard: [],
     pit: [],
-    majorDeck: createMajorDeck(extended),
+    majorDeck: createMajorDeck(extended, config.majorArcana),
     majorDiscard: [],
     display: [null, null, null],
     pot: 0,
@@ -49,9 +53,9 @@ export function createInitialState(numPlayers, extended = false, seed) {
     lastScoredRound: -1,
     turnCount: 0,
     config: {
+      ...config,
       extended,
       numPlayers,
-      handSizeLimit: 6,
     },
     log: [],
     events: [],
@@ -100,11 +104,14 @@ export function getHandSize(player) {
 /**
  * Get effective hand size limit (6, or 7 if Devil in tome).
  * @param {object} player
+ * @param {object} [config] - Game config (optional, uses defaults if not provided)
  * @returns {number}
  */
-export function getEffectiveHandLimit(player) {
+export function getEffectiveHandLimit(player, config) {
+  const normalLimit = config?.gameRules?.handSizeLimit ?? 6;
+  const devilLimit = config?.gameRules?.devilHandSizeLimit ?? 7;
   const hasDevil = player.tome.some(c => c.type === 'major' && c.number === 15);
-  return hasDevil ? 7 : 6;
+  return hasDevil ? devilLimit : normalLimit;
 }
 
 /**

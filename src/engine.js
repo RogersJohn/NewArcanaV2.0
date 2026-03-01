@@ -2,7 +2,7 @@
  * Game loop orchestration for New Arcana.
  */
 
-import { shuffle, cardName, PROTECTION_MAP, isCelestial } from './cards.js';
+import { shuffle, cardName, PROTECTION_MAP as DEFAULT_PROTECTION_MAP, isCelestial } from './cards.js';
 import {
   createInitialState, getHandSize, getEffectiveHandLimit,
   drawMinorCard, drawMajorCard, log, refillDisplay, recordEvent
@@ -11,8 +11,14 @@ import { getLegalActions } from './actions.js';
 import { scoreRoundEnd, scoreGameEnd, checkCelestialWin } from './scoring.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
 
-const MAX_TURNS_PER_ROUND = 50;
-const MAX_ROUNDS = 20;
+// Defaults used when config is not available (e.g. in tests without full state)
+const DEFAULT_MAX_TURNS_PER_ROUND = 50;
+const DEFAULT_MAX_ROUNDS = 20;
+
+/** Get the protection suit for a card number, using config if available. */
+function getProtection(state, cardNumber) {
+  return state.config?.protectionMap?.[cardNumber] ?? DEFAULT_PROTECTION_MAP[cardNumber];
+}
 
 /**
  * Set up the initial game state: shuffle, deal, place Death, fill display.
@@ -83,9 +89,10 @@ export function setup(state, ais) {
     }
   }
 
-  // Deal 5 Minor Arcana to each player (first round)
+  // Deal Minor Arcana to each player (first round)
+  const initialDeal = state.config?.gameRules?.initialDealCount ?? 5;
   for (let i = 0; i < state.players.length; i++) {
-    for (let j = 0; j < 5; j++) {
+    for (let j = 0; j < initialDeal; j++) {
       const card = drawMinorCard(state);
       if (card) state.players[i].hand.push(card);
     }
@@ -96,10 +103,11 @@ export function setup(state, ais) {
     state.minorDiscard.push(state.minorDeck.pop());
   }
 
-  // Set initial pot (1vp per player)
-  state.pot = state.players.length;
+  // Set initial pot (potInitialPerPlayer vp per player)
+  const potPerPlayer = state.config?.scoring?.potInitialPerPlayer ?? 1;
+  state.pot = state.players.length * potPerPlayer;
   state.roundNumber = 1;
-  state.lastPotAmount = state.players.length;
+  state.lastPotAmount = state.pot;
 
   // Dealer is index 0, first player is index 1 (left of dealer)
   state.currentPlayerIndex = (state.dealerIndex + 1) % state.players.length;
@@ -116,7 +124,8 @@ export function setup(state, ais) {
 export function playGame(state, ais) {
   if (state.gameEnded) return state;
 
-  while (!state.gameEnded && state.roundNumber <= MAX_ROUNDS) {
+  const maxRounds = state.config?.gameRules?.maxRounds ?? DEFAULT_MAX_ROUNDS;
+  while (!state.gameEnded && state.roundNumber <= maxRounds) {
     playRound(state, ais);
   }
 
@@ -152,8 +161,9 @@ export function playRound(state, ais) {
   }
 
   // Take turns until round ends or game ends
+  const maxTurns = state.config?.gameRules?.maxTurnsPerRound ?? DEFAULT_MAX_TURNS_PER_ROUND;
   let roundActive = true;
-  while (roundActive && !state.gameEnded && state.turnCount < MAX_TURNS_PER_ROUND) {
+  while (roundActive && !state.gameEnded && state.turnCount < maxTurns) {
     const pi = state.currentPlayerIndex;
 
     // Check round-end trigger: start of turn with 5+ cards in realm AND holding marker
@@ -182,7 +192,7 @@ export function playRound(state, ais) {
     state.turnCount++;
   }
 
-  if (state.turnCount >= MAX_TURNS_PER_ROUND && !state.gameEnded) {
+  if (state.turnCount >= maxTurns && !state.gameEnded) {
     log(state, 'Round ended: turn limit reached');
   }
 
@@ -231,7 +241,7 @@ export function playTurn(state, ais, playerIndex) {
  */
 export function drawPhase(state, playerIndex) {
   const player = state.players[playerIndex];
-  const limit = getEffectiveHandLimit(player);
+  const limit = getEffectiveHandLimit(player, state.config);
   const currentSize = getHandSize(player);
   const toDraw = Math.max(1, limit - currentSize);
 
@@ -258,7 +268,7 @@ export function drawPhase(state, playerIndex) {
  */
 export function discardPhase(state, playerIndex, ai) {
   const player = state.players[playerIndex];
-  const limit = getEffectiveHandLimit(player);
+  const limit = getEffectiveHandLimit(player, state.config);
 
   // First handle realm overflow (> 5 cards)
   while (player.realm.length > 5) {
@@ -469,8 +479,8 @@ function executeMajorTome(state, ais, playerIndex, action) {
       const discarded = player.tome.splice(discardIdx, 1)[0];
       state.pit.push(discarded);
       // Remove protection if applicable
-      if (PROTECTION_MAP[discarded.number]) {
-        player.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
+      if (getProtection(state, discarded.number)) {
+        player.tomeProtections.delete(getProtection(state, discarded.number));
       }
     }
   }
@@ -502,8 +512,8 @@ function applyTomeEffect(state, ais, playerIndex, card) {
             player.tome.splice(idx, 1);
             player.hand.push(tc);
             // Remove protection
-            if (PROTECTION_MAP[tc.number]) {
-              player.tomeProtections.delete(PROTECTION_MAP[tc.number]);
+            if (getProtection(state, tc.number)) {
+              player.tomeProtections.delete(getProtection(state, tc.number));
             }
           }
         }
@@ -511,9 +521,9 @@ function applyTomeEffect(state, ais, playerIndex, card) {
       log(state, `${player.name} takes Tome cards into hand via Hermit`);
       break;
 
-    case 15: // Devil: draw up to 7
+    case 15: // Devil: draw up to devilHandSizeLimit
       {
-        const limit = 7;
+        const limit = state.config?.gameRules?.devilHandSizeLimit ?? 7;
         const currentSize = getHandSize(player);
         const toDraw = Math.max(0, limit - currentSize);
         for (let i = 0; i < toDraw; i++) {
@@ -530,7 +540,7 @@ function applyTomeEffect(state, ais, playerIndex, card) {
     case 23: // Hope: protect WANDS
     case 25: // Prudence: protect COINS
       {
-        const suit = PROTECTION_MAP[card.number];
+        const suit = getProtection(state, card.number);
         if (suit) {
           player.tomeProtections.add(suit);
           log(state, `${player.name}'s ${suit} cards are now protected`);
@@ -594,8 +604,8 @@ function resolveChariot(state, ais, playerIndex, targets) {
     checkMarkerPassAfterAttack(state);
   } else if (targets.source === 'tome') {
     celestial = state.players[targets.playerIndex].tome.splice(targets.cardIndex, 1)[0];
-    if (PROTECTION_MAP[celestial.number]) {
-      state.players[targets.playerIndex].tomeProtections.delete(PROTECTION_MAP[celestial.number]);
+    if (getProtection(state, celestial.number)) {
+      state.players[targets.playerIndex].tomeProtections.delete(getProtection(state, celestial.number));
     }
   } else if (targets.source === 'display') {
     celestial = state.display[targets.slotIndex];
@@ -627,8 +637,8 @@ function resolveStrength(state, ais, playerIndex, targets) {
     checkMarkerPassAfterAttack(state);
   } else if (targets.source === 'tome') {
     majorCard = state.players[targets.playerIndex].tome.splice(targets.cardIndex, 1)[0];
-    if (PROTECTION_MAP[majorCard.number]) {
-      state.players[targets.playerIndex].tomeProtections.delete(PROTECTION_MAP[majorCard.number]);
+    if (getProtection(state, majorCard.number)) {
+      state.players[targets.playerIndex].tomeProtections.delete(getProtection(state, majorCard.number));
     }
   }
 
@@ -682,8 +692,8 @@ function resolveHangedMan(state, ais, playerIndex, targets) {
 
   if (!card) return;
 
-  if (PROTECTION_MAP[card.number]) {
-    source.tomeProtections.delete(PROTECTION_MAP[card.number]);
+  if (getProtection(state, card.number)) {
+    source.tomeProtections.delete(getProtection(state, card.number));
   }
 
   if (player.tome.length >= 3) {
@@ -691,14 +701,14 @@ function resolveHangedMan(state, ais, playerIndex, targets) {
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     const discarded = player.tome.splice(discardIdx, 1)[0];
     state.pit.push(discarded);
-    if (PROTECTION_MAP[discarded.number]) {
-      player.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
+    if (getProtection(state, discarded.number)) {
+      player.tomeProtections.delete(getProtection(state, discarded.number));
     }
   }
 
   player.tome.push(card);
-  if (PROTECTION_MAP[card.number]) {
-    player.tomeProtections.add(PROTECTION_MAP[card.number]);
+  if (getProtection(state, card.number)) {
+    player.tomeProtections.add(getProtection(state, card.number));
   }
 
   log(state, `${player.name} takes ${cardName(card)} from ${source.name}'s Tome via Hanged Man`);
@@ -715,8 +725,8 @@ function resolveTower(state, ais, playerIndex, targets) {
         // Find a valid target
         const tomeIdx = state.players[pi].tome.length - 1;
         const card = state.players[pi].tome.splice(tomeIdx, 1)[0];
-        if (PROTECTION_MAP[card.number]) {
-          state.players[pi].tomeProtections.delete(PROTECTION_MAP[card.number]);
+        if (getProtection(state, card.number)) {
+          state.players[pi].tomeProtections.delete(getProtection(state, card.number));
         }
         state.pit.push(card);
         log(state, `Tower destroys ${cardName(card)} in ${state.players[pi].name}'s Tome`);
@@ -742,8 +752,8 @@ function resolvePlague(state, ais, playerIndex, targets) {
     const discardIdx = ais[playerIndex].chooseTomeDiscard(state, targets.playerIndex);
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     const discarded = target.tome.splice(Math.min(discardIdx, target.tome.length - 1), 1)[0];
-    if (PROTECTION_MAP[discarded.number]) {
-      target.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
+    if (getProtection(state, discarded.number)) {
+      target.tomeProtections.delete(getProtection(state, discarded.number));
     }
     state.pit.push(discarded);
   }
@@ -1057,8 +1067,9 @@ function resetForNextRound(state) {
 
   shuffle(state.minorDeck, state.rng);
 
-  // Next round pot: last pot amount + 1
-  const addToPot = (state.lastPotAmount || state.config.numPlayers) + 1;
+  // Next round pot: last pot amount + potGrowth
+  const potGrowth = state.config?.scoring?.potGrowth ?? 1;
+  const addToPot = (state.lastPotAmount || state.config.numPlayers) + potGrowth;
   state.pot += addToPot;
   state.lastPotAmount = addToPot;
 
@@ -1075,8 +1086,9 @@ function resetForNextRound(state) {
  * Deal cards for a new round (6 per player for round 2+).
  */
 function dealRoundCards(state) {
+  const roundDeal = state.config?.gameRules?.roundDealCount ?? 6;
   for (let i = 0; i < state.players.length; i++) {
-    for (let j = 0; j < 6; j++) {
+    for (let j = 0; j < roundDeal; j++) {
       const card = drawMinorCard(state);
       if (!card) {
         state.gameEnded = true;

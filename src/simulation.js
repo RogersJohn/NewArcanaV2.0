@@ -16,6 +16,7 @@ import { createRNG } from './rng.js';
  * @param {string} config.aiAssignment - AI assignment strategy
  * @param {boolean} config.verbose - Log individual games
  * @param {number|string} [config.seed] - Master seed for reproducibility
+ * @param {object} [config.cardConfig] - Card/game config (merged over defaults)
  * @returns {object} Simulation results
  */
 export function runSimulation(config) {
@@ -26,6 +27,7 @@ export function runSimulation(config) {
     aiAssignment = 'diverse',
     verbose = false,
     seed,
+    cardConfig,
   } = config;
 
   // Create master RNG for deriving per-game seeds
@@ -41,7 +43,7 @@ export function runSimulation(config) {
         ? (typeof seed === 'number' ? seed + i : masterRng.nextInt(2147483647))
         : undefined;
 
-      const state = createInitialState(players, extended, gameSeed);
+      const state = createInitialState(players, extended, gameSeed, cardConfig);
       const ais = createAIs(players, aiAssignment, state.rng);
 
       // Name players with their AI type
@@ -67,7 +69,7 @@ export function runSimulation(config) {
   }
 
   return {
-    config: { games, players, extended, aiAssignment, seed: masterRng ? seed : undefined },
+    config: { games, players, extended, aiAssignment, seed: masterRng ? seed : undefined, hasCustomConfig: !!cardConfig },
     results,
     errors,
     completedGames: results.length,
@@ -218,8 +220,8 @@ function logGameResult(gameNum, result) {
  * Run a single verbose game.
  */
 export function runSingleGame(config) {
-  const { players = 4, extended = false, aiAssignment = 'diverse', seed } = config;
-  const state = createInitialState(players, extended, seed);
+  const { players = 4, extended = false, aiAssignment = 'diverse', seed, cardConfig } = config;
+  const state = createInitialState(players, extended, seed, cardConfig);
   const ais = createAIs(players, aiAssignment, state.rng);
 
   for (let pi = 0; pi < players; pi++) {
