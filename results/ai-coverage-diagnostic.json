@@ -1,0 +1,549 @@
+{
+  "config": {
+    "games": 200,
+    "players": 4,
+    "aiAssignment": "diverse",
+    "completedGames": 200,
+    "errors": 0
+  },
+  "trackedCards": {
+    "10": "Wheel of Fortune",
+    "20": "Judgement"
+  },
+  "allActionCards": {
+    "7": "The Chariot",
+    "8": "Strength",
+    "10": "Wheel of Fortune",
+    "12": "The Hanged Man",
+    "16": "The Tower",
+    "20": "Judgement",
+    "26": "Plague"
+  },
+  "aiBreakdown": {
+    "Opportunist": {
+      "totalTurns": 1335,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 26,
+          "chosenAsAction": 9,
+          "chosenAsWild": 9,
+          "chosenAsTome": 0,
+          "notChosen": 17,
+          "playRatePercent": 34.6,
+          "blockedOthersAce": 0
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 18,
+          "chosenAsAction": 3,
+          "chosenAsWild": 10,
+          "chosenAsTome": 0,
+          "notChosen": 15,
+          "playRatePercent": 16.7,
+          "blockedOthersAce": 0
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 26,
+          "chosenAsAction": 0,
+          "chosenAsWild": 20,
+          "chosenAsTome": 0,
+          "notChosen": 26,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 11,
+          "chosenAsAction": 2,
+          "chosenAsWild": 7,
+          "chosenAsTome": 0,
+          "notChosen": 9,
+          "playRatePercent": 18.2,
+          "blockedOthersAce": 0
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 17,
+          "chosenAsAction": 2,
+          "chosenAsWild": 14,
+          "chosenAsTome": 0,
+          "notChosen": 15,
+          "playRatePercent": 11.8,
+          "blockedOthersAce": 0
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 19,
+          "chosenAsAction": 2,
+          "chosenAsWild": 13,
+          "chosenAsTome": 0,
+          "notChosen": 17,
+          "playRatePercent": 10.5,
+          "blockedOthersAce": 0
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    },
+    "Builder": {
+      "totalTurns": 1688,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 27,
+          "chosenAsAction": 5,
+          "chosenAsWild": 1,
+          "chosenAsTome": 0,
+          "notChosen": 22,
+          "playRatePercent": 18.5,
+          "blockedOthersAce": 0
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 19,
+          "chosenAsAction": 6,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 13,
+          "playRatePercent": 31.6,
+          "blockedOthersAce": 0
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 29,
+          "chosenAsAction": 0,
+          "chosenAsWild": 3,
+          "chosenAsTome": 0,
+          "notChosen": 29,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 26,
+          "chosenAsAction": 8,
+          "chosenAsWild": 1,
+          "chosenAsTome": 0,
+          "notChosen": 18,
+          "playRatePercent": 30.8,
+          "blockedOthersAce": 0
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 16,
+          "chosenAsAction": 1,
+          "chosenAsWild": 3,
+          "chosenAsTome": 0,
+          "notChosen": 15,
+          "playRatePercent": 6.3,
+          "blockedOthersAce": 0
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 25,
+          "chosenAsAction": 0,
+          "chosenAsWild": 6,
+          "chosenAsTome": 0,
+          "notChosen": 25,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    },
+    "Celestial": {
+      "totalTurns": 1330,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 43,
+          "chosenAsAction": 42,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 1,
+          "playRatePercent": 97.7,
+          "blockedOthersAce": 17
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 132,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 132,
+          "playRatePercent": 0,
+          "blockedOthersAce": 17
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 130,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 130,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 95,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 95,
+          "playRatePercent": 0,
+          "blockedOthersAce": 12
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 49,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 49,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 239,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 239,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    },
+    "Collector": {
+      "totalTurns": 1566,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 63,
+          "chosenAsAction": 11,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 52,
+          "playRatePercent": 17.5,
+          "blockedOthersAce": 0
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 50,
+          "chosenAsAction": 6,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 44,
+          "playRatePercent": 12,
+          "blockedOthersAce": 0
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 109,
+          "chosenAsAction": 106,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 3,
+          "playRatePercent": 97.2,
+          "blockedOthersAce": 2
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 70,
+          "chosenAsAction": 17,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 53,
+          "playRatePercent": 24.3,
+          "blockedOthersAce": 0
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 17,
+          "chosenAsAction": 5,
+          "chosenAsWild": 3,
+          "chosenAsTome": 0,
+          "notChosen": 12,
+          "playRatePercent": 29.4,
+          "blockedOthersAce": 0
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 50,
+          "chosenAsAction": 4,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 46,
+          "playRatePercent": 8,
+          "blockedOthersAce": 0
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    },
+    "Aggressor": {
+      "totalTurns": 1729,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 81,
+          "chosenAsAction": 54,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 27,
+          "playRatePercent": 66.7,
+          "blockedOthersAce": 5
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 98,
+          "chosenAsAction": 56,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 42,
+          "playRatePercent": 57.1,
+          "blockedOthersAce": 1
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 146,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 146,
+          "playRatePercent": 0,
+          "blockedOthersAce": 5
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 66,
+          "chosenAsAction": 44,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 22,
+          "playRatePercent": 66.7,
+          "blockedOthersAce": 3
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 64,
+          "chosenAsAction": 38,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 26,
+          "playRatePercent": 59.4,
+          "blockedOthersAce": 2
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 267,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 267,
+          "playRatePercent": 0,
+          "blockedOthersAce": 1
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    },
+    "Controller": {
+      "totalTurns": 1502,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 91,
+          "chosenAsAction": 7,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 84,
+          "playRatePercent": 7.7,
+          "blockedOthersAce": 0
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 68,
+          "chosenAsAction": 7,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 61,
+          "playRatePercent": 10.3,
+          "blockedOthersAce": 0
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 72,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 72,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 37,
+          "chosenAsAction": 1,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 36,
+          "playRatePercent": 2.7,
+          "blockedOthersAce": 0
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 69,
+          "chosenAsAction": 7,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 62,
+          "playRatePercent": 10.1,
+          "blockedOthersAce": 0
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 90,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 90,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    },
+    "Tactician": {
+      "totalTurns": 1418,
+      "cardUsage": {
+        "7": {
+          "name": "The Chariot",
+          "availableAsAction": 124,
+          "chosenAsAction": 13,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 111,
+          "playRatePercent": 10.5,
+          "blockedOthersAce": 0
+        },
+        "8": {
+          "name": "Strength",
+          "availableAsAction": 129,
+          "chosenAsAction": 13,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 116,
+          "playRatePercent": 10.1,
+          "blockedOthersAce": 0
+        },
+        "10": {
+          "name": "Wheel of Fortune",
+          "availableAsAction": 51,
+          "chosenAsAction": 21,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 30,
+          "playRatePercent": 41.2,
+          "blockedOthersAce": 1
+        },
+        "12": {
+          "name": "The Hanged Man",
+          "availableAsAction": 87,
+          "chosenAsAction": 23,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 64,
+          "playRatePercent": 26.4,
+          "blockedOthersAce": 0
+        },
+        "16": {
+          "name": "The Tower",
+          "availableAsAction": 61,
+          "chosenAsAction": 12,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 49,
+          "playRatePercent": 19.7,
+          "blockedOthersAce": 0
+        },
+        "20": {
+          "name": "Judgement",
+          "availableAsAction": 142,
+          "chosenAsAction": 3,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 139,
+          "playRatePercent": 2.1,
+          "blockedOthersAce": 0
+        },
+        "26": {
+          "name": "Plague",
+          "availableAsAction": 0,
+          "chosenAsAction": 0,
+          "chosenAsWild": 0,
+          "chosenAsTome": 0,
+          "notChosen": 0,
+          "playRatePercent": 0,
+          "blockedOthersAce": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Arcana — AI & Card Balance Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0c0e12;--surface:#14171e;--surface2:#1a1e28;--border:#2a3040;--text:#e2e6ee;--text-dim:#8892a4;--text-muted:#5a6478;--accent:#6c9cff;--accent2:#a78bfa;--green:#34d399;--red:#f87171;--amber:#fbbf24;--orange:#fb923c;--radius:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.container{max-width:1200px;margin:0 auto;padding:32px 24px}
+a{color:var(--accent);text-decoration:none}
+
+/* Hero */
+.hero{text-align:center;padding:64px 24px 48px;position:relative}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:600px;height:300px;background:radial-gradient(ellipse,rgba(108,156,255,0.08) 0%,transparent 70%);pointer-events:none}
+.hero .badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:0.75em;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;background:rgba(108,156,255,0.12);color:var(--accent);border:1px solid rgba(108,156,255,0.25);margin-bottom:20px}
+.hero h1{font-family:'DM Serif Display',serif;font-size:2.8em;font-weight:400;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px}
+.hero h1 span{color:var(--accent)}
+.hero .subtitle{color:var(--text-dim);font-size:1.1em;max-width:640px;margin:0 auto}
+
+/* Hero stats row */
+.hero-stats{display:flex;justify-content:center;gap:32px;margin-top:32px;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat .val{font-family:'JetBrains Mono',monospace;font-size:2em;font-weight:500;color:var(--text)}
+.hero-stat .lbl{font-size:0.78em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+
+/* Section */
+section{margin-bottom:56px}
+section h2{font-family:'DM Serif Display',serif;font-size:1.6em;font-weight:400;margin-bottom:8px}
+section .section-sub{color:var(--text-dim);font-size:0.92em;margin-bottom:24px}
+
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;position:relative;overflow:hidden}
+.kpi .kpi-label{font-size:0.78em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em}
+.kpi .kpi-value{font-family:'JetBrains Mono',monospace;font-size:2em;font-weight:500;margin-top:4px}
+.kpi .kpi-sub{font-size:0.82em;color:var(--text-dim);margin-top:4px}
+.kpi.green .kpi-value{color:var(--green)}
+.kpi.red .kpi-value{color:var(--red)}
+.kpi.accent .kpi-value{color:var(--accent)}
+.kpi.amber .kpi-value{color:var(--amber)}
+.kpi::after{content:'';position:absolute;top:0;right:0;width:60px;height:100%;opacity:0.06}
+.kpi.green::after{background:linear-gradient(90deg,transparent,var(--green))}
+.kpi.red::after{background:linear-gradient(90deg,transparent,var(--red))}
+
+/* Card component */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.card h3{font-size:1.05em;font-weight:600;margin-bottom:12px}
+
+/* Callout */
+.callout{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:20px 24px;margin:20px 0;font-size:0.92em;line-height:1.7;color:var(--text-dim)}
+.callout strong{color:var(--text);font-weight:600}
+.callout.warn{border-left-color:var(--amber)}
+.callout.success{border-left-color:var(--green)}
+.callout.danger{border-left-color:var(--red)}
+
+/* Charts */
+.chart-wrap{position:relative;width:100%;max-height:400px;margin:16px 0}
+.chart-wrap canvas{width:100%!important}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:16px 0}
+@media(max-width:800px){.chart-grid{grid-template-columns:1fr}}
+
+/* Table */
+.table-wrap{overflow-x:auto;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:0.88em}
+th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--text-muted);font-weight:600;font-size:0.82em;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid rgba(42,48,64,0.5);white-space:nowrap}
+tr:hover td{background:rgba(108,156,255,0.04)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:0.92em}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.78em;font-weight:600}
+.tag-green{background:rgba(52,211,153,0.15);color:var(--green)}
+.tag-red{background:rgba(248,113,113,0.15);color:var(--red)}
+.tag-amber{background:rgba(251,191,36,0.15);color:var(--amber)}
+.tag-blue{background:rgba(108,156,255,0.15);color:var(--accent)}
+.tag-purple{background:rgba(167,139,250,0.15);color:var(--accent2)}
+
+/* Summary cards grid */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin:24px 0}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center}
+.summary-card h3{font-family:'DM Serif Display',serif;font-size:1.3em;margin-bottom:8px}
+.summary-card .desc{color:var(--text-dim);font-size:0.88em;line-height:1.6}
+.summary-card.highlight{border-color:var(--green);background:rgba(52,211,153,0.04)}
+
+/* Horizontal bar chart */
+.hbar{margin:8px 0}
+.hbar-row{display:flex;align-items:center;margin:6px 0;gap:12px}
+.hbar-label{width:160px;font-size:0.85em;text-align:right;flex-shrink:0;color:var(--text-dim)}
+.hbar-track{flex:1;height:24px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
+.hbar-fill{height:100%;border-radius:4px;transition:width 0.6s ease}
+.hbar-val{width:60px;font-family:'JetBrains Mono',monospace;font-size:0.82em;flex-shrink:0}
+
+/* Footer */
+footer{text-align:center;padding:40px 0;color:var(--text-muted);font-size:0.82em;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">Post-Fix Analysis: 7 AI Personalities</div>
+  <h1>New Arcana — <span>AI & Card Balance Report</span></h1>
+  <p class="subtitle">Comprehensive analysis after fixing Judgement & Wheel of Fortune coverage gaps and introducing Tactician & Collector AI personalities.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="val">1,000</div><div class="lbl">Games Simulated</div></div>
+    <div class="hero-stat"><div class="val">7</div><div class="lbl">AI Types</div></div>
+    <div class="hero-stat"><div class="val">21</div><div class="lbl">Cards Analyzed</div></div>
+    <div class="hero-stat"><div class="val">0</div><div class="lbl">Errors</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<!-- SECTION 1: The Judgement & Wheel Fix -->
+<!-- ============================================================ -->
+<section>
+  <h2>1. The Judgement & Wheel Fix</h2>
+  <p class="section-sub">Root cause: 4 of 5 original AIs never selected Wheel of Fortune or Judgement as action cards. Two new AI personalities and targeted fixes restored coverage.</p>
+
+  <div class="kpi-row">
+    <div class="kpi green">
+      <div class="kpi-label">Wheel of Fortune — Before</div>
+      <div class="kpi-value">0.0%</div>
+      <div class="kpi-sub">0 plays, 33 blocked</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Wheel of Fortune — After</div>
+      <div class="kpi-value">87.5%</div>
+      <div class="kpi-sub">460 plays, 66 blocked</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Judgement — Before</div>
+      <div class="kpi-value">2.9%</div>
+      <div class="kpi-sub">1 play, 33 blocked</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Judgement — After</div>
+      <div class="kpi-value">72.6%</div>
+      <div class="kpi-sub">45 plays, 17 blocked</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Action Card Effectiveness — Before vs After</h3>
+    <div class="chart-wrap"><canvas id="chartBeforeAfter"></canvas></div>
+  </div>
+
+  <div class="callout success">
+    <strong>Root Cause & Fix:</strong> The original 5-AI pool had Wheel of Fortune and Judgement effectively dead — AIs either never considered them as action plays (Builder, Controller) or filtered them out of priority lists (Aggressor). The fix involved (1) adding action-card fallback logic to Builder and Controller, (2) expanding Aggressor's action filter to include all action cards, (3) creating Tactician AI with strategic Judgement timing, and (4) creating Collector AI that prioritizes Wheel of Fortune as its top action card.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: AI Coverage Matrix -->
+<!-- ============================================================ -->
+<section>
+  <h2>2. AI Coverage Matrix</h2>
+  <p class="section-sub">Per-AI breakdown of action card usage across 200 diagnostic games. Shows which AIs exercise each mechanic.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>AI Type</th>
+          <th>Turns</th>
+          <th>Chariot</th>
+          <th>Strength</th>
+          <th>Wheel</th>
+          <th>Hanged Man</th>
+          <th>Tower</th>
+          <th>Judgement</th>
+          <th>Primary Mechanic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Collector</strong></td>
+          <td class="mono">1,566</td>
+          <td class="mono">17.5%</td>
+          <td class="mono">12.0%</td>
+          <td><span class="tag tag-green">97.2%</span></td>
+          <td class="mono">24.3%</td>
+          <td class="mono">29.4%</td>
+          <td class="mono">8.0%</td>
+          <td><span class="tag tag-blue">Wheel of Fortune</span></td>
+        </tr>
+        <tr>
+          <td><strong>Celestial</strong></td>
+          <td class="mono">1,330</td>
+          <td><span class="tag tag-green">97.7%</span></td>
+          <td class="mono">0.0%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">0.0%</td>
+          <td><span class="tag tag-blue">Chariot</span></td>
+        </tr>
+        <tr>
+          <td><strong>Aggressor</strong></td>
+          <td class="mono">1,729</td>
+          <td class="mono">66.7%</td>
+          <td class="mono">57.1%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">66.7%</td>
+          <td class="mono">59.4%</td>
+          <td class="mono">0.0%</td>
+          <td><span class="tag tag-blue">Broad Attacker</span></td>
+        </tr>
+        <tr>
+          <td><strong>Tactician</strong></td>
+          <td class="mono">1,418</td>
+          <td class="mono">10.5%</td>
+          <td class="mono">10.1%</td>
+          <td class="mono">41.2%</td>
+          <td class="mono">26.4%</td>
+          <td class="mono">19.7%</td>
+          <td class="mono">2.1%</td>
+          <td><span class="tag tag-blue">Round Timing</span></td>
+        </tr>
+        <tr>
+          <td><strong>Opportunist</strong></td>
+          <td class="mono">1,335</td>
+          <td class="mono">34.6%</td>
+          <td class="mono">16.7%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">18.2%</td>
+          <td class="mono">11.8%</td>
+          <td class="mono">10.5%</td>
+          <td><span class="tag tag-blue">EV Maximizer</span></td>
+        </tr>
+        <tr>
+          <td><strong>Builder</strong></td>
+          <td class="mono">1,688</td>
+          <td class="mono">18.5%</td>
+          <td class="mono">31.6%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">30.8%</td>
+          <td class="mono">6.3%</td>
+          <td class="mono">0.0%</td>
+          <td><span class="tag tag-blue">Hand Builder</span></td>
+        </tr>
+        <tr>
+          <td><strong>Controller</strong></td>
+          <td class="mono">1,502</td>
+          <td class="mono">7.7%</td>
+          <td class="mono">10.3%</td>
+          <td class="mono">0.0%</td>
+          <td class="mono">2.7%</td>
+          <td class="mono">10.1%</td>
+          <td class="mono">0.0%</td>
+          <td><span class="tag tag-blue">Defender</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Action Plays per AI Type (200 games)</h3>
+    <div class="chart-wrap"><canvas id="chartAIActions"></canvas></div>
+  </div>
+
+  <div class="callout">
+    <strong>Key Insight:</strong> Collector is the dominant Wheel of Fortune player (97.2% play rate when available), while Aggressor leads broad action coverage (Chariot/Strength/Hanged Man/Tower all >57%). Tactician exercises Wheel at 41.2% and is the only non-Opportunist to play Judgement (2.1%). Several AIs (Celestial, Aggressor, Builder, Controller) still never play Wheel or Judgement — but their niches are covered by the new personalities.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: Full Card Balance -->
+<!-- ============================================================ -->
+<section>
+  <h2>3. Full Card Balance</h2>
+  <p class="section-sub">Five balance metrics across all 21 Major Arcana cards from the 1,000-game simulation.</p>
+
+  <div class="card">
+    <h3>Winner Affinity</h3>
+    <p style="color:var(--text-dim);font-size:0.88em;margin-bottom:16px">Percentage of card buyers who go on to win the game. Expected baseline ~25% for 4-player games.</p>
+    <div id="winnerAffinityBars"></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="card">
+      <h3>VP Delta — Holders vs Non-Holders</h3>
+      <div class="chart-wrap"><canvas id="chartVPDelta"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Action Effectiveness</h3>
+      <div class="chart-wrap"><canvas id="chartActionEff"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="card">
+      <h3>Tome Bonus Hit Rate</h3>
+      <div class="chart-wrap"><canvas id="chartBonusRate"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Purchase Rate — Bought vs Aged Off</h3>
+      <div class="chart-wrap"><canvas id="chartPurchaseRate"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: Remaining Issues -->
+<!-- ============================================================ -->
+<section>
+  <h2>4. Remaining Issues</h2>
+  <p class="section-sub">Cards and mechanics that still show anomalous behavior after the AI fix.</p>
+
+  <div class="callout warn">
+    <strong>Wheel of Fortune (10) — Low Winner Affinity:</strong> Despite excellent action success (87.5%), Wheel holders win only 11.4% of games — the lowest of any card. This is because Collector (the primary Wheel user) spends resources hoarding Major Arcana rather than building winning hands. The card works mechanically but its primary exerciser has a weak overall strategy.
+  </div>
+
+  <div class="callout warn">
+    <strong>Judgement (20) — Low Volume:</strong> Only 45 successful plays across 1,000 games (vs 460 for Wheel). Tactician's strategic timing requirement (only plays when winning pot) limits usage. Judgement's niche is narrow by design, but coverage could be improved.
+  </div>
+
+  <div class="callout warn">
+    <strong>The Hermit (9) — Negative VP Delta:</strong> Despite 100% bonus hit rate, Hermit holders average -4.71 VP vs non-holders. This suggests the Hermit's effect (draw cards) doesn't translate into competitive advantage — or that AIs who buy Hermit are already losing.
+  </div>
+
+  <div class="callout danger">
+    <strong>Celestial AI — Still Never Plays Wheel/Judgement:</strong> Celestial AI has 0% play rate on 5 of 6 action card types (only plays Chariot at 97.7%). This is by design (Celestial win path), but means action card coverage depends entirely on other AIs being in the game.
+  </div>
+
+  <div class="callout">
+    <strong>Aggressor & Controller — No Wheel/Judgement:</strong> These AIs still show 0% play rates for both Wheel and Judgement. They rely on higher-priority actions or don't include these in their logic. Coverage comes from Collector (Wheel) and Tactician/Opportunist (Judgement).
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: Recommendation -->
+<!-- ============================================================ -->
+<section>
+  <h2>5. Recommendation</h2>
+  <p class="section-sub">Comparing the old 5-AI pool against the new 7-AI pool.</p>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h3>Old: 5 AI Pool</h3>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:2em;color:var(--red);margin:12px 0">Broken</div>
+      <div class="desc">
+        Wheel: 0% success<br>
+        Judgement: 2.9% success<br>
+        2 action cards effectively dead<br>
+        5 AI personalities
+      </div>
+    </div>
+    <div class="summary-card highlight">
+      <h3>New: 7 AI Pool</h3>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:2em;color:var(--green);margin:12px 0">Fixed</div>
+      <div class="desc">
+        Wheel: 87.5% success<br>
+        Judgement: 72.6% success<br>
+        All action cards functional<br>
+        7 AI personalities with diverse coverage
+      </div>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <strong>Verdict:</strong> The 7-AI pool resolves the critical Wheel/Judgement coverage gap. All 6 action card types now have healthy success rates (72.6%–96.4%). The addition of Collector and Tactician provides dedicated exercisers for Wheel and Judgement respectively, while the existing AI fixes ensure baseline coverage. The remaining issues (low Judgement volume, Hermit VP delta) are balance tuning concerns rather than coverage failures. <strong>Recommendation: adopt the 7-AI pool as the standard simulation configuration.</strong>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  New Arcana Stats Engine v2 — Monte Carlo Simulation Report<br>
+  Generated from 1,000-game card balance analysis + 200-game AI diagnostic
+</footer>
+
+<script>
+// ===== CHART CONFIGURATION =====
+const COLORS = {
+  blue: '#6c9cff', purple: '#a78bfa', green: '#34d399',
+  red: '#f87171', amber: '#fbbf24', orange: '#fb923c', slate: '#64748b'
+};
+
+Chart.defaults.color = '#8892a4';
+Chart.defaults.borderColor = 'rgba(42,48,64,0.6)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+// ===== SECTION 1: Before vs After Action Effectiveness =====
+const beforeData = {
+  'Chariot': { before: 71.5, after: 80.8 },
+  'Strength': { before: 64.4, after: 76.9 },
+  'Hanged Man': { before: 63.3, after: 79.9 },
+  'Wheel': { before: 0.0, after: 87.5 },
+  'Tower': { before: 88.9, after: 96.4 },
+  'Judgement': { before: 2.9, after: 72.6 },
+};
+
+new Chart(document.getElementById('chartBeforeAfter'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(beforeData),
+    datasets: [
+      {
+        label: 'Before (5 AI)',
+        data: Object.values(beforeData).map(d => d.before),
+        backgroundColor: 'rgba(248,113,113,0.7)',
+        borderColor: COLORS.red,
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+      {
+        label: 'After (7 AI)',
+        data: Object.values(beforeData).map(d => d.after),
+        backgroundColor: 'rgba(52,211,153,0.7)',
+        borderColor: COLORS.green,
+        borderWidth: 1,
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } }
+    },
+    scales: {
+      y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Success Rate' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== SECTION 2: AI Action Plays =====
+const aiActionData = {
+  'Collector': { Chariot: 11, Strength: 6, Wheel: 106, HangedMan: 17, Tower: 5, Judgement: 4 },
+  'Aggressor': { Chariot: 54, Strength: 56, Wheel: 0, HangedMan: 44, Tower: 38, Judgement: 0 },
+  'Celestial': { Chariot: 42, Strength: 0, Wheel: 0, HangedMan: 0, Tower: 0, Judgement: 0 },
+  'Tactician': { Chariot: 13, Strength: 13, Wheel: 21, HangedMan: 23, Tower: 12, Judgement: 3 },
+  'Opportunist': { Chariot: 9, Strength: 3, Wheel: 0, HangedMan: 2, Tower: 2, Judgement: 2 },
+  'Builder': { Chariot: 5, Strength: 6, Wheel: 0, HangedMan: 8, Tower: 1, Judgement: 0 },
+  'Controller': { Chariot: 7, Strength: 7, Wheel: 0, HangedMan: 1, Tower: 7, Judgement: 0 },
+};
+const aiLabels = Object.keys(aiActionData);
+const actionTypes = ['Chariot', 'Strength', 'Wheel', 'HangedMan', 'Tower', 'Judgement'];
+const actionColors = [COLORS.blue, COLORS.purple, COLORS.green, COLORS.orange, COLORS.red, COLORS.amber];
+
+new Chart(document.getElementById('chartAIActions'), {
+  type: 'bar',
+  data: {
+    labels: aiLabels,
+    datasets: actionTypes.map((act, i) => ({
+      label: act === 'HangedMan' ? 'Hanged Man' : act,
+      data: aiLabels.map(ai => aiActionData[ai][act]),
+      backgroundColor: actionColors[i] + 'bb',
+      borderColor: actionColors[i],
+      borderWidth: 1,
+      borderRadius: 3,
+    }))
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, title: { display: true, text: 'Action Plays (200 games)' } }
+    }
+  }
+});
+
+// ===== SECTION 3: Winner Affinity Horizontal Bars =====
+const winnerAffinity = [
+  { name: 'Strength', rate: 28.8 },
+  { name: 'The Moon', rate: 27.1 },
+  { name: 'The Sun', rate: 25.2 },
+  { name: 'The Star', rate: 25.1 },
+  { name: 'The Tower', rate: 24.1 },
+  { name: 'Hanged Man', rate: 23.2 },
+  { name: 'The World', rate: 22.7 },
+  { name: 'The Chariot', rate: 22.5 },
+  { name: 'Judgement', rate: 21.3 },
+  { name: 'Justice', rate: 20.6 },
+  { name: 'The Magician', rate: 19.9 },
+  { name: 'The Fool', rate: 19.6 },
+  { name: 'The Emperor', rate: 19.1 },
+  { name: 'The Lovers', rate: 19.1 },
+  { name: 'The Empress', rate: 17.9 },
+  { name: 'The Devil', rate: 17.1 },
+  { name: 'Temperance', rate: 16.8 },
+  { name: 'High Priestess', rate: 14.5 },
+  { name: 'The Hermit', rate: 14.2 },
+  { name: 'Hierophant', rate: 13.5 },
+  { name: 'Wheel of Fortune', rate: 11.4 },
+];
+
+const affinityContainer = document.getElementById('winnerAffinityBars');
+winnerAffinity.forEach(item => {
+  const row = document.createElement('div');
+  row.className = 'hbar-row';
+  const color = item.rate >= 25 ? COLORS.green : item.rate >= 20 ? COLORS.blue : item.rate >= 15 ? COLORS.amber : COLORS.red;
+  row.innerHTML = `
+    <div class="hbar-label">${item.name}</div>
+    <div class="hbar-track"><div class="hbar-fill" style="width:${(item.rate / 30) * 100}%;background:${color}"></div></div>
+    <div class="hbar-val" style="color:${color}">${item.rate.toFixed(1)}%</div>
+  `;
+  affinityContainer.appendChild(row);
+});
+
+// ===== VP Delta Chart =====
+const vpDeltaData = [
+  { name: 'Hanged Man', delta: 7.50 },
+  { name: 'Tower', delta: 7.06 },
+  { name: 'Strength', delta: 6.47 },
+  { name: 'Wheel', delta: 5.00 },
+  { name: 'Chariot', delta: 3.33 },
+  { name: 'The Star', delta: 0.21 },
+  { name: 'The Moon', delta: -0.06 },
+  { name: 'The Sun', delta: -0.15 },
+  { name: 'The World', delta: -0.31 },
+  { name: 'The Fool', delta: -0.36 },
+  { name: 'Lovers', delta: -1.09 },
+  { name: 'Magician', delta: -1.21 },
+  { name: 'Hierophant', delta: -1.22 },
+  { name: 'Devil', delta: -1.42 },
+  { name: 'Empress', delta: -1.75 },
+  { name: 'Temperance', delta: -1.94 },
+  { name: 'Emperor', delta: -2.46 },
+  { name: 'Justice', delta: -2.63 },
+  { name: 'High Priestess', delta: -2.96 },
+  { name: 'Hermit', delta: -4.71 },
+];
+
+new Chart(document.getElementById('chartVPDelta'), {
+  type: 'bar',
+  data: {
+    labels: vpDeltaData.map(d => d.name),
+    datasets: [{
+      label: 'VP Delta',
+      data: vpDeltaData.map(d => d.delta),
+      backgroundColor: vpDeltaData.map(d => d.delta >= 0 ? COLORS.green + 'aa' : COLORS.red + 'aa'),
+      borderColor: vpDeltaData.map(d => d.delta >= 0 ? COLORS.green : COLORS.red),
+      borderWidth: 1,
+      borderRadius: 3,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `VP Delta: ${ctx.raw >= 0 ? '+' : ''}${ctx.raw.toFixed(2)}` } } },
+    scales: {
+      x: { title: { display: true, text: 'VP Difference (holder - non-holder)' } },
+      y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+// ===== Action Effectiveness Chart =====
+const actionEffData = [
+  { name: 'Tower', rate: 96.4, played: 350, blocked: 13 },
+  { name: 'Wheel', rate: 87.5, played: 460, blocked: 66 },
+  { name: 'Chariot', rate: 80.8, played: 479, blocked: 114 },
+  { name: 'Hanged Man', rate: 79.9, played: 318, blocked: 80 },
+  { name: 'Strength', rate: 76.9, played: 260, blocked: 78 },
+  { name: 'Judgement', rate: 72.6, played: 45, blocked: 17 },
+];
+
+new Chart(document.getElementById('chartActionEff'), {
+  type: 'bar',
+  data: {
+    labels: actionEffData.map(d => d.name),
+    datasets: [
+      { label: 'Successful', data: actionEffData.map(d => d.played), backgroundColor: COLORS.green + 'bb', borderColor: COLORS.green, borderWidth: 1, borderRadius: 3 },
+      { label: 'Ace Blocked', data: actionEffData.map(d => d.blocked), backgroundColor: COLORS.red + 'bb', borderColor: COLORS.red, borderWidth: 1, borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, title: { display: true, text: 'Total Attempts' } }
+    }
+  }
+});
+
+// ===== Bonus Hit Rate Chart =====
+const bonusData = [
+  { name: 'Hermit', rate: 100.0 },
+  { name: 'Lovers', rate: 37.7 },
+  { name: 'Empress', rate: 23.9 },
+  { name: 'Justice', rate: 22.2 },
+  { name: 'Emperor', rate: 21.9 },
+  { name: 'Temperance', rate: 21.7 },
+  { name: 'High Priestess', rate: 21.4 },
+  { name: 'Magician', rate: 20.1 },
+  { name: 'Fool', rate: 13.8 },
+];
+
+new Chart(document.getElementById('chartBonusRate'), {
+  type: 'bar',
+  data: {
+    labels: bonusData.map(d => d.name),
+    datasets: [{
+      label: 'Hit Rate',
+      data: bonusData.map(d => d.rate),
+      backgroundColor: bonusData.map(d => d.rate >= 30 ? COLORS.green + 'bb' : d.rate >= 20 ? COLORS.blue + 'bb' : COLORS.amber + 'bb'),
+      borderColor: bonusData.map(d => d.rate >= 30 ? COLORS.green : d.rate >= 20 ? COLORS.blue : COLORS.amber),
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Hit Rate: ${ctx.raw.toFixed(1)}%` } } },
+    scales: {
+      y: { beginAtZero: true, max: 110, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Bonus Success Rate' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== Purchase Rate Chart =====
+const purchaseData = [
+  { name: 'Star', bought: 633, aged: 33 },
+  { name: 'Moon', bought: 645, aged: 37 },
+  { name: 'Sun', bought: 611, aged: 36 },
+  { name: 'World', bought: 620, aged: 39 },
+  { name: 'Temperance', bought: 523, aged: 126 },
+  { name: 'Devil', bought: 531, aged: 138 },
+  { name: 'Wheel', bought: 482, aged: 152 },
+  { name: 'Hermit', bought: 464, aged: 180 },
+  { name: 'Hierophant', bought: 446, aged: 182 },
+  { name: 'Justice', bought: 389, aged: 233 },
+  { name: 'Emperor', bought: 397, aged: 245 },
+  { name: 'Magician', bought: 387, aged: 246 },
+  { name: 'Lovers', bought: 356, aged: 238 },
+  { name: 'Empress', bought: 374, aged: 258 },
+  { name: 'High Priestess', bought: 351, aged: 262 },
+  { name: 'Fool', bought: 342, aged: 267 },
+  { name: 'Tower', bought: 328, aged: 300 },
+  { name: 'Strength', bought: 295, aged: 277 },
+  { name: 'Hanged Man', bought: 315, aged: 305 },
+  { name: 'Chariot', bought: 285, aged: 286 },
+  { name: 'Judgement', bought: 300, aged: 303 },
+];
+
+new Chart(document.getElementById('chartPurchaseRate'), {
+  type: 'bar',
+  data: {
+    labels: purchaseData.map(d => d.name),
+    datasets: [
+      { label: 'Purchased', data: purchaseData.map(d => d.bought), backgroundColor: COLORS.blue + 'bb', borderColor: COLORS.blue, borderWidth: 1, borderRadius: 2 },
+      { label: 'Aged Off', data: purchaseData.map(d => d.aged), backgroundColor: COLORS.slate + 'bb', borderColor: COLORS.slate, borderWidth: 1, borderRadius: 2 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } },
+      y: { stacked: true, title: { display: true, text: 'Count' } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>

@@ -9,6 +9,8 @@ import { CelestialAI } from './celestial.js';
 import { ControllerAI } from './controller.js';
 import { OpportunistAI } from './opportunist.js';
 import { PassiveAI } from './passive.js';
+import { TacticianAI } from './tactician.js';
+import { CollectorAI } from './collector.js';
 import { shuffle } from '../cards.js';
 
 const AI_CLASSES = {
@@ -19,6 +21,8 @@ const AI_CLASSES = {
   'controller': ControllerAI,
   'opportunist': OpportunistAI,
   'passive': PassiveAI,
+  'tactician': TacticianAI,
+  'collector': CollectorAI,
 };
 
 const AI_NAMES = Object.keys(AI_CLASSES);
@@ -94,4 +98,4 @@ export function createAIs(numPlayers, assignment = 'diverse') {
   return createAIPool(numPlayers);
 }
 
-export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI };
+export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI };
