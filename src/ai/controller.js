@@ -156,7 +156,7 @@ export class ControllerAI extends RandomAI {
       return aceCount >= 2;
     }
     // Block wild card plays (they're dangerous)
-    if (action.type === 'PLAY_WILD') return Math.random() < 0.3;
+    if (action.type === 'PLAY_WILD') return state.rng.next() < 0.3;
     return false;
   }
 

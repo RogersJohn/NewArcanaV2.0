@@ -202,8 +202,8 @@ export class TacticianAI extends RandomAI {
     }
     // Block Judgement and Wheel that target us or change scoring
     if (action.type === 'PLAY_MAJOR_ACTION') {
-      if (action.card?.number === 20) return Math.random() < 0.4; // Block Judgement sometimes
-      if (action.card?.number === 10) return Math.random() < 0.3; // Block Wheel sometimes
+      if (action.card?.number === 20) return state.rng.next() < 0.4; // Block Judgement sometimes
+      if (action.card?.number === 10) return state.rng.next() < 0.3; // Block Wheel sometimes
     }
     // Block attacks on our realm when we have good hands
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {

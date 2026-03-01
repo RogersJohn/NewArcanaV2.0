@@ -57,13 +57,13 @@ export class CelestialAI extends RandomAI {
 
     // Priority 6: Any buy (might reveal celestials)
     if (buyActions.length > 0) {
-      return buyActions[Math.floor(Math.random() * buyActions.length)];
+      return buyActions[state.rng.nextInt(buyActions.length)];
     }
 
     // Priority 7: Play singles
     const singles = legalActions.filter(a => a.type === 'PLAY_SET' && a.cards.length === 1);
     if (singles.length > 0 && player.realm.length < 5) {
-      return singles[Math.floor(Math.random() * singles.length)];
+      return singles[state.rng.nextInt(singles.length)];
     }
 
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];
@@ -91,7 +91,7 @@ export class CelestialAI extends RandomAI {
     }
     // Block attacks on our realm
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
-      return Math.random() < 0.7;
+      return state.rng.next() < 0.7;
     }
     return false;
   }

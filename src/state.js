@@ -3,14 +3,16 @@
  */
 
 import { createMinorDeck, createMajorDeck } from './cards.js';
+import { createRNG } from './rng.js';
 
 /**
  * Create the initial game state.
  * @param {number} numPlayers - Number of players (2-6)
  * @param {boolean} extended - Use extended Major Arcana (6-player set)
+ * @param {number|string} [seed] - Optional seed for deterministic RNG
  * @returns {object} Initial game state
  */
-export function createInitialState(numPlayers, extended = false) {
+export function createInitialState(numPlayers, extended = false, seed) {
   const players = [];
   for (let i = 0; i < numPlayers; i++) {
     players.push({
@@ -25,8 +27,12 @@ export function createInitialState(numPlayers, extended = false) {
     });
   }
 
+  const rng = createRNG(seed);
+
   return {
     players,
+    rng,
+    seed: rng.seed,
     minorDeck: createMinorDeck(),
     minorDiscard: [],
     pit: [],
@@ -49,6 +55,7 @@ export function createInitialState(numPlayers, extended = false) {
     },
     log: [],
     events: [],
+    history: [],
   };
 }
 
@@ -68,11 +75,16 @@ export function recordEvent(state, type, data) {
  * @returns {object} Deep copy
  */
 export function cloneState(state) {
-  const clone = JSON.parse(JSON.stringify(state));
+  const { rng, history, ...rest } = state;
+  const clone = JSON.parse(JSON.stringify(rest, setReplacer));
   // Restore Sets that JSON doesn't handle
   for (const player of clone.players) {
     player.tomeProtections = new Set(player.tomeProtections);
   }
+  // Share RNG reference — clones shouldn't diverge the RNG independently
+  clone.rng = rng;
+  // Share history reference — clones used for lookahead shouldn't bloat with duplicate history
+  clone.history = history;
   return clone;
 }
 
@@ -106,11 +118,7 @@ export function drawMinorCard(state) {
     if (state.minorDiscard.length === 0) return null;
     // Shuffle discard into deck (Pit stays separate)
     state.minorDeck = state.minorDiscard.splice(0);
-    // Fisher-Yates shuffle
-    for (let i = state.minorDeck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [state.minorDeck[i], state.minorDeck[j]] = [state.minorDeck[j], state.minorDeck[i]];
-    }
+    state.rng.shuffle(state.minorDeck);
   }
   return state.minorDeck.length > 0 ? state.minorDeck.pop() : null;
 }

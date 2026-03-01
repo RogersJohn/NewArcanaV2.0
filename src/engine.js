@@ -9,6 +9,7 @@ import {
 } from './state.js';
 import { getLegalActions } from './actions.js';
 import { scoreRoundEnd, scoreGameEnd, checkCelestialWin } from './scoring.js';
+import { recordDecision, DECISION_TYPES } from './history.js';
 
 const MAX_TURNS_PER_ROUND = 50;
 const MAX_ROUNDS = 20;
@@ -20,14 +21,14 @@ const MAX_ROUNDS = 20;
  */
 export function setup(state, ais) {
   // Shuffle minor deck
-  shuffle(state.minorDeck);
+  shuffle(state.minorDeck, state.rng);
 
   // Separate Death from major deck
   const deathIndex = state.majorDeck.findIndex(c => c.number === 13);
   const deathCard = state.majorDeck.splice(deathIndex, 1)[0];
 
   // Shuffle remaining major deck
-  shuffle(state.majorDeck);
+  shuffle(state.majorDeck, state.rng);
 
   // Deal 2 Major Arcana to each player, keep 1
   const majorDiscards = [];
@@ -36,7 +37,8 @@ export function setup(state, ais) {
     const card2 = state.majorDeck.pop();
     if (!card1 || !card2) break;
 
-    const keepIndex = ais[i].chooseMajorKeep([card1, card2]);
+    const keepIndex = ais[i].chooseMajorKeep([card1, card2], state);
+    recordDecision(state, DECISION_TYPES.MAJOR_KEEP, i, keepIndex);
     const kept = keepIndex === 0 ? card1 : card2;
     const discarded = keepIndex === 0 ? card2 : card1;
 
@@ -46,7 +48,7 @@ export function setup(state, ais) {
 
   // Death placement procedure:
   // 1. Shuffle the face-up discards
-  shuffle(majorDiscards);
+  shuffle(majorDiscards, state.rng);
 
   // 2. Deal them face-down until 2 remain
   const bottomCards = [];
@@ -61,7 +63,7 @@ export function setup(state, ais) {
 
   // 4. Shuffle Death with the 2 remaining cards, place at very bottom
   const deathGroup = [...majorDiscards, deathCard];
-  shuffle(deathGroup);
+  shuffle(deathGroup, state.rng);
   state.majorDeck.unshift(...deathGroup);
 
   // Fill display (3 cards from top of major deck)
@@ -209,6 +211,8 @@ export function playTurn(state, ais, playerIndex) {
   // Play/Buy phase: AI chooses one action
   const legalActions = getLegalActions(state, playerIndex);
   const action = ai.chooseAction(state, legalActions, playerIndex);
+  const actionIndex = legalActions.indexOf(action);
+  recordDecision(state, DECISION_TYPES.ACTION, playerIndex, actionIndex);
 
   if (action && action.type !== 'PASS') {
     executeAction(state, ais, playerIndex, action);
@@ -260,6 +264,7 @@ export function discardPhase(state, playerIndex, ai) {
   while (player.realm.length > 5) {
     const numOver = player.realm.length - 5;
     const indices = ai.chooseRealmDiscard(state, playerIndex, numOver);
+    recordDecision(state, DECISION_TYPES.REALM_DISCARD, playerIndex, indices);
     for (const idx of indices) {
       if (idx >= 0 && idx < player.realm.length) {
         const card = player.realm.splice(idx, 1)[0];
@@ -277,6 +282,7 @@ export function discardPhase(state, playerIndex, ai) {
     const handDiscard = Math.min(numToDiscard, player.hand.length);
     if (handDiscard > 0) {
       const indices = ai.chooseDiscard(state, playerIndex, handDiscard);
+      recordDecision(state, DECISION_TYPES.DISCARD, playerIndex, indices);
       for (const idx of indices) {
         if (idx >= 0 && idx < player.hand.length) {
           const card = player.hand.splice(idx, 1)[0];
@@ -372,7 +378,9 @@ function executeRoyalAttack(state, ais, playerIndex, action) {
   // Check King blocking (defender only, for Royal attacks)
   if (target.playerIndex !== playerIndex) {
     const defenderAi = ais[target.playerIndex];
-    if (defenderAi.shouldBlockWithKing(state, target.playerIndex, card)) {
+    const kingBlockChoice = defenderAi.shouldBlockWithKing(state, target.playerIndex, card);
+    recordDecision(state, DECISION_TYPES.KING_BLOCK, target.playerIndex, kingBlockChoice);
+    if (kingBlockChoice) {
       const kingIdx = defender.hand.findIndex(c => c.type === 'minor' && c.rank === 'KING');
       if (kingIdx !== -1) {
         // Check if someone blocks the King with an Ace
@@ -456,6 +464,7 @@ function executeMajorTome(state, ais, playerIndex, action) {
   // If Tome is full (3 cards), AI must discard one
   if (player.tome.length >= 3) {
     const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
+    recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     if (discardIdx >= 0 && discardIdx < player.tome.length) {
       const discarded = player.tome.splice(discardIdx, 1)[0];
       state.pit.push(discarded);
@@ -601,6 +610,7 @@ function resolveChariot(state, ais, playerIndex, targets) {
     player.tome.push(celestial);
     if (player.tome.length > 3) {
       const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
+      recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
       const discarded = player.tome.splice(discardIdx, 1)[0];
       state.pit.push(discarded);
     }
@@ -633,6 +643,7 @@ function resolveWheelOfFortune(state, ais, playerIndex) {
   const ai = ais[playerIndex];
 
   const sources = ai.chooseWheelSources(state, playerIndex);
+  recordDecision(state, DECISION_TYPES.WHEEL_SOURCES, playerIndex, sources);
   const drawn = [];
 
   for (const src of sources) {
@@ -655,7 +666,8 @@ function resolveWheelOfFortune(state, ais, playerIndex) {
   if (drawn.length === 1) {
     player.hand.push(drawn[0]);
   } else {
-    const keepIdx = ai.chooseWheelKeep(drawn);
+    const keepIdx = ai.chooseWheelKeep(drawn, state);
+    recordDecision(state, DECISION_TYPES.WHEEL_KEEP, playerIndex, keepIdx);
     player.hand.push(drawn[keepIdx]);
     state.pit.push(drawn[1 - keepIdx]);
   }
@@ -676,6 +688,7 @@ function resolveHangedMan(state, ais, playerIndex, targets) {
 
   if (player.tome.length >= 3) {
     const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
+    recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     const discarded = player.tome.splice(discardIdx, 1)[0];
     state.pit.push(discarded);
     if (PROTECTION_MAP[discarded.number]) {
@@ -727,6 +740,7 @@ function resolvePlague(state, ais, playerIndex, targets) {
   if (target.tome.length >= 3) {
     // Need to remove one card from target's tome
     const discardIdx = ais[playerIndex].chooseTomeDiscard(state, targets.playerIndex);
+    recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     const discarded = target.tome.splice(Math.min(discardIdx, target.tome.length - 1), 1)[0];
     if (PROTECTION_MAP[discarded.number]) {
       target.tomeProtections.delete(PROTECTION_MAP[discarded.number]);
@@ -868,7 +882,9 @@ function checkAceBlock(state, ais, actorIndex, action) {
     const aceIdx = playerHand.findIndex(c => c.type === 'minor' && c.rank === 'ACE');
     if (aceIdx === -1) continue;
 
-    if (ais[pi].shouldBlockWithAce(state, pi, action)) {
+    const aceBlockChoice = ais[pi].shouldBlockWithAce(state, pi, action);
+    recordDecision(state, DECISION_TYPES.ACE_BLOCK, pi, aceBlockChoice);
+    if (aceBlockChoice) {
       const ace = playerHand.splice(aceIdx, 1)[0];
       log(state, `${state.players[pi].name} blocks [${action.description || action.type}] with ${cardName(ace)}!`);
 
@@ -1039,7 +1055,7 @@ function resetForNextRound(state) {
   // discard pile and the Pit, and shuffle well"
   state.pit = [];
 
-  shuffle(state.minorDeck);
+  shuffle(state.minorDeck, state.rng);
 
   // Next round pot: last pot amount + 1
   const addToPot = (state.lastPotAmount || state.config.numPlayers) + 1;

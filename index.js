@@ -7,6 +7,7 @@
  *   --players N     Number of players (default: 4)
  *   --extended      Use 6-player card set
  *   --ai TYPE       AI assignment: diverse|random|all-random|all-builder|etc
+ *   --seed N        Seed for reproducible results
  *   --verbose       Log individual games
  *   --json FILE     Output stats as JSON
  *   --single        Run one game with verbose logging
@@ -23,6 +24,7 @@ function parseArgs(argv) {
     players: 4,
     extended: false,
     ai: 'diverse',
+    seed: undefined,
     verbose: false,
     json: null,
     single: false,
@@ -43,6 +45,9 @@ function parseArgs(argv) {
         break;
       case '--ai':
         args.ai = argv[++i] || 'diverse';
+        break;
+      case '--seed':
+        args.seed = parseInt(argv[++i]);
         break;
       case '--verbose':
         args.verbose = true;
@@ -67,6 +72,7 @@ Usage: node index.js [options]
   --players N     Number of players (default: 4)
   --extended      Use 6-player card set
   --ai TYPE       AI assignment: diverse|random|all-random|all-builder|etc
+  --seed N        Seed for reproducible results
   --verbose       Log individual games
   --json FILE     Output stats as JSON
   --single        Run one game with verbose logging
@@ -87,6 +93,7 @@ if (args.single) {
     players: args.players,
     extended: args.extended,
     aiAssignment: args.ai,
+    seed: args.seed,
   });
 } else {
   console.log(`Running ${args.games} games with ${args.players} players (${args.ai})...`);
@@ -98,6 +105,7 @@ if (args.single) {
     extended: args.extended,
     aiAssignment: args.ai,
     verbose: args.verbose,
+    seed: args.seed,
   });
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

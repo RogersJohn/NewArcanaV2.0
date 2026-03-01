@@ -203,8 +203,8 @@ export class CollectorAI extends RandomAI {
     }
     // Block Wheel and Judgement sometimes
     if (action.type === 'PLAY_MAJOR_ACTION') {
-      if (action.card?.number === 10) return Math.random() < 0.25;
-      if (action.card?.number === 20) return Math.random() < 0.35;
+      if (action.card?.number === 10) return state.rng.next() < 0.25;
+      if (action.card?.number === 20) return state.rng.next() < 0.35;
     }
     // Protect our realm
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {

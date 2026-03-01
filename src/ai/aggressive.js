@@ -51,13 +51,13 @@ export class AggressorAI extends RandomAI {
     // Priority 4: Buy attack cards
     const buyActions = legalActions.filter(a => a.type === 'BUY');
     if (buyActions.length > 0) {
-      return buyActions[Math.floor(Math.random() * buyActions.length)];
+      return buyActions[state.rng.nextInt(buyActions.length)];
     }
 
     // Priority 5: Play singles
     const singles = legalActions.filter(a => a.type === 'PLAY_SET' && a.cards.length === 1);
     if (singles.length > 0 && player.realm.length < 5) {
-      return singles[Math.floor(Math.random() * singles.length)];
+      return singles[state.rng.nextInt(singles.length)];
     }
 
     // Priority 6: Play tome cards
@@ -121,8 +121,8 @@ export class AggressorAI extends RandomAI {
     }
     // Block opponent plays that improve their position
     if (action.type === 'PLAY_WILD') return true;
-    if (action.type === 'PLAY_MAJOR_TOME') return Math.random() < 0.5;
-    if (action.type === 'PLAY_MAJOR_ACTION') return Math.random() < 0.4;
+    if (action.type === 'PLAY_MAJOR_TOME') return state.rng.next() < 0.5;
+    if (action.type === 'PLAY_MAJOR_ACTION') return state.rng.next() < 0.4;
     return false;
   }
 

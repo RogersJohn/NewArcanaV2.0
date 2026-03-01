@@ -18,7 +18,7 @@ export class RandomAI {
    * @returns {object} Chosen action
    */
   chooseAction(state, legalActions, playerIndex) {
-    return legalActions[Math.floor(Math.random() * legalActions.length)];
+    return legalActions[state.rng.nextInt(legalActions.length)];
   }
 
   /**
@@ -32,10 +32,7 @@ export class RandomAI {
     const hand = state.players[playerIndex].hand;
     const indices = Array.from({ length: hand.length }, (_, i) => i);
     // Shuffle and pick first numToDiscard
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
+    state.rng.shuffle(indices);
     return indices.slice(0, numToDiscard).sort((a, b) => b - a);
   }
 
@@ -51,7 +48,7 @@ export class RandomAI {
     const hasAce = state.players[playerIndex].hand.some(
       c => c.type === 'minor' && c.rank === 'ACE'
     );
-    return hasAce && Math.random() < 0.2;
+    return hasAce && state.rng.next() < 0.2;
   }
 
   /**
@@ -65,7 +62,7 @@ export class RandomAI {
     const hasKing = state.players[playerIndex].hand.some(
       c => c.type === 'minor' && c.rank === 'KING'
     );
-    return hasKing && Math.random() < 0.3;
+    return hasKing && state.rng.next() < 0.3;
   }
 
   /**
@@ -76,15 +73,18 @@ export class RandomAI {
    */
   chooseTomeDiscard(state, playerIndex) {
     const tome = state.players[playerIndex].tome;
-    return Math.floor(Math.random() * tome.length);
+    return state.rng.nextInt(tome.length);
   }
 
   /**
    * Choose which Major Arcana card to keep during setup.
    * @param {object[]} majorCards - 2 cards to choose from
+   * @param {object} state - Game state (for RNG access)
    * @returns {number} Index of card to keep (0 or 1)
    */
-  chooseMajorKeep(majorCards) {
+  chooseMajorKeep(majorCards, state) {
+    const rng = state && state.rng;
+    if (rng) return rng.nextInt(majorCards.length);
     return Math.floor(Math.random() * majorCards.length);
   }
 
@@ -98,10 +98,7 @@ export class RandomAI {
   chooseRealmDiscard(state, playerIndex, numToDiscard) {
     const realm = state.players[playerIndex].realm;
     const indices = Array.from({ length: realm.length }, (_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
+    state.rng.shuffle(indices);
     return indices.slice(0, numToDiscard).sort((a, b) => b - a);
   }
 
@@ -123,7 +120,7 @@ export class RandomAI {
     const picked = [];
     const available = [...sources];
     for (let i = 0; i < Math.min(2, available.length); i++) {
-      const idx = Math.floor(Math.random() * available.length);
+      const idx = state.rng.nextInt(available.length);
       picked.push(available.splice(idx, 1)[0]);
     }
     return picked;
@@ -132,9 +129,12 @@ export class RandomAI {
   /**
    * Choose which of 2 Wheel of Fortune cards to keep.
    * @param {object[]} cards - The 2 drawn cards
+   * @param {object} state - Game state (for RNG access)
    * @returns {number} Index to keep (0 or 1)
    */
-  chooseWheelKeep(cards) {
+  chooseWheelKeep(cards, state) {
+    const rng = state && state.rng;
+    if (rng) return rng.nextInt(cards.length);
     return Math.floor(Math.random() * cards.length);
   }
 
@@ -146,7 +146,7 @@ export class RandomAI {
    */
   chooseMagicianSuit(state, playerIndex) {
     const suits = ['WANDS', 'CUPS', 'SWORDS', 'COINS'];
-    return suits[Math.floor(Math.random() * suits.length)];
+    return suits[state.rng.nextInt(suits.length)];
   }
 
   /**
@@ -158,6 +158,6 @@ export class RandomAI {
    */
   chooseFoolTarget(state, playerIndex, options) {
     if (options.length === 0) return -1;
-    return Math.floor(Math.random() * options.length);
+    return state.rng.nextInt(options.length);
   }
 }

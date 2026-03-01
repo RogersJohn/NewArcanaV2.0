@@ -263,7 +263,7 @@ export function resolveWheelOfFortune(state, ais, playerIndex) {
   if (drawn.length === 1) {
     player.hand.push(drawn[0]);
   } else {
-    const keepIdx = ai.chooseWheelKeep(drawn);
+    const keepIdx = ai.chooseWheelKeep(drawn, state);
     player.hand.push(drawn[keepIdx]);
     state.pit.push(drawn[1 - keepIdx]);
   }

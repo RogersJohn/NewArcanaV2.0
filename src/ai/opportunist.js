@@ -166,7 +166,7 @@ export class OpportunistAI extends RandomAI {
       const realmSize = state.players[playerIndex].realm.length;
       return realmSize >= 3; // Only block if we have a significant realm
     }
-    if (action.type === 'PLAY_WILD') return Math.random() < 0.3;
+    if (action.type === 'PLAY_WILD') return state.rng.next() < 0.3;
     return false;
   }
 

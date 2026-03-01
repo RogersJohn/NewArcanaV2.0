@@ -5,6 +5,7 @@
 import { evaluateHand, compareHands } from './poker.js';
 import { isCelestial, cardName, SUITS } from './cards.js';
 import { log, recordEvent } from './state.js';
+import { recordDecision, DECISION_TYPES } from './history.js';
 
 /**
  * Score the end of a round.
@@ -219,6 +220,7 @@ export function resolveFool(state, playerIndex, ais) {
 function resolveMagician(state, playerIndex, ais) {
   const ai = ais[playerIndex];
   const suit = ai.chooseMagicianSuit(state, playerIndex);
+  recordDecision(state, DECISION_TYPES.MAGICIAN_SUIT, playerIndex, suit);
 
   const myCount = countSuitInRealm(state.players[playerIndex], suit, true); // count wilds
 

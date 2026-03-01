@@ -58,18 +58,19 @@ export function getAllAINames() {
  * Create a pool of diverse AIs for a game.
  * Cycles through AI types so each gets roughly equal representation.
  * @param {number} numPlayers
+ * @param {object} [rng] - Optional SeededRNG for deterministic assignment
  * @returns {object[]}
  */
-export function createAIPool(numPlayers) {
+export function createAIPool(numPlayers, rng) {
   const nonRandom = AI_NAMES.filter(n => n !== 'random' && n !== 'passive');
   // Shuffle available AIs so different combinations play each game
-  const shuffledNames = shuffle([...nonRandom]);
+  const shuffledNames = shuffle([...nonRandom], rng);
   const ais = [];
   for (let i = 0; i < numPlayers; i++) {
     const aiName = shuffledNames[i % shuffledNames.length];
     ais.push(getAI(aiName));
   }
-  shuffle(ais); // Also randomize seat order
+  shuffle(ais, rng); // Also randomize seat order
   return ais;
 }
 
@@ -77,15 +78,20 @@ export function createAIPool(numPlayers) {
  * Create AIs based on assignment type.
  * @param {number} numPlayers
  * @param {string} assignment - 'diverse', 'random', or 'all-<name>'
+ * @param {object} [rng] - Optional SeededRNG for deterministic assignment
  * @returns {object[]}
  */
-export function createAIs(numPlayers, assignment = 'diverse') {
+export function createAIs(numPlayers, assignment = 'diverse', rng) {
   if (assignment === 'diverse') {
-    return createAIPool(numPlayers);
+    return createAIPool(numPlayers, rng);
   }
   if (assignment === 'random') {
     // Random selection for each seat
     return Array.from({ length: numPlayers }, () => {
+      if (rng) {
+        const name = AI_NAMES[rng.nextInt(AI_NAMES.length)];
+        return getAI(name);
+      }
       const name = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
       return getAI(name);
     });
@@ -95,7 +101,7 @@ export function createAIs(numPlayers, assignment = 'diverse') {
     return Array.from({ length: numPlayers }, () => getAI(aiName));
   }
   // Default to diverse
-  return createAIPool(numPlayers);
+  return createAIPool(numPlayers, rng);
 }
 
 export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI };

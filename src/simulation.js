@@ -5,6 +5,7 @@
 import { createInitialState } from './state.js';
 import { setup, playGame } from './engine.js';
 import { createAIs } from './ai/index.js';
+import { createRNG } from './rng.js';
 
 /**
  * Run a batch simulation.
@@ -14,6 +15,7 @@ import { createAIs } from './ai/index.js';
  * @param {boolean} config.extended - Use extended Major Arcana
  * @param {string} config.aiAssignment - AI assignment strategy
  * @param {boolean} config.verbose - Log individual games
+ * @param {number|string} [config.seed] - Master seed for reproducibility
  * @returns {object} Simulation results
  */
 export function runSimulation(config) {
@@ -23,15 +25,24 @@ export function runSimulation(config) {
     extended = false,
     aiAssignment = 'diverse',
     verbose = false,
+    seed,
   } = config;
+
+  // Create master RNG for deriving per-game seeds
+  const masterRng = seed !== undefined ? createRNG(seed) : null;
 
   const results = [];
   let errors = 0;
 
   for (let i = 0; i < games; i++) {
     try {
-      const state = createInitialState(players, extended);
-      const ais = createAIs(players, aiAssignment);
+      // Derive per-game seed: masterSeed + gameIndex for isolation
+      const gameSeed = masterRng
+        ? (typeof seed === 'number' ? seed + i : masterRng.nextInt(2147483647))
+        : undefined;
+
+      const state = createInitialState(players, extended, gameSeed);
+      const ais = createAIs(players, aiAssignment, state.rng);
 
       // Name players with their AI type
       for (let pi = 0; pi < players; pi++) {
@@ -56,7 +67,7 @@ export function runSimulation(config) {
   }
 
   return {
-    config: { games, players, extended, aiAssignment },
+    config: { games, players, extended, aiAssignment, seed: masterRng ? seed : undefined },
     results,
     errors,
     completedGames: results.length,
@@ -102,6 +113,7 @@ function extractGameResult(state, ais) {
   }));
 
   return {
+    seed: state.seed,
     winner: {
       playerIndex: winnerPi,
       aiType: ais[winnerPi].name,
@@ -206,9 +218,9 @@ function logGameResult(gameNum, result) {
  * Run a single verbose game.
  */
 export function runSingleGame(config) {
-  const { players = 4, extended = false, aiAssignment = 'diverse' } = config;
-  const state = createInitialState(players, extended);
-  const ais = createAIs(players, aiAssignment);
+  const { players = 4, extended = false, aiAssignment = 'diverse', seed } = config;
+  const state = createInitialState(players, extended, seed);
+  const ais = createAIs(players, aiAssignment, state.rng);
 
   for (let pi = 0; pi < players; pi++) {
     state.players[pi].name = `${ais[pi].name}-${pi + 1}`;
@@ -223,6 +235,7 @@ export function runSingleGame(config) {
   }
 
   console.log('\n=== Final Results ===');
+  console.log(`Seed: ${state.seed}`);
   for (const p of state.players) {
     console.log(`${p.name}: ${p.vp}vp`);
   }
