@@ -1,5 +1,6 @@
 /**
  * Game loop orchestration for New Arcana.
+ * Generator versions yield at decision points; sync wrappers drive them with AIs.
  */
 
 import { shuffle, cardName, PROTECTION_MAP as DEFAULT_PROTECTION_MAP, isCelestial } from './cards.js';
@@ -8,7 +9,7 @@ import {
   drawMinorCard, drawMajorCard, log, refillDisplay, recordEvent
 } from './state.js';
 import { getLegalActions } from './actions.js';
-import { scoreRoundEnd, scoreGameEnd, checkCelestialWin } from './scoring.js';
+import { scoreRoundEndGen, scoreGameEnd, checkCelestialWin, resolveWithAI, driveWithAIs } from './scoring.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
 
 // Defaults used when config is not available (e.g. in tests without full state)
@@ -20,12 +21,17 @@ function getProtection(state, cardNumber) {
   return state.config?.protectionMap?.[cardNumber] ?? DEFAULT_PROTECTION_MAP[cardNumber];
 }
 
+// ============================================================
+// Generator versions of all decision-containing functions
+// ============================================================
+
 /**
- * Set up the initial game state: shuffle, deal, place Death, fill display.
+ * Set up the initial game state (generator version).
+ * Yields MAJOR_KEEP for each player.
  * @param {object} state - The initial state from createInitialState
- * @param {object[]} ais - Array of AI objects, one per player
+ * @yields {{ type: string, playerIndex: number, cards: object[], state: object }}
  */
-export function setup(state, ais) {
+export function* setupGen(state) {
   // Shuffle minor deck
   shuffle(state.minorDeck, state.rng);
 
@@ -43,7 +49,12 @@ export function setup(state, ais) {
     const card2 = state.majorDeck.pop();
     if (!card1 || !card2) break;
 
-    const keepIndex = ais[i].chooseMajorKeep([card1, card2], state);
+    const keepIndex = yield {
+      type: DECISION_TYPES.MAJOR_KEEP,
+      playerIndex: i,
+      cards: [card1, card2],
+      state,
+    };
     recordDecision(state, DECISION_TYPES.MAJOR_KEEP, i, keepIndex);
     const kept = keepIndex === 0 ? card1 : card2;
     const discarded = keepIndex === 0 ? card2 : card1;
@@ -116,17 +127,17 @@ export function setup(state, ais) {
 }
 
 /**
- * Play a complete game.
+ * Play a complete game (generator version).
  * @param {object} state - Game state (after setup)
- * @param {object[]} ais - AI objects
+ * @yields decision requests
  * @returns {object} Final state
  */
-export function playGame(state, ais) {
+export function* playGameGen(state) {
   if (state.gameEnded) return state;
 
   const maxRounds = state.config?.gameRules?.maxRounds ?? DEFAULT_MAX_ROUNDS;
   while (!state.gameEnded && state.roundNumber <= maxRounds) {
-    playRound(state, ais);
+    yield* playRoundGen(state);
   }
 
   if (!state.gameEnded) {
@@ -138,7 +149,7 @@ export function playGame(state, ais) {
   // Final round scoring — award pot and evaluate Tome bonuses
   // (handleRoundEnd is not called when Death ends the game mid-round,
   // so the last round's pot and bonuses would otherwise be skipped)
-  scoreRoundEnd(state, ais);
+  yield* scoreRoundEndGen(state);
 
   // Game-end scoring
   scoreGameEnd(state);
@@ -147,11 +158,11 @@ export function playGame(state, ais) {
 }
 
 /**
- * Play a single round.
+ * Play a single round (generator version).
  * @param {object} state
- * @param {object[]} ais
+ * @yields decision requests
  */
-export function playRound(state, ais) {
+function* playRoundGen(state) {
   log(state, `=== Round ${state.roundNumber} ===`);
   state.turnCount = 0;
 
@@ -173,7 +184,7 @@ export function playRound(state, ais) {
       break;
     }
 
-    playTurn(state, ais, pi);
+    yield* playTurnGen(state, pi);
 
     if (state.gameEnded) break;
 
@@ -197,19 +208,18 @@ export function playRound(state, ais) {
   }
 
   if (!state.gameEnded) {
-    handleRoundEnd(state, ais);
+    yield* handleRoundEndGen(state);
   }
 }
 
 /**
- * Play a single turn for a player.
+ * Play a single turn for a player (generator version).
  * @param {object} state
- * @param {object[]} ais
  * @param {number} playerIndex
+ * @yields decision requests
  */
-export function playTurn(state, ais, playerIndex) {
+function* playTurnGen(state, playerIndex) {
   const player = state.players[playerIndex];
-  const ai = ais[playerIndex];
 
   log(state, `--- ${player.name}'s turn (hand: ${player.hand.length}, realm: ${player.realm.length}) ---`);
 
@@ -218,24 +228,30 @@ export function playTurn(state, ais, playerIndex) {
 
   if (state.gameEnded) return;
 
-  // Play/Buy phase: AI chooses one action
+  // Play/Buy phase: yield ACTION decision
   const legalActions = getLegalActions(state, playerIndex);
-  const action = ai.chooseAction(state, legalActions, playerIndex);
+  const action = yield {
+    type: DECISION_TYPES.ACTION,
+    playerIndex,
+    legalActions,
+    state,
+  };
   const actionIndex = legalActions.indexOf(action);
   recordDecision(state, DECISION_TYPES.ACTION, playerIndex, actionIndex);
 
   if (action && action.type !== 'PASS') {
-    executeAction(state, ais, playerIndex, action);
+    yield* executeActionGen(state, playerIndex, action);
   }
 
   if (state.gameEnded) return;
 
   // Discard phase
-  discardPhase(state, playerIndex, ai);
+  yield* discardPhaseGen(state, playerIndex);
 }
 
 /**
  * Draw phase: draw up to hand size limit, minimum 1.
+ * (No decision points — stays synchronous.)
  * @param {object} state
  * @param {number} playerIndex
  */
@@ -261,19 +277,24 @@ export function drawPhase(state, playerIndex) {
 }
 
 /**
- * Discard phase: discard down to hand limit.
+ * Discard phase (generator version): discard down to hand limit.
  * @param {object} state
  * @param {number} playerIndex
- * @param {object} ai
+ * @yields REALM_DISCARD, DISCARD decisions
  */
-export function discardPhase(state, playerIndex, ai) {
+function* discardPhaseGen(state, playerIndex) {
   const player = state.players[playerIndex];
   const limit = getEffectiveHandLimit(player, state.config);
 
   // First handle realm overflow (> 5 cards)
   while (player.realm.length > 5) {
     const numOver = player.realm.length - 5;
-    const indices = ai.chooseRealmDiscard(state, playerIndex, numOver);
+    const indices = yield {
+      type: DECISION_TYPES.REALM_DISCARD,
+      playerIndex,
+      numToDiscard: numOver,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.REALM_DISCARD, playerIndex, indices);
     for (const idx of indices) {
       if (idx >= 0 && idx < player.realm.length) {
@@ -291,7 +312,12 @@ export function discardPhase(state, playerIndex, ai) {
     const numToDiscard = totalSize - limit;
     const handDiscard = Math.min(numToDiscard, player.hand.length);
     if (handDiscard > 0) {
-      const indices = ai.chooseDiscard(state, playerIndex, handDiscard);
+      const indices = yield {
+        type: DECISION_TYPES.DISCARD,
+        playerIndex,
+        numToDiscard: handDiscard,
+        state,
+      };
       recordDecision(state, DECISION_TYPES.DISCARD, playerIndex, indices);
       for (const idx of indices) {
         if (idx >= 0 && idx < player.hand.length) {
@@ -305,46 +331,45 @@ export function discardPhase(state, playerIndex, ai) {
 }
 
 /**
- * Execute a chosen action.
+ * Execute a chosen action (generator version).
  * @param {object} state
- * @param {object[]} ais
  * @param {number} playerIndex
  * @param {object} action
+ * @yields decision requests
  */
-export function executeAction(state, ais, playerIndex, action) {
-  const player = state.players[playerIndex];
-
+function* executeActionGen(state, playerIndex, action) {
   switch (action.type) {
     case 'PLAY_SET':
-      executePlaySet(state, ais, playerIndex, action);
+      executePlaySet(state, playerIndex, action);
       break;
 
     case 'PLAY_ROYAL':
-      executeRoyalAttack(state, ais, playerIndex, action);
+      yield* executeRoyalAttackGen(state, playerIndex, action);
       break;
 
     case 'PLAY_MAJOR_TOME':
-      executeMajorTome(state, ais, playerIndex, action);
+      yield* executeMajorTomeGen(state, playerIndex, action);
       break;
 
     case 'PLAY_MAJOR_ACTION':
-      executeMajorAction(state, ais, playerIndex, action);
+      yield* executeMajorActionGen(state, playerIndex, action);
       break;
 
     case 'PLAY_WILD':
-      executeWild(state, ais, playerIndex, action);
+      yield* executeWildGen(state, playerIndex, action);
       break;
 
     case 'BUY':
-      executeBuy(state, ais, playerIndex, action);
+      executeBuy(state, playerIndex, action);
       break;
   }
 }
 
 /**
  * Execute playing a set to realm.
+ * (No decision points — stays synchronous.)
  */
-function executePlaySet(state, ais, playerIndex, action) {
+function executePlaySet(state, playerIndex, action) {
   const player = state.players[playerIndex];
   for (const card of action.cards) {
     const idx = player.hand.findIndex(c => c.id === card.id);
@@ -357,9 +382,10 @@ function executePlaySet(state, ais, playerIndex, action) {
 }
 
 /**
- * Execute a Royal attack.
+ * Execute a Royal attack (generator version).
+ * Yields ACE_BLOCK and KING_BLOCK decisions.
  */
-function executeRoyalAttack(state, ais, playerIndex, action) {
+function* executeRoyalAttackGen(state, playerIndex, action) {
   const player = state.players[playerIndex];
   const { card, target } = action;
   const defender = state.players[target.playerIndex];
@@ -381,14 +407,18 @@ function executeRoyalAttack(state, ais, playerIndex, action) {
   }
 
   // Check Ace blocking (any player can block)
-  if (checkAceBlock(state, ais, playerIndex, action)) {
+  if (yield* checkAceBlockGen(state, playerIndex, action)) {
     return; // Blocked
   }
 
   // Check King blocking (defender only, for Royal attacks)
   if (target.playerIndex !== playerIndex) {
-    const defenderAi = ais[target.playerIndex];
-    const kingBlockChoice = defenderAi.shouldBlockWithKing(state, target.playerIndex, card);
+    const kingBlockChoice = yield {
+      type: DECISION_TYPES.KING_BLOCK,
+      playerIndex: target.playerIndex,
+      attackCard: card,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.KING_BLOCK, target.playerIndex, kingBlockChoice);
     if (kingBlockChoice) {
       const kingIdx = defender.hand.findIndex(c => c.type === 'minor' && c.rank === 'KING');
@@ -396,7 +426,7 @@ function executeRoyalAttack(state, ais, playerIndex, action) {
         // Check if someone blocks the King with an Ace
         const kingCard = defender.hand[kingIdx];
         const kingAction = { type: 'KING_BLOCK', card: kingCard, playerIndex: target.playerIndex };
-        if (checkAceBlock(state, ais, target.playerIndex, kingAction)) {
+        if (yield* checkAceBlockGen(state, target.playerIndex, kingAction)) {
           // King was blocked by Ace, original attack continues
         } else {
           // King blocks successfully
@@ -456,14 +486,15 @@ function executeRoyalAttack(state, ais, playerIndex, action) {
 }
 
 /**
- * Execute playing a Major Arcana to Tome.
+ * Execute playing a Major Arcana to Tome (generator version).
+ * Yields ACE_BLOCK and TOME_DISCARD decisions.
  */
-function executeMajorTome(state, ais, playerIndex, action) {
+function* executeMajorTomeGen(state, playerIndex, action) {
   const player = state.players[playerIndex];
   const { card } = action;
 
   // Check Ace blocking
-  if (checkAceBlock(state, ais, playerIndex, action)) {
+  if (yield* checkAceBlockGen(state, playerIndex, action)) {
     return;
   }
 
@@ -471,9 +502,13 @@ function executeMajorTome(state, ais, playerIndex, action) {
   if (cardIdx === -1) return;
   player.hand.splice(cardIdx, 1);
 
-  // If Tome is full (3 cards), AI must discard one
+  // If Tome is full (3 cards), player must discard one
   if (player.tome.length >= 3) {
-    const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
+    const discardIdx = yield {
+      type: DECISION_TYPES.TOME_DISCARD,
+      playerIndex,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     if (discardIdx >= 0 && discardIdx < player.tome.length) {
       const discarded = player.tome.splice(discardIdx, 1)[0];
@@ -492,33 +527,36 @@ function executeMajorTome(state, ais, playerIndex, action) {
   });
 
   // Apply on-play Tome effects
-  applyTomeEffect(state, ais, playerIndex, card);
+  yield* applyTomeEffectGen(state, playerIndex, card);
 }
 
 /**
- * Apply on-play effects for Tome cards.
+ * Apply on-play effects for Tome cards (generator version).
+ * Yields TOME_DISCARD for Hermit's tome overflow (via Chariot-like paths),
+ * but most effects are synchronous.
  */
-function applyTomeEffect(state, ais, playerIndex, card) {
+function* applyTomeEffectGen(state, playerIndex, card) {
   const player = state.players[playerIndex];
 
   switch (card.number) {
     case 9: // Hermit: choose cards from tome to take into hand
-      // For AI, we let them take all non-Hermit tome cards (simplified)
-      const tomeCopy = [...player.tome];
-      for (const tc of tomeCopy) {
-        if (tc.id !== card.id) {
-          const idx = player.tome.findIndex(c => c.id === tc.id);
-          if (idx !== -1) {
-            player.tome.splice(idx, 1);
-            player.hand.push(tc);
-            // Remove protection
-            if (getProtection(state, tc.number)) {
-              player.tomeProtections.delete(getProtection(state, tc.number));
+      {
+        const tomeCopy = [...player.tome];
+        for (const tc of tomeCopy) {
+          if (tc.id !== card.id) {
+            const idx = player.tome.findIndex(c => c.id === tc.id);
+            if (idx !== -1) {
+              player.tome.splice(idx, 1);
+              player.hand.push(tc);
+              // Remove protection
+              if (getProtection(state, tc.number)) {
+                player.tomeProtections.delete(getProtection(state, tc.number));
+              }
             }
           }
         }
+        log(state, `${player.name} takes Tome cards into hand via Hermit`);
       }
-      log(state, `${player.name} takes Tome cards into hand via Hermit`);
       break;
 
     case 15: // Devil: draw up to devilHandSizeLimit
@@ -551,14 +589,15 @@ function applyTomeEffect(state, ais, playerIndex, card) {
 }
 
 /**
- * Execute a Major Arcana action card.
+ * Execute a Major Arcana action card (generator version).
+ * Yields ACE_BLOCK and delegates to resolve* generators.
  */
-function executeMajorAction(state, ais, playerIndex, action) {
+function* executeMajorActionGen(state, playerIndex, action) {
   const player = state.players[playerIndex];
   const { card, targets } = action;
 
   // Check Ace blocking
-  if (checkAceBlock(state, ais, playerIndex, action)) {
+  if (yield* checkAceBlockGen(state, playerIndex, action)) {
     return;
   }
 
@@ -572,30 +611,33 @@ function executeMajorAction(state, ais, playerIndex, action) {
 
   switch (card.number) {
     case 7: // Chariot
-      resolveChariot(state, ais, playerIndex, targets);
+      yield* resolveChariotGen(state, playerIndex, targets);
       break;
     case 8: // Strength
-      resolveStrength(state, ais, playerIndex, targets);
+      resolveStrength(state, playerIndex, targets);
       break;
     case 10: // Wheel of Fortune
-      resolveWheelOfFortune(state, ais, playerIndex);
+      yield* resolveWheelOfFortuneGen(state, playerIndex);
       break;
     case 12: // Hanged Man
-      resolveHangedMan(state, ais, playerIndex, targets);
+      yield* resolveHangedManGen(state, playerIndex, targets);
       break;
     case 16: // Tower
-      resolveTower(state, ais, playerIndex, targets);
+      resolveTower(state, playerIndex, targets);
       break;
     case 20: // Judgement
-      resolveJudgement(state, ais, playerIndex);
+      resolveJudgement(state, playerIndex);
       break;
     case 26: // Plague
-      resolvePlague(state, ais, playerIndex, targets);
+      yield* resolvePlagueGen(state, playerIndex, targets);
       break;
   }
 }
 
-function resolveChariot(state, ais, playerIndex, targets) {
+/**
+ * Resolve Chariot (generator version). Yields TOME_DISCARD.
+ */
+function* resolveChariotGen(state, playerIndex, targets) {
   const player = state.players[playerIndex];
   let celestial = null;
 
@@ -619,7 +661,11 @@ function resolveChariot(state, ais, playerIndex, targets) {
   if (celestial) {
     player.tome.push(celestial);
     if (player.tome.length > 3) {
-      const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
+      const discardIdx = yield {
+        type: DECISION_TYPES.TOME_DISCARD,
+        playerIndex,
+        state,
+      };
       recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
       const discarded = player.tome.splice(discardIdx, 1)[0];
       state.pit.push(discarded);
@@ -628,7 +674,10 @@ function resolveChariot(state, ais, playerIndex, targets) {
   }
 }
 
-function resolveStrength(state, ais, playerIndex, targets) {
+/**
+ * Resolve Strength. (No decision points — stays synchronous.)
+ */
+function resolveStrength(state, playerIndex, targets) {
   const player = state.players[playerIndex];
   let majorCard = null;
 
@@ -648,11 +697,17 @@ function resolveStrength(state, ais, playerIndex, targets) {
   }
 }
 
-function resolveWheelOfFortune(state, ais, playerIndex) {
+/**
+ * Resolve Wheel of Fortune (generator version). Yields WHEEL_SOURCES and WHEEL_KEEP.
+ */
+function* resolveWheelOfFortuneGen(state, playerIndex) {
   const player = state.players[playerIndex];
-  const ai = ais[playerIndex];
 
-  const sources = ai.chooseWheelSources(state, playerIndex);
+  const sources = yield {
+    type: DECISION_TYPES.WHEEL_SOURCES,
+    playerIndex,
+    state,
+  };
   recordDecision(state, DECISION_TYPES.WHEEL_SOURCES, playerIndex, sources);
   const drawn = [];
 
@@ -676,7 +731,12 @@ function resolveWheelOfFortune(state, ais, playerIndex) {
   if (drawn.length === 1) {
     player.hand.push(drawn[0]);
   } else {
-    const keepIdx = ai.chooseWheelKeep(drawn, state);
+    const keepIdx = yield {
+      type: DECISION_TYPES.WHEEL_KEEP,
+      playerIndex,
+      cards: drawn,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.WHEEL_KEEP, playerIndex, keepIdx);
     player.hand.push(drawn[keepIdx]);
     state.pit.push(drawn[1 - keepIdx]);
@@ -685,7 +745,10 @@ function resolveWheelOfFortune(state, ais, playerIndex) {
   log(state, `${player.name} uses Wheel of Fortune`);
 }
 
-function resolveHangedMan(state, ais, playerIndex, targets) {
+/**
+ * Resolve Hanged Man (generator version). Yields TOME_DISCARD.
+ */
+function* resolveHangedManGen(state, playerIndex, targets) {
   const player = state.players[playerIndex];
   const source = state.players[targets.playerIndex];
   const card = source.tome.splice(targets.cardIndex, 1)[0];
@@ -697,7 +760,11 @@ function resolveHangedMan(state, ais, playerIndex, targets) {
   }
 
   if (player.tome.length >= 3) {
-    const discardIdx = ais[playerIndex].chooseTomeDiscard(state, playerIndex);
+    const discardIdx = yield {
+      type: DECISION_TYPES.TOME_DISCARD,
+      playerIndex,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     const discarded = player.tome.splice(discardIdx, 1)[0];
     state.pit.push(discarded);
@@ -714,7 +781,10 @@ function resolveHangedMan(state, ais, playerIndex, targets) {
   log(state, `${player.name} takes ${cardName(card)} from ${source.name}'s Tome via Hanged Man`);
 }
 
-function resolveTower(state, ais, playerIndex, targets) {
+/**
+ * Resolve Tower. (No decision points — stays synchronous.)
+ */
+function resolveTower(state, playerIndex, targets) {
   const myTomeSize = state.players[playerIndex].tome.length;
 
   for (let pi = 0; pi < state.players.length; pi++) {
@@ -735,7 +805,10 @@ function resolveTower(state, ais, playerIndex, targets) {
   }
 }
 
-function resolveJudgement(state, ais, playerIndex) {
+/**
+ * Resolve Judgement. (No decision points — stays synchronous.)
+ */
+function resolveJudgement(state, playerIndex) {
   state.roundEndMarkerHolder = playerIndex;
   state.players[playerIndex].hasRoundEndMarker = true;
   log(state, `${state.players[playerIndex].name} claims Round-End Marker via Judgement`);
@@ -744,12 +817,19 @@ function resolveJudgement(state, ais, playerIndex) {
   state.judgementTriggered = true;
 }
 
-function resolvePlague(state, ais, playerIndex, targets) {
+/**
+ * Resolve Plague (generator version). Yields TOME_DISCARD.
+ */
+function* resolvePlagueGen(state, playerIndex, targets) {
   const target = state.players[targets.playerIndex];
 
   if (target.tome.length >= 3) {
     // Need to remove one card from target's tome
-    const discardIdx = ais[playerIndex].chooseTomeDiscard(state, targets.playerIndex);
+    const discardIdx = yield {
+      type: DECISION_TYPES.TOME_DISCARD,
+      playerIndex,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
     const discarded = target.tome.splice(Math.min(discardIdx, target.tome.length - 1), 1)[0];
     if (getProtection(state, discarded.number)) {
@@ -775,14 +855,15 @@ function resolvePlague(state, ais, playerIndex, targets) {
 }
 
 /**
- * Execute playing a wild card to Realm.
+ * Execute playing a wild card to Realm (generator version).
+ * Yields ACE_BLOCK decisions.
  */
-function executeWild(state, ais, playerIndex, action) {
+function* executeWildGen(state, playerIndex, action) {
   const player = state.players[playerIndex];
   const { card, withCards } = action;
 
   // Check Ace blocking (blocks the wild card only)
-  if (checkAceBlock(state, ais, playerIndex, action)) {
+  if (yield* checkAceBlockGen(state, playerIndex, action)) {
     // Wild card and blocking Ace go to Pit
     // But Minor Arcana cards in the set still go to Realm
     for (const mc of withCards) {
@@ -819,8 +900,9 @@ function executeWild(state, ais, playerIndex, action) {
 
 /**
  * Execute buying a Major Arcana card.
+ * (No decision points — stays synchronous.)
  */
-function executeBuy(state, ais, playerIndex, action) {
+function executeBuy(state, playerIndex, action) {
   const player = state.players[playerIndex];
   const { source, payment } = action;
 
@@ -882,17 +964,23 @@ function executeBuy(state, ais, playerIndex, action) {
 }
 
 /**
- * Check if any player wants to block with an Ace.
+ * Check if any player wants to block with an Ace (generator version).
+ * Recursive via yield* for Ace-blocks-Ace chains.
  * Returns true if blocked.
  */
-function checkAceBlock(state, ais, actorIndex, action) {
+function* checkAceBlockGen(state, actorIndex, action) {
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === actorIndex) continue;
     const playerHand = state.players[pi].hand;
     const aceIdx = playerHand.findIndex(c => c.type === 'minor' && c.rank === 'ACE');
     if (aceIdx === -1) continue;
 
-    const aceBlockChoice = ais[pi].shouldBlockWithAce(state, pi, action);
+    const aceBlockChoice = yield {
+      type: DECISION_TYPES.ACE_BLOCK,
+      playerIndex: pi,
+      action,
+      state,
+    };
     recordDecision(state, DECISION_TYPES.ACE_BLOCK, pi, aceBlockChoice);
     if (aceBlockChoice) {
       const ace = playerHand.splice(aceIdx, 1)[0];
@@ -900,7 +988,7 @@ function checkAceBlock(state, ais, actorIndex, action) {
 
       // Check if someone blocks the Ace with another Ace
       const aceAction = { type: 'ACE_BLOCK', card: ace, playerIndex: pi, originalAction: action };
-      if (checkAceBlock(state, ais, pi, aceAction)) {
+      if (yield* checkAceBlockGen(state, pi, aceAction)) {
         // The blocking Ace was itself blocked, so original action proceeds
         // But the first Ace still goes to Pit
         state.pit.push(ace);
@@ -930,6 +1018,7 @@ function checkAceBlock(state, ais, actorIndex, action) {
 
 /**
  * Check round-end marker at turn end.
+ * (No decision points — stays synchronous.)
  */
 function checkRoundEndMarker(state, playerIndex) {
   const player = state.players[playerIndex];
@@ -945,6 +1034,7 @@ function checkRoundEndMarker(state, playerIndex) {
 
 /**
  * After an attack removes cards, check if marker holder still has 5.
+ * (No decision points — stays synchronous.)
  */
 function checkMarkerPassAfterAttack(state) {
   if (state.roundEndMarkerHolder === -1) return;
@@ -971,16 +1061,16 @@ function checkMarkerPassAfterAttack(state) {
 }
 
 /**
- * Handle round end: score, age display, reset for next round.
+ * Handle round end (generator version): score, age display, reset.
+ * Yields through scoreRoundEndGen for MAGICIAN_SUIT decisions.
  * @param {object} state
- * @param {object[]} ais
+ * @yields decision requests
  */
-export function handleRoundEnd(state, ais) {
-  // Import scoring dynamically to avoid circular deps - for now inline basic scoring
+function* handleRoundEndGen(state) {
   log(state, `--- Round ${state.roundNumber} End ---`);
 
   // Score round
-  scoreRoundEnd(state, ais);
+  yield* scoreRoundEndGen(state);
 
   // Check celestial win
   const celestialWinner = checkCelestialWin(state);
@@ -1000,9 +1090,9 @@ export function handleRoundEnd(state, ais) {
   resetForNextRound(state);
 }
 
-
 /**
  * Age the Major Arcana display.
+ * (No decision points — stays synchronous.)
  */
 function ageDisplay(state) {
   // Slot 2 -> major discard
@@ -1031,6 +1121,7 @@ function ageDisplay(state) {
 
 /**
  * Check if Death appeared in the display.
+ * (No decision points — stays synchronous.)
  */
 function checkDeathInDisplay(state) {
   for (let i = 0; i < 3; i++) {
@@ -1045,6 +1136,7 @@ function checkDeathInDisplay(state) {
 
 /**
  * Reset state for next round.
+ * (No decision points — stays synchronous.)
  */
 function resetForNextRound(state) {
   // Gather realm cards, minor deck, discard, pit -> shuffle for new deck
@@ -1084,6 +1176,7 @@ function resetForNextRound(state) {
 
 /**
  * Deal cards for a new round (6 per player for round 2+).
+ * (No decision points — stays synchronous.)
  */
 function dealRoundCards(state) {
   const roundDeal = state.config?.gameRules?.roundDealCount ?? 6;
@@ -1101,3 +1194,77 @@ function dealRoundCards(state) {
   }
 }
 
+// ============================================================
+// Sync wrappers (backward compatible — unchanged signatures)
+// ============================================================
+
+/**
+ * Set up the initial game state (sync wrapper).
+ * @param {object} state - The initial state from createInitialState
+ * @param {object[]} ais - Array of AI objects, one per player
+ */
+export function setup(state, ais) {
+  driveWithAIs(setupGen(state), ais);
+}
+
+/**
+ * Play a complete game (sync wrapper).
+ * @param {object} state - Game state (after setup)
+ * @param {object[]} ais - AI objects
+ * @returns {object} Final state
+ */
+export function playGame(state, ais) {
+  return driveWithAIs(playGameGen(state), ais);
+}
+
+/**
+ * Play a single round (sync wrapper).
+ * @param {object} state
+ * @param {object[]} ais
+ */
+export function playRound(state, ais) {
+  driveWithAIs(playRoundGen(state), ais);
+}
+
+/**
+ * Play a single turn for a player (sync wrapper).
+ * @param {object} state
+ * @param {object[]} ais
+ * @param {number} playerIndex
+ */
+export function playTurn(state, ais, playerIndex) {
+  driveWithAIs(playTurnGen(state, playerIndex), ais);
+}
+
+/**
+ * Discard phase (sync wrapper).
+ * @param {object} state
+ * @param {number} playerIndex
+ * @param {object} ai
+ */
+export function discardPhase(state, playerIndex, ai) {
+  // Create a single-element ais array at the right index for driveWithAIs
+  const ais = [];
+  ais[playerIndex] = ai;
+  driveWithAIs(discardPhaseGen(state, playerIndex), ais);
+}
+
+/**
+ * Execute a chosen action (sync wrapper).
+ * @param {object} state
+ * @param {object[]} ais
+ * @param {number} playerIndex
+ * @param {object} action
+ */
+export function executeAction(state, ais, playerIndex, action) {
+  driveWithAIs(executeActionGen(state, playerIndex, action), ais);
+}
+
+/**
+ * Handle round end (sync wrapper).
+ * @param {object} state
+ * @param {object[]} ais
+ */
+export function handleRoundEnd(state, ais) {
+  driveWithAIs(handleRoundEndGen(state), ais);
+}

@@ -1,5 +1,6 @@
 /**
  * Round-end and game-end scoring for New Arcana.
+ * Generator versions yield at decision points; sync wrappers drive them with AIs.
  */
 
 import { evaluateHand, compareHands } from './poker.js';
@@ -8,11 +9,13 @@ import { log, recordEvent } from './state.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
 
 /**
- * Score the end of a round.
+ * Score the end of a round (generator version).
+ * Yields at MAGICIAN_SUIT decision points (via resolveBonus → resolveMagician).
  * @param {object} state
- * @param {object[]} ais
+ * @param {object[]} ais - Only used by sync wrapper; generators yield instead
+ * @yields {{ type: string, playerIndex: number, state: object }}
  */
-export function scoreRoundEnd(state, ais) {
+export function* scoreRoundEndGen(state) {
   // Guard against double-scoring the same round (e.g. handleRoundEnd scores it,
   // then ageDisplay triggers Death/Celestial win, and playGame calls us again)
   if (state.lastScoredRound === state.roundNumber) return;
@@ -39,7 +42,7 @@ export function scoreRoundEnd(state, ais) {
 
       if (hasRealmCards) {
         // Normal bonus evaluation
-        const bonus = resolveBonus(state, pi, tomeCard, ais);
+        const bonus = yield* resolveBonusGen(state, pi, tomeCard);
         if (bonus > 0) {
           player.vp += bonus;
           log(state, `${player.name} earns ${bonus}vp from ${cardName(tomeCard)}`);
@@ -101,6 +104,15 @@ export function scoreRoundEnd(state, ais) {
 }
 
 /**
+ * Score the end of a round (sync wrapper — unchanged API).
+ * @param {object} state
+ * @param {object[]} ais
+ */
+export function scoreRoundEnd(state, ais) {
+  driveWithAIs(scoreRoundEndGen(state), ais);
+}
+
+/**
  * Award the pot to the player with the best poker hand.
  */
 function awardPot(state) {
@@ -138,26 +150,27 @@ function isBonusCard(card) {
 }
 
 /**
- * Resolve a single bonus card's VP.
+ * Resolve a single bonus card's VP (generator version).
+ * Yields at MAGICIAN_SUIT decision point.
  * @param {object} state
  * @param {number} playerIndex
  * @param {object} card
- * @param {object[]} ais
+ * @yields {{ type: string, playerIndex: number, state: object }}
  * @returns {number} VP earned
  */
-export function resolveBonus(state, playerIndex, card, ais) {
+export function* resolveBonusGen(state, playerIndex, card) {
   const player = state.players[playerIndex];
   const bonusCfg = state.config?.bonusCards?.[card.number];
 
   // Fool and Hierophant have special logic, not config-driven
-  if (card.number === 0) return resolveFool(state, playerIndex, ais);
+  if (card.number === 0) return yield* resolveFoolGen(state, playerIndex);
   if (card.number === 5) return 0; // Hierophant itself is not a bonus
 
   // If we have a config entry, use config-driven resolution
   if (bonusCfg) {
     switch (bonusCfg.bonusType) {
       case 'suitMajority':
-        return resolveMagician(state, playerIndex, ais);
+        return yield* resolveMagicianGen(state, playerIndex);
       case 'suitHighest':
         return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1);
       case 'pairCounting':
@@ -173,7 +186,7 @@ export function resolveBonus(state, playerIndex, card, ais) {
 
   // Fallback for cards without config entries (hardcoded defaults)
   switch (card.number) {
-    case 1: return resolveMagician(state, playerIndex, ais);
+    case 1: return yield* resolveMagicianGen(state, playerIndex);
     case 2: return resolveSuitBonus(state, playerIndex, 'WANDS', false, true);
     case 3: return resolveSuitBonus(state, playerIndex, 'CUPS', false, true);
     case 4: return resolveSuitBonus(state, playerIndex, 'COINS', false, true);
@@ -189,11 +202,22 @@ export function resolveBonus(state, playerIndex, card, ais) {
 }
 
 /**
- * The Fool: duplicate the best opponent bonus.
+ * Resolve a single bonus card's VP (sync wrapper — unchanged API).
+ * @param {object} state
+ * @param {number} playerIndex
+ * @param {object} card
+ * @param {object[]} ais
+ * @returns {number} VP earned
  */
-export function resolveFool(state, playerIndex, ais) {
+export function resolveBonus(state, playerIndex, card, ais) {
+  return driveWithAIs(resolveBonusGen(state, playerIndex, card), ais);
+}
+
+/**
+ * The Fool: duplicate the best opponent bonus (generator version).
+ */
+function* resolveFoolGen(state, playerIndex) {
   let bestBonus = 0;
-  const options = [];
 
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === playerIndex) continue;
@@ -203,7 +227,7 @@ export function resolveFool(state, playerIndex, ais) {
       if (!isBonusCard(card)) continue;
       // Evaluate this bonus as if the Fool's owner had it
       // But use the OPPONENT'S state for evaluation (requirements are duplicated)
-      const bonusVp = resolveBonus(state, pi, card, ais);
+      const bonusVp = yield* resolveBonusGen(state, pi, card);
       if (bonusVp > bestBonus) {
         bestBonus = bonusVp;
       }
@@ -214,12 +238,22 @@ export function resolveFool(state, playerIndex, ais) {
 }
 
 /**
- * Magician: 1vp if you have MORE cards of your named suit than ANY other player.
- * Wild cards ARE counted. NOT scored on tie.
+ * The Fool: duplicate the best opponent bonus (sync wrapper — unchanged API).
  */
-function resolveMagician(state, playerIndex, ais) {
-  const ai = ais[playerIndex];
-  const suit = ai.chooseMagicianSuit(state, playerIndex);
+export function resolveFool(state, playerIndex, ais) {
+  return driveWithAIs(resolveFoolGen(state, playerIndex), ais);
+}
+
+/**
+ * Magician: 1vp if you have MORE cards of your named suit than ANY other player.
+ * Wild cards ARE counted. NOT scored on tie. (generator version)
+ */
+function* resolveMagicianGen(state, playerIndex) {
+  const suit = yield {
+    type: DECISION_TYPES.MAGICIAN_SUIT,
+    playerIndex,
+    state,
+  };
   recordDecision(state, DECISION_TYPES.MAGICIAN_SUIT, playerIndex, suit);
 
   const bonusCfg = state.config?.bonusCards?.[1];
@@ -380,4 +414,57 @@ export function checkCelestialWin(state) {
     if (celestials.length >= winCount) return pi;
   }
   return -1;
+}
+
+// ============================================================
+// Shared utilities for driving generators with AIs
+// ============================================================
+
+/**
+ * Map a decision request to the corresponding AI method call.
+ * @param {object} ai - AI instance
+ * @param {object} request - Yielded decision request
+ * @returns {*} The AI's choice value
+ */
+export function resolveWithAI(ai, request) {
+  switch (request.type) {
+    case DECISION_TYPES.MAJOR_KEEP:
+      return ai.chooseMajorKeep(request.cards, request.state);
+    case DECISION_TYPES.ACTION:
+      return ai.chooseAction(request.state, request.legalActions, request.playerIndex);
+    case DECISION_TYPES.ACE_BLOCK:
+      return ai.shouldBlockWithAce(request.state, request.playerIndex, request.action);
+    case DECISION_TYPES.KING_BLOCK:
+      return ai.shouldBlockWithKing(request.state, request.playerIndex, request.attackCard);
+    case DECISION_TYPES.DISCARD:
+      return ai.chooseDiscard(request.state, request.playerIndex, request.numToDiscard);
+    case DECISION_TYPES.REALM_DISCARD:
+      return ai.chooseRealmDiscard(request.state, request.playerIndex, request.numToDiscard);
+    case DECISION_TYPES.TOME_DISCARD:
+      return ai.chooseTomeDiscard(request.state, request.playerIndex);
+    case DECISION_TYPES.WHEEL_SOURCES:
+      return ai.chooseWheelSources(request.state, request.playerIndex);
+    case DECISION_TYPES.WHEEL_KEEP:
+      return ai.chooseWheelKeep(request.cards, request.state);
+    case DECISION_TYPES.MAGICIAN_SUIT:
+      return ai.chooseMagicianSuit(request.state, request.playerIndex);
+    default:
+      throw new Error(`Unknown decision type: ${request.type}`);
+  }
+}
+
+/**
+ * Drive a generator to completion using AI objects for all decisions.
+ * @param {Generator} gen - Game generator
+ * @param {object[]} ais - Array of AI objects
+ * @returns {*} The generator's return value
+ */
+export function driveWithAIs(gen, ais) {
+  let result = gen.next();
+  while (!result.done) {
+    const request = result.value;
+    const choice = resolveWithAI(ais[request.playerIndex], request);
+    result = gen.next(choice);
+  }
+  return result.value;
 }

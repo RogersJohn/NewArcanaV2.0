@@ -303,7 +303,7 @@ When completing any task, update this section by marking it done and noting the 
 - [x] A4. Immutable State & History — completed 2026-03-01
 - [ ] A5. Test Coverage (ongoing)
 - [ ] A6. Smarter AI
-- [ ] B1. Engine Interface Layer
+- [x] B1. Engine Interface Layer — completed 2026-03-02
 - [ ] B2. Client Shell & Game Board
 - [ ] B3. Interaction Model
 - [ ] B4. AI Turn Visualization
