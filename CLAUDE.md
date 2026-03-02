@@ -299,7 +299,7 @@ When completing any task, update this section by marking it done and noting the 
 
 - [x] A1. Seeded RNG — completed 2026-03-01
 - [x] A2. Data-Driven Card Definitions — completed 2026-03-01
-- [ ] A3. A/B Comparison Mode
+- [x] A3. A/B Comparison Mode — completed 2026-03-02
 - [x] A4. Immutable State & History — completed 2026-03-01
 - [ ] A5. Test Coverage (ongoing)
 - [ ] A6. Smarter AI

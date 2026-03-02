@@ -11,12 +11,14 @@
  *   --verbose       Log individual games
  *   --json FILE     Output stats as JSON
  *   --single        Run one game with verbose logging
+ *   --compare A B   A/B comparison: run same games under two configs
  */
 
 import { runSimulation, runSingleGame } from './src/simulation.js';
 import { aggregateStats, formatReport, computeCardAnalytics, formatCardReport } from './src/stats.js';
 import { analyzeCardBalance } from './src/card-balance.js';
 import { loadConfig } from './src/config.js';
+import { runComparison, formatComparisonReport, generateComparisonHTML } from './src/compare.js';
 import { writeFileSync, mkdirSync } from 'fs';
 
 function parseArgs(argv) {
@@ -32,6 +34,7 @@ function parseArgs(argv) {
     report: false,
     cardBalance: false,
     config: null,
+    compare: null, // [configA, configB] paths
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -69,6 +72,9 @@ function parseArgs(argv) {
       case '--config':
         args.config = argv[++i];
         break;
+      case '--compare':
+        args.compare = [argv[++i], argv[++i]];
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -83,7 +89,8 @@ Usage: node index.js [options]
   --single        Run one game with verbose logging
   --report        Generate card analytics report
   --card-balance  Run card balance analysis (5 metrics with anomaly flags)
-  --config FILE   Path to card/game config JSON (overrides defaults)`);
+  --config FILE   Path to card/game config JSON (overrides defaults)
+  --compare A B   A/B comparison mode: run same games under two config files`);
         process.exit(0);
     }
   }
@@ -96,7 +103,60 @@ const args = parseArgs(process.argv);
 // Load card/game config if specified
 const cardConfig = args.config ? loadConfig(args.config) : undefined;
 
-if (args.single) {
+if (args.compare) {
+  // A/B Comparison mode
+  const [pathA, pathB] = args.compare;
+  if (!pathA || !pathB) {
+    console.error('Error: --compare requires two config file paths');
+    process.exit(1);
+  }
+
+  const configA = loadConfig(pathA);
+  const configB = loadConfig(pathB);
+
+  console.log(`Running A/B comparison: ${pathA} vs ${pathB}`);
+  console.log(`${args.games} games | ${args.players} players | Seed: ${args.seed ?? 'random'}\n`);
+
+  const startTime = Date.now();
+  const comparison = runComparison(configA, configB, {
+    games: args.games,
+    players: args.players,
+    extended: args.extended,
+    aiAssignment: args.ai,
+    seed: args.seed,
+  });
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`Completed in ${elapsed}s\n`);
+
+  const report = formatComparisonReport(comparison);
+  console.log(report);
+
+  if (args.json) {
+    try {
+      const dir = args.json.includes('/') ? args.json.substring(0, args.json.lastIndexOf('/')) : '.';
+      if (dir !== '.') mkdirSync(dir, { recursive: true });
+
+      // Write JSON data
+      const jsonOutput = {
+        configDiff: comparison.configDiff,
+        simOpts: comparison.simOpts,
+        statsA: comparison.statsA,
+        statsB: comparison.statsB,
+        diff: comparison.diff,
+      };
+      writeFileSync(args.json, JSON.stringify(jsonOutput, null, 2));
+      console.log(`\nJSON comparison saved to ${args.json}`);
+
+      // Write HTML report alongside JSON
+      const htmlPath = args.json.replace(/\.json$/, '.html');
+      const html = generateComparisonHTML(comparison);
+      writeFileSync(htmlPath, html);
+      console.log(`HTML comparison saved to ${htmlPath}`);
+    } catch (e) {
+      console.error(`Failed to write output: ${e.message}`);
+    }
+  }
+} else if (args.single) {
   console.log(`Running single game with ${args.players} players (${args.ai})...\n`);
   runSingleGame({
     players: args.players,
