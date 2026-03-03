@@ -43,6 +43,7 @@ src/
 │   ├── passive.js    # Minimal interaction, steady building
 │   ├── tactician.js  # Round-timing specialist, strategic Judgement
 │   ├── collector.js  # Tome-focused, accumulates Major Arcana
+│   ├── scoring.js    # 1-step lookahead, position evaluation
 │   ├── awareness.js  # Shared celestial threat detection
 │   └── index.js      # Registry, factory, assignment
 ├── simulation.js     # Monte Carlo runner
@@ -52,7 +53,12 @@ test/
 ├── actions.test.js
 ├── engine.test.js
 ├── effects.test.js
-└── scoring.test.js
+├── scoring.test.js
+├── history.test.js
+├── game-controller.test.js
+├── major-arcana.test.js
+├── regression.test.js
+└── statistical.test.js
 scripts/
 ├── ai-coverage-diagnostic.js
 └── card-balance.js
@@ -301,8 +307,8 @@ When completing any task, update this section by marking it done and noting the 
 - [x] A2. Data-Driven Card Definitions — completed 2026-03-01
 - [x] A3. A/B Comparison Mode — completed 2026-03-02
 - [x] A4. Immutable State & History — completed 2026-03-01
-- [ ] A5. Test Coverage (ongoing)
-- [ ] A6. Smarter AI
+- [x] A5. Test Coverage Expansion — completed 2026-03-02
+- [x] A6. Smarter AI (ScoringAI) — completed 2026-03-02
 - [x] B1. Engine Interface Layer — completed 2026-03-02
 - [ ] B2. Client Shell & Game Board
 - [ ] B3. Interaction Model

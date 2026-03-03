@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateHand, compareHands } from '../src/poker.js';
-import { createMinorCard, createMajorCard } from '../src/cards.js';
+import { createMinorCard, createMajorCard, SUITS, RANKS } from '../src/cards.js';
+import { createRNG } from '../src/rng.js';
 
 // Helper to create minor cards quickly
 function mc(suit, rank) {
@@ -392,6 +393,76 @@ describe('evaluateHand', () => {
       const pair = { rank: 1, type: 'One Pair', tiebreakers: [14] };
       const trips = { rank: 3, type: 'Three-of-a-Kind', tiebreakers: [2] };
       expect(compareHands(trips, pair)).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Property-based tests', () => {
+    it('1000 random 5-card hands always evaluate without throwing', () => {
+      const rng = createRNG(12345);
+      for (let i = 0; i < 1000; i++) {
+        const hand = [];
+        for (let j = 0; j < 5; j++) {
+          const suit = SUITS[rng.nextInt(SUITS.length)];
+          const rank = RANKS[rng.nextInt(RANKS.length)];
+          hand.push(createMinorCard(suit, rank));
+        }
+        const result = evaluateHand(hand);
+        expect(result).toBeDefined();
+        expect(result.rank).toBeGreaterThanOrEqual(0);
+        expect(result.rank).toBeLessThanOrEqual(9);
+        expect(typeof result.type).toBe('string');
+      }
+    });
+
+    it('transitivity: if A > B and B > C then A > C', () => {
+      const rng = createRNG(99999);
+
+      function randomHand() {
+        const hand = [];
+        const n = rng.nextInt(4) + 2; // 2-5 cards
+        for (let j = 0; j < n; j++) {
+          const suit = SUITS[rng.nextInt(SUITS.length)];
+          const rank = RANKS[rng.nextInt(RANKS.length)];
+          hand.push(createMinorCard(suit, rank));
+        }
+        return hand;
+      }
+
+      for (let i = 0; i < 200; i++) {
+        const a = evaluateHand(randomHand());
+        const b = evaluateHand(randomHand());
+        const c = evaluateHand(randomHand());
+
+        const ab = compareHands(a, b);
+        const bc = compareHands(b, c);
+        const ac = compareHands(a, c);
+
+        if (ab > 0 && bc > 0) {
+          expect(ac).toBeGreaterThan(0);
+        }
+        if (ab < 0 && bc < 0) {
+          expect(ac).toBeLessThan(0);
+        }
+      }
+    });
+
+    it('adding a wild card never worsens a hand', () => {
+      const rng = createRNG(77777);
+
+      for (let i = 0; i < 200; i++) {
+        const hand = [];
+        const n = rng.nextInt(3) + 1; // 1-3 cards
+        for (let j = 0; j < n; j++) {
+          const suit = SUITS[rng.nextInt(SUITS.length)];
+          const rank = RANKS[rng.nextInt(RANKS.length)];
+          hand.push(createMinorCard(suit, rank));
+        }
+
+        const base = evaluateHand(hand);
+        const withWild = evaluateHand([...hand, wild(17)]);
+
+        expect(compareHands(withWild, base)).toBeGreaterThanOrEqual(0);
+      }
     });
   });
 });

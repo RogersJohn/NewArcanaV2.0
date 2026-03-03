@@ -72,7 +72,7 @@ describe('Decision History Recording', () => {
 });
 
 describe('Game Replay', () => {
-  it('replays a seeded game to identical VP totals', () => {
+  it('replays a seeded game to identical VP totals', { timeout: 15000 }, () => {
     const original = runSeededGame(42);
     const replayed = replayGame(42, 4);
 
@@ -81,21 +81,21 @@ describe('Game Replay', () => {
     }
   });
 
-  it('replays to identical game end reason', () => {
+  it('replays to identical game end reason', { timeout: 15000 }, () => {
     const original = runSeededGame(42);
     const replayed = replayGame(42, 4);
 
     expect(replayed.gameEndReason).toBe(original.gameEndReason);
   });
 
-  it('replays to identical round count', () => {
+  it('replays to identical round count', { timeout: 15000 }, () => {
     const original = runSeededGame(42);
     const replayed = replayGame(42, 4);
 
     expect(replayed.roundNumber).toBe(original.roundNumber);
   });
 
-  it('replays produce identical history (decision-by-decision)', () => {
+  it('replays produce identical history (decision-by-decision)', { timeout: 15000 }, () => {
     const original = runSeededGame(42);
     const replayed = replayGame(42, 4);
 

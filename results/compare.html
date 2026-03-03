@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Arcana — A/B Comparison Report</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --dim: #8b949e;
+    --accent: #58a6ff;
+    --gold: #f0c040;
+    --green: #3fb950;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #d29922;
+    --cyan: #39d2c0;
+    --bar-a: #58a6ff;
+    --bar-b: #f0c040;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  header { text-align: center; padding: 48px 0 16px; }
+  header h1 { font-size: 2.2em; font-weight: 700; letter-spacing: -0.02em; }
+  header h1 span { color: var(--gold); }
+  header p { color: var(--dim); font-size: 1.05em; margin-top: 6px; }
+
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin: 24px 0 32px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; text-align: center;
+  }
+  .stat-card .label { font-size: 0.75em; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-card .value { font-size: 1.5em; font-weight: 700; margin-top: 4px; }
+
+  section { margin-bottom: 36px; }
+  section h2 {
+    font-size: 1.2em; font-weight: 600; margin-bottom: 14px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--dim); font-weight: 500; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:hover { background: rgba(88,166,255,0.04); }
+
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .sig-significant { color: var(--green); font-weight: 600; }
+  .sig-marginal { color: var(--orange); }
+  .sig-not-significant { color: var(--dim); }
+
+  .config-table td:first-child { font-family: monospace; color: var(--accent); }
+  .val-a { color: var(--dim); }
+  .val-b { color: var(--gold); font-weight: 500; }
+
+  .bar-chart { margin: 16px 0; }
+  .bar-group { margin-bottom: 12px; }
+  .bar-label { font-size: 0.85em; color: var(--dim); margin-bottom: 4px; font-weight: 500; }
+  .bar-pair { display: flex; flex-direction: column; gap: 3px; }
+  .bar {
+    height: 24px; border-radius: 4px; display: flex; align-items: center;
+    padding: 0 8px; font-size: 0.8em; font-weight: 600; min-width: 50px;
+    transition: width 0.3s;
+  }
+  .bar-a { background: var(--bar-a); color: #000; }
+  .bar-b { background: var(--bar-b); color: #000; }
+
+  .legend {
+    display: flex; gap: 20px; margin: 12px 0 20px; font-size: 0.85em;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  .metric-row {
+    display: grid; grid-template-columns: 140px 1fr; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.9em;
+  }
+  .metric-label { color: var(--dim); font-weight: 500; }
+
+  footer { text-align: center; padding: 32px 0; color: var(--dim); font-size: 0.8em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>New Arcana — <span>A/B Comparison</span></h1>
+  <p>100 games | 4 players | Seed: 42</p>
+</header>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="label">Config Changes</div>
+    <div class="value">1</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Games Each</div>
+    <div class="value">100</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Celestial Win A</div>
+    <div class="value">7.0%</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Celestial Win B</div>
+    <div class="value">7.0%</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Avg VP Delta</div>
+    <div class="value down">-0.51</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Game Length Delta</div>
+    <div class="value ">0.00</div>
+  </div>
+</div>
+
+<section>
+  <h2>Config Changes</h2>
+  
+  <table class="config-table">
+    <thead><tr><th>Key</th><th>Config A</th><th>Config B</th></tr></thead>
+    <tbody><tr><td>scoring.celestialVp</td><td class="val-a">2</td><td class="val-b">1</td></tr></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Win Rate Comparison</h2>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--bar-a)"></div> Config A</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--bar-b)"></div> Config B</div>
+  </div>
+  <div class="bar-chart">
+      <div class="bar-group">
+        <div class="bar-label">Celestial</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 100.0%">
+            <span>35.8%</span>
+          </div>
+          <div class="bar bar-b" style="width: 89.5%">
+            <span>32.1%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">Tactician</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 92.3%">
+            <span>21.4%</span>
+          </div>
+          <div class="bar bar-b" style="width: 100.0%">
+            <span>23.2%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">Builder</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 94.7%">
+            <span>30.0%</span>
+          </div>
+          <div class="bar bar-b" style="width: 100.0%">
+            <span>31.7%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">Collector</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 100.0%">
+            <span>1.9%</span>
+          </div>
+          <div class="bar bar-b" style="width: 100.0%">
+            <span>1.9%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">Controller</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 100.0%">
+            <span>35.6%</span>
+          </div>
+          <div class="bar bar-b" style="width: 100.0%">
+            <span>35.6%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">Aggressor</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 100.0%">
+            <span>10.0%</span>
+          </div>
+          <div class="bar bar-b" style="width: 100.0%">
+            <span>10.0%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label">Opportunist</div>
+        <div class="bar-pair">
+          <div class="bar bar-a" style="width: 100.0%">
+            <span>38.3%</span>
+          </div>
+          <div class="bar bar-b" style="width: 100.0%">
+            <span>38.3%</span>
+          </div>
+        </div>
+      </div></div>
+  <table>
+    <thead><tr><th>AI Type</th><th>Config A</th><th>Config B</th><th>Delta</th><th>Significance</th></tr></thead>
+    <tbody><tr>
+      <td>Celestial</td>
+      <td>35.8%</td>
+      <td>32.1%</td>
+      <td class="down">-3.77%</td>
+      <td class="sig-marginal">marginal</td>
+    </tr>
+<tr>
+      <td>Tactician</td>
+      <td>21.4%</td>
+      <td>23.2%</td>
+      <td class="up">+1.79%</td>
+      <td class="sig-not-significant">not significant</td>
+    </tr>
+<tr>
+      <td>Builder</td>
+      <td>30.0%</td>
+      <td>31.7%</td>
+      <td class="up">+1.67%</td>
+      <td class="sig-not-significant">not significant</td>
+    </tr>
+<tr>
+      <td>Collector</td>
+      <td>1.9%</td>
+      <td>1.9%</td>
+      <td class="">0.00%</td>
+      <td class="sig-not-significant">not significant</td>
+    </tr>
+<tr>
+      <td>Controller</td>
+      <td>35.6%</td>
+      <td>35.6%</td>
+      <td class="">0.00%</td>
+      <td class="sig-not-significant">not significant</td>
+    </tr>
+<tr>
+      <td>Aggressor</td>
+      <td>10.0%</td>
+      <td>10.0%</td>
+      <td class="">0.00%</td>
+      <td class="sig-not-significant">not significant</td>
+    </tr>
+<tr>
+      <td>Opportunist</td>
+      <td>38.3%</td>
+      <td>38.3%</td>
+      <td class="">0.00%</td>
+      <td class="sig-not-significant">not significant</td>
+    </tr></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Strategy Effectiveness (Avg VP)</h2>
+  <table>
+    <thead><tr><th>AI Type</th><th>Config A</th><th>Config B</th><th>Delta</th></tr></thead>
+    <tbody><tr>
+      <td>Celestial</td>
+      <td>9.66</td>
+      <td>8.06</td>
+      <td class="down">-1.60vp</td>
+    </tr>
+<tr>
+      <td>Collector</td>
+      <td>3.69</td>
+      <td>3.00</td>
+      <td class="down">-0.69vp</td>
+    </tr>
+<tr>
+      <td>Tactician</td>
+      <td>10.38</td>
+      <td>9.96</td>
+      <td class="down">-0.42vp</td>
+    </tr>
+<tr>
+      <td>Controller</td>
+      <td>13.68</td>
+      <td>13.34</td>
+      <td class="down">-0.34vp</td>
+    </tr>
+<tr>
+      <td>Opportunist</td>
+      <td>17.05</td>
+      <td>16.72</td>
+      <td class="down">-0.33vp</td>
+    </tr>
+<tr>
+      <td>Aggressor</td>
+      <td>6.53</td>
+      <td>6.23</td>
+      <td class="down">-0.30vp</td>
+    </tr>
+<tr>
+      <td>Builder</td>
+      <td>11.30</td>
+      <td>11.23</td>
+      <td class="down">-0.07vp</td>
+    </tr></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>VP Distribution</h2>
+  <div class="metric-row">
+    <div class="metric-label">All Players</div>
+    <div>10.46 -> 9.95 <span class="down">(-0.51)</span> <span class="sig-not-significant">not significant</span></div>
+  </div>
+  <div class="metric-row">
+    <div class="metric-label">Winners</div>
+    <div>18.83 -> 18.27 <span class="down">(-0.56)</span> <span class="sig-not-significant">not significant</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Game Length</h2>
+  <div class="metric-row">
+    <div class="metric-label">Mean Rounds</div>
+    <div>5.22 -> 5.22 <span class="">(0.00)</span> <span class="sig-not-significant">not significant</span></div>
+  </div>
+  <div class="metric-row">
+    <div class="metric-label">Median</div>
+    <div>5 -> 5</div>
+  </div>
+</section>
+
+<section>
+  <h2>Game End Reasons</h2>
+  <table>
+    <thead><tr><th>Reason</th><th>Config A</th><th>Config B</th><th>Delta</th></tr></thead>
+    <tbody><tr>
+      <td>death_revealed</td>
+      <td>75.0%</td>
+      <td>75.0%</td>
+      <td class="">0.00%</td>
+    </tr>
+<tr>
+      <td>death_purchased</td>
+      <td>17.0%</td>
+      <td>17.0%</td>
+      <td class="">0.00%</td>
+    </tr>
+<tr>
+      <td>celestial_win</td>
+      <td>7.0%</td>
+      <td>7.0%</td>
+      <td class="">0.00%</td>
+    </tr>
+<tr>
+      <td>max_rounds</td>
+      <td>1.0%</td>
+      <td>1.0%</td>
+      <td class="">0.00%</td>
+    </tr></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Card Power Ranking Shifts</h2>
+  <table>
+    <thead><tr><th>Card</th><th>Rank A</th><th>Rank B</th><th>Move</th><th>Score A</th><th>Score B</th></tr></thead>
+    <tbody><tr>
+      <td>[17] The Star</td>
+      <td>#1</td>
+      <td>#2</td>
+      <td class="down">-1</td>
+      <td>0.759</td>
+      <td>0.759</td>
+    </tr>
+<tr>
+      <td>[21] The World</td>
+      <td>#2</td>
+      <td>#1</td>
+      <td class="up">+1</td>
+      <td>0.729</td>
+      <td>0.762</td>
+    </tr>
+<tr>
+      <td>[3] The Empress</td>
+      <td>#6</td>
+      <td>#7</td>
+      <td class="down">-1</td>
+      <td>0.497</td>
+      <td>0.511</td>
+    </tr>
+<tr>
+      <td>[15] The Devil</td>
+      <td>#7</td>
+      <td>#6</td>
+      <td class="up">+1</td>
+      <td>0.495</td>
+      <td>0.517</td>
+    </tr>
+<tr>
+      <td>[4] The Emperor</td>
+      <td>#9</td>
+      <td>#10</td>
+      <td class="down">-1</td>
+      <td>0.405</td>
+      <td>0.380</td>
+    </tr>
+<tr>
+      <td>[0] The Fool</td>
+      <td>#10</td>
+      <td>#9</td>
+      <td class="up">+1</td>
+      <td>0.370</td>
+      <td>0.381</td>
+    </tr>
+<tr>
+      <td>[18] The Moon</td>
+      <td>#3</td>
+      <td>#3</td>
+      <td class="">0</td>
+      <td>0.639</td>
+      <td>0.631</td>
+    </tr>
+<tr>
+      <td>[14] Temperance</td>
+      <td>#4</td>
+      <td>#4</td>
+      <td class="">0</td>
+      <td>0.600</td>
+      <td>0.576</td>
+    </tr>
+<tr>
+      <td>[1] The Magician</td>
+      <td>#5</td>
+      <td>#5</td>
+      <td class="">0</td>
+      <td>0.519</td>
+      <td>0.538</td>
+    </tr>
+<tr>
+      <td>[2] The High Priestess</td>
+      <td>#8</td>
+      <td>#8</td>
+      <td class="">0</td>
+      <td>0.453</td>
+      <td>0.464</td>
+    </tr>
+<tr>
+      <td>[6] The Lovers</td>
+      <td>#11</td>
+      <td>#11</td>
+      <td class="">0</td>
+      <td>0.343</td>
+      <td>0.346</td>
+    </tr>
+<tr>
+      <td>[9] The Hermit</td>
+      <td>#12</td>
+      <td>#12</td>
+      <td class="">0</td>
+      <td>0.333</td>
+      <td>0.338</td>
+    </tr>
+<tr>
+      <td>[11] Justice (11)</td>
+      <td>#13</td>
+      <td>#13</td>
+      <td class="">0</td>
+      <td>0.311</td>
+      <td>0.311</td>
+    </tr>
+<tr>
+      <td>[19] The Sun (19)</td>
+      <td>#14</td>
+      <td>#14</td>
+      <td class="">0</td>
+      <td>0.271</td>
+      <td>0.271</td>
+    </tr>
+<tr>
+      <td>[10] Wheel of Fortune</td>
+      <td>#15</td>
+      <td>#15</td>
+      <td class="">0</td>
+      <td>0.189</td>
+      <td>0.189</td>
+    </tr>
+<tr>
+      <td>[5] The Hierophant (5)</td>
+      <td>#16</td>
+      <td>#16</td>
+      <td class="">0</td>
+      <td>0.168</td>
+      <td>0.168</td>
+    </tr>
+<tr>
+      <td>[16] The Tower</td>
+      <td>#17</td>
+      <td>#17</td>
+      <td class="">0</td>
+      <td>0.148</td>
+      <td>0.148</td>
+    </tr>
+<tr>
+      <td>[20] Judgement (20)</td>
+      <td>#18</td>
+      <td>#18</td>
+      <td class="">0</td>
+      <td>0.132</td>
+      <td>0.132</td>
+    </tr>
+<tr>
+      <td>[7] The Chariot (7)</td>
+      <td>#19</td>
+      <td>#19</td>
+      <td class="">0</td>
+      <td>0.127</td>
+      <td>0.127</td>
+    </tr>
+<tr>
+      <td>[8] Strength</td>
+      <td>#20</td>
+      <td>#20</td>
+      <td class="">0</td>
+      <td>0.127</td>
+      <td>0.127</td>
+    </tr></tbody>
+  </table>
+</section>
+
+<footer>
+  Generated by New Arcana Stats Engine v2 — A/B Comparison Mode
+</footer>
+
+</div>
+</body>
+</html>

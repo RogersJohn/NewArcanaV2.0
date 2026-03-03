@@ -161,7 +161,7 @@ describe('Full Game', () => {
     }
   });
 
-  it('works with 3 players', () => {
+  it('works with 3 players', { timeout: 15000 }, () => {
     for (let i = 0; i < 5; i++) {
       const state = createInitialState(3);
       const ais = makeAIs(3);

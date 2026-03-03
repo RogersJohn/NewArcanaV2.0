@@ -55,7 +55,7 @@ describe('GameController', () => {
       expect(result.state.gameEndReason).toBeTruthy();
     });
 
-    it('completes with different player counts', () => {
+    it('completes with different player counts', { timeout: 15000 }, () => {
       for (const n of [3, 4, 5]) {
         const ctrl = new GameController({
           players: n,

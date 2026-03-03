@@ -11,6 +11,7 @@ import { OpportunistAI } from './opportunist.js';
 import { PassiveAI } from './passive.js';
 import { TacticianAI } from './tactician.js';
 import { CollectorAI } from './collector.js';
+import { ScoringAI } from './scoring.js';
 import { shuffle } from '../cards.js';
 
 const AI_CLASSES = {
@@ -23,6 +24,7 @@ const AI_CLASSES = {
   'passive': PassiveAI,
   'tactician': TacticianAI,
   'collector': CollectorAI,
+  'scoring': ScoringAI,
 };
 
 const AI_NAMES = Object.keys(AI_CLASSES);
@@ -104,4 +106,4 @@ export function createAIs(numPlayers, assignment = 'diverse', rng) {
   return createAIPool(numPlayers, rng);
 }
 
-export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI };
+export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI, ScoringAI };
