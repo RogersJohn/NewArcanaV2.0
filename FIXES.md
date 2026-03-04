@@ -333,6 +333,18 @@ Remove the duplicate log/recordEvent after the `if (bought)` block for display s
 
 ---
 
+## Pre-Demo Investigation: Wheel/Judgement Blocking Rates
+
+**Investigated**: Whether Wheel of Fortune (10) and Judgement (20) have unreasonably high block rates.
+
+**Finding**: Current blocking rates are reasonable (1000 games, 4 players, seed 42):
+- Wheel of Fortune: 87.4% success (62 blocked / 494 total)
+- Judgement: 51.4% success (35 blocked / 72 total)
+
+**Analysis**: Most AI types (Builder, Controller, Opportunist, Scoring, Passive) do NOT block action cards. Only Aggressor (40%), Tactician (30-40%), Collector (25-35%), and Random (20%) attempt to block. Judgement has a higher block rate because it's a high-impact action that the AIs prioritize. The compound probability of at least one of 3 opponents having an Ace and choosing to block explains the moderate rates. No code changes needed — documented in DANNY_README.md Known Limitations section.
+
+---
+
 ## Verification
 
 After all fixes:
