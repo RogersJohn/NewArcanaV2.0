@@ -186,7 +186,7 @@ function formatBalanceReport(totalGames, m) {
   lines.push(THIN);
   lines.push('  Card                      Bought  ByWinner  Rate    Flag');
   for (const c of m.winnerAffinity) {
-    const name = `[${c.number}] ${c.name}`.padEnd(26);
+    const name = `${c.name} (${c.number})`.padEnd(26);
     const flag = c.flag ? ` <<${c.flag}>>` : '';
     lines.push(`  ${name} ${String(c.purchased).padStart(6)}  ${String(c.purchasedByWinner).padStart(8)}  ${(c.rate * 100).toFixed(1).padStart(5)}%${flag}`);
   }
@@ -199,7 +199,7 @@ function formatBalanceReport(totalGames, m) {
   lines.push(THIN);
   lines.push('  Card                      Held-In  Delta   Flag');
   for (const c of m.vpDelta) {
-    const name = `[${c.number}] ${c.name}`.padEnd(26);
+    const name = `${c.name} (${c.number})`.padEnd(26);
     const sign = c.meanDelta >= 0 ? '+' : '';
     const flag = c.flag ? ` <<${c.flag}>>` : '';
     lines.push(`  ${name} ${String(c.gamesHeld).padStart(7)}  ${sign}${c.meanDelta.toFixed(2).padStart(6)}${flag}`);
@@ -213,7 +213,7 @@ function formatBalanceReport(totalGames, m) {
   lines.push(THIN);
   lines.push('  Card                      OK  Ace-Blk  Total  Success  Flag');
   for (const c of m.actionEffectiveness) {
-    const name = `[${c.number}] ${c.name}`.padEnd(26);
+    const name = `${c.name} (${c.number})`.padEnd(26);
     const total = c.played + c.aceBlocked;
     const flag = c.flag ? ` <<${c.flag}>>` : '';
     lines.push(`  ${name} ${String(c.played).padStart(4)}  ${String(c.aceBlocked).padStart(7)}  ${String(total).padStart(5)}  ${(c.successRate * 100).toFixed(1).padStart(6)}%${flag}`);
@@ -227,7 +227,7 @@ function formatBalanceReport(totalGames, m) {
   lines.push(THIN);
   lines.push('  Card                      Scored  Hieroph  Failed  Rate    Flag');
   for (const c of m.bonusHitRate) {
-    const name = `[${c.number}] ${c.name}`.padEnd(26);
+    const name = `${c.name} (${c.number})`.padEnd(26);
     const flag = c.flag ? ` <<${c.flag}>>` : '';
     lines.push(`  ${name} ${String(c.scored).padStart(6)}  ${String(c.hierophant).padStart(7)}  ${String(c.failed).padStart(6)}  ${(c.rate * 100).toFixed(1).padStart(5)}%${flag}`);
   }
@@ -240,7 +240,7 @@ function formatBalanceReport(totalGames, m) {
   lines.push(THIN);
   lines.push('  Card                      Bought  Display  AgedOff  Rate    Flag');
   for (const c of m.purchaseRate) {
-    const name = `[${c.number}] ${c.name}`.padEnd(26);
+    const name = `${c.name} (${c.number})`.padEnd(26);
     const flag = c.flag ? ` <<${c.flag}>>` : '';
     lines.push(`  ${name} ${String(c.purchased).padStart(6)}  ${String(c.displayed).padStart(7)}  ${String(c.agedOff).padStart(7)}  ${(c.purchaseRate * 100).toFixed(1).padStart(5)}%${flag}`);
   }
