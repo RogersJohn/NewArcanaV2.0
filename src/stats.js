@@ -596,7 +596,7 @@ export function formatReport(stats) {
       .sort((a, b) => b[1].purchasedByWinner - a[1].purchasedByWinner);
 
     for (const [num, c] of sortedCards) {
-      const name = `${c.name} (${num})`;
+      const name = c.name;
       const bonusRate = c.bonusSuccessRate !== null
         ? `${(c.bonusSuccessRate * 100).toFixed(0)}%`
         : '-';
