@@ -316,3 +316,9 @@ When completing any task, update this section by marking it done and noting the 
 - [ ] B5. Game Flow Screens
 - [ ] B6. Polish & Visuals
 - [ ] Monorepo restructure
+
+### Pre-Demo Fixes (Workstream A Polish)
+- [x] Fix duplicate card name formatting in stats and balance output
+- [x] Add DANNY_README.md (game designer quick start)
+- [x] Investigate and document Wheel/Judgement blocking behaviour
+- [x] Regenerate clean result files
