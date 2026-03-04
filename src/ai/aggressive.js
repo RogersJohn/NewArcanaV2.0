@@ -82,7 +82,7 @@ export class AggressorAI extends RandomAI {
     if (bestPi === -1) {
       // Target anyone with cards
       for (let pi = 0; pi < state.players.length; pi++) {
-        if (pi === playerIndex && state.players[pi].realm.length > 0) {
+        if (pi !== playerIndex && state.players[pi].realm.length > 0) {
           bestPi = pi;
           break;
         }
