@@ -1,0 +1,194 @@
+Running 1000 games with 4 players (diverse)...
+Completed in 718.3s
+
+============================================================
+  NEW ARCANA STATS ENGINE v2 — SIMULATION REPORT
+============================================================
+Games: 1000 | Players: 4 | Errors: 0
+AI Assignment: diverse
+
+--- AI WIN RATES ---
+  Opportunist  41.6% (206/495) CI95: [37.4%, 46.0%]
+  Scoring      39.3% (199/506) CI95: [35.2%, 43.6%]
+  Controller   32.4% (155/478) CI95: [28.4%, 36.7%]
+  Builder      29.8% (149/500) CI95: [26.0%, 34.0%]
+  Celestial    29.2% (150/513) CI95: [25.5%, 33.3%]
+  Tactician    15.1% (72/478) CI95: [12.1%, 18.5%]
+  Aggressor    12.0% (63/526) CI95: [9.5%, 15.0%]
+  Collector    1.2% (6/504) CI95: [0.5%, 2.6%]
+
+--- STRATEGY EFFECTIVENESS (avg VP) ---
+  Opportunist  20.50 avg VP (495 games)
+  Scoring      20.48 avg VP (506 games)
+  Controller   16.14 avg VP (478 games)
+  Builder      15.50 avg VP (500 games)
+  Celestial    11.13 avg VP (513 games)
+  Tactician    10.24 avg VP (478 games)
+  Aggressor    7.03 avg VP (526 games)
+  Collector    3.44 avg VP (504 games)
+
+--- GAME END REASONS ---
+  death_purchased      138 (13.8%)
+  death_revealed       808 (80.8%)
+  celestial_win        41 (4.1%)
+  max_rounds           13 (1.3%)
+
+--- GAME LENGTH (rounds) ---
+  Mean: 6.3 | Median: 6 | StdDev: 3.1 | Range: [1, 21]
+
+--- CELESTIAL WIN RATE ---
+  41 / 1000 (4.1%)
+
+--- VP DISTRIBUTION ---
+  All players: mean=13, median=10, stddev=13.83, range=[0, 176]
+  Winners:     mean=23.05, median=20, stddev=16.68, range=[4, 176]
+
+--- POSITION WIN RATES ---
+  position_0   23.4% (234/1000)
+  position_1   24.2% (242/1000)
+  position_2   25.7% (257/1000)
+  position_3   26.7% (267/1000)
+
+--- MAJOR ARCANA CARD STATS ---
+  Card Name               | Purchased  | In Winner Tome  | Bonus Rate  | Avg Bonus VP  | Used as Wild
+  ---------------------------------------------------------------------------------------------------
+  The World               |   619      |      145        |      -      |        -      |   296
+  The Moon (18)           |   598      |      123        |      -      |        -      |   313
+  The Sun (19)            |   580      |      127        |      -      |        -      |   327
+  The Star (17)           |   596      |      126        |      -      |        -      |   314
+  The Devil (15)          |   429      |       81        |      -      |        -      |   266
+  Temperance (14)         |   424      |       90        |    31%      |      1.0      |   192
+  The Fool (0)            |   319      |       63        |    15%      |      1.0      |   119
+  The Empress (3)         |   342      |       59        |    26%      |      1.0      |   121
+  The Chariot             |   250      |        0        |      -      |        -      |    93
+  The Emperor (4)         |   297      |       48        |    27%      |      1.0      |   160
+  The High Priestess      |   312      |       67        |    26%      |      1.0      |   176
+  The Hierophant (5)      |   409      |       60        |      -      |        -      |   217
+  Wheel of Fortune (10)   |   465      |        0        |      -      |        -      |   145
+  The Hanged Man          |   238      |        0        |      -      |        -      |    60
+  The Lovers              |   300      |       56        |    38%      |      1.2      |   121
+  The Hermit              |   438      |       40        |   100%      |      1.0      |   213
+  Justice                 |   299      |       53        |    30%      |      1.0      |   148
+  The Magician            |   324      |       59        |    24%      |      1.0      |   133
+  The Tower (16)          |   227      |        0        |      -      |        -      |    80
+  Strength                |   223      |        0        |      -      |        -      |    57
+  Judgement (20)          |   219      |        0        |      -      |        -      |    57
+  Death (13)              |     0      |        0        |      -      |        -      |    12
+
+============================================================
+
+============================================================
+  CARD ANALYTICS REPORT
+============================================================
+Based on 1000 games
+
+--- POWER RANKINGS (composite score) ---
+  Rank  Card                     Score  Tome  Buy   VP
+   1.  [21] The World           0.800  1.00  1.00  0.00
+   2.  [2] The High Priestess   0.472  0.39  0.50  0.64
+   3.  [6] The Lovers           0.444  0.23  0.48  0.92
+   4.  [11] Justice             0.411  0.26  0.48  0.68
+   5.  [14] Temperance (14)     0.405  0.00  0.69  1.00
+   6.  [1] The Magician         0.385  0.24  0.52  0.54
+   7.  [9] The Hermit           0.352  0.19  0.71  0.21
+   8.  [18] The Moon (18)       0.290  0.00  0.97  0.00
+   9.  [17] The Star (17)       0.289  0.00  0.96  0.00
+  10.  [19] The Sun (19)        0.281  0.00  0.94  0.00
+  11.  [3] The Empress (3)      0.277  0.00  0.55  0.56
+  12.  [4] The Emperor (4)      0.266  0.00  0.48  0.61
+  13.  [10] Wheel of Fortune (10) 0.225  0.00  0.75  0.00
+  14.  [0] The Fool (0)         0.223  0.00  0.52  0.34
+  15.  [15] The Devil (15)      0.208  0.00  0.69  0.00
+
+--- PURCHASE FREQUENCY ---
+  Card                     Total  Per Game  Winner%
+  [21] The World             619     0.619    27.9%
+  [18] The Moon (18)         598     0.598    27.8%
+  [17] The Star (17)         596     0.596    26.8%
+  [19] The Sun (19)          580     0.580    27.8%
+  [10] Wheel of Fortune (10)   465     0.465    11.8%
+  [9] The Hermit             438     0.438    11.6%
+  [15] The Devil (15)        429     0.429    20.0%
+  [14] Temperance (14)       424     0.424    17.9%
+  [5] The Hierophant (5)     409     0.409    13.4%
+  [3] The Empress (3)        342     0.342    18.1%
+  [1] The Magician           324     0.324    14.8%
+  [0] The Fool (0)           319     0.319    19.7%
+  [2] The High Priestess     312     0.312    17.9%
+  [6] The Lovers             300     0.300    17.7%
+  [11] Justice               299     0.299    17.1%
+
+--- CARDS IN WINNING TOMES ---
+  Card                     Count  Rate
+  [21] The World             134   13.4%
+  [2] The High Priestess      52    5.2%
+  [11] Justice                35    3.5%
+  [1] The Magician            32    3.2%
+  [6] The Lovers              31    3.1%
+  [9] The Hermit              26    2.6%
+
+--- BONUS SUCCESS RATES ---
+  Card                     OK   Fail  Rate    AvgVP  TotalVP
+  [14] Temperance (14)      428   960   30.8%   1.00      428
+  [2] The High Priestess    272   758   26.4%   1.00      272
+  [1] The Magician          233   758   23.5%   1.00      233
+  [4] The Emperor (4)       262   707   27.0%   1.00      262
+  [11] Justice              289   665   30.3%   1.00      289
+  [3] The Empress (3)       238   684   25.8%   1.00      238
+  [0] The Fool (0)          141   769   15.5%   1.04      146
+  [6] The Lovers            319   515   38.2%   1.23      392
+  [9] The Hermit             91     0  100.0%   1.00       91
+
+--- CARD-IN-TOME WIN CORRELATION ---
+  Card                     In Tome  In Winner  Win%
+  [21] The World               616        145   23.5%
+  [19] The Sun (19)            583        127   21.8%
+  [18] The Moon (18)           605        123   20.3%
+  [17] The Star (17)           620        126   20.3%
+  [2] The High Priestess       396         67   16.9%
+  [0] The Fool (0)             376         63   16.8%
+  [14] Temperance (14)         542         90   16.6%
+  [15] The Devil (15)          498         81   16.3%
+  [6] The Lovers               347         56   16.1%
+  [3] The Empress (3)          390         59   15.1%
+  [1] The Magician             406         59   14.5%
+  [11] Justice                 370         53   14.3%
+  [5] The Hierophant (5)       463         60   13.0%
+  [4] The Emperor (4)          382         48   12.6%
+  [9] The Hermit               419         40    9.5%
+
+--- ACTION CARD USAGE ---
+  Card                     Total  Per Game
+  [7] The Chariot            462     0.462
+  [10] Wheel of Fortune (10)   432     0.432
+  [16] The Tower (16)        272     0.272
+  [12] The Hanged Man        261     0.261
+  [8] Strength               218     0.218
+  [20] Judgement (20)         37     0.037
+
+--- WILD CARD USAGE ---
+  Card                     Total  Per Game
+  [19] The Sun (19)          327     0.327
+  [17] The Star (17)         314     0.314
+  [18] The Moon (18)         313     0.313
+  [21] The World             296     0.296
+  [15] The Devil (15)        266     0.266
+  [5] The Hierophant (5)     217     0.217
+  [9] The Hermit             213     0.213
+  [14] Temperance (14)       192     0.192
+  [2] The High Priestess     176     0.176
+  [4] The Emperor (4)        160     0.160
+  [11] Justice               148     0.148
+  [10] Wheel of Fortune (10)   145     0.145
+  [1] The Magician           133     0.133
+  [3] The Empress (3)        121     0.121
+  [6] The Lovers             121     0.121
+  [0] The Fool (0)           119     0.119
+  [7] The Chariot             93     0.093
+  [16] The Tower (16)         80     0.080
+  [12] The Hanged Man         60     0.060
+  [8] Strength                57     0.057
+  [20] Judgement (20)         57     0.057
+  [13] Death (13)             12     0.012
+
+============================================================
