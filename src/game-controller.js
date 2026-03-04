@@ -13,6 +13,17 @@
  *     result = ctrl.submitDecision(choice);
  *   }
  *   // result.state is the final game state
+ *
+ * With yieldAll mode (for AI visualization):
+ *   const ctrl = new GameController({ players: 4, humanPlayers: [0], seed: 42, yieldAll: true });
+ *   let result = ctrl.start();
+ *   while (!result.done) {
+ *     if (ctrl.isHumanDecision(result.decision)) {
+ *       result = ctrl.submitDecision(humanChoice);
+ *     } else {
+ *       result = ctrl.submitAIDecision(result.decision);
+ *     }
+ *   }
  */
 
 import { createInitialState } from './state.js';
@@ -32,14 +43,16 @@ export class GameController {
    * @param {number|string} [options.seed] - Seed for deterministic RNG
    * @param {boolean} [options.extended=false] - Use extended Major Arcana
    * @param {object} [options.cardConfig] - Custom card/game config
+   * @param {boolean} [options.yieldAll=false] - Yield ALL decisions (AI + human) for visualization
    */
-  constructor({ players, humanPlayers = [], aiAssignment = 'diverse', seed, extended = false, cardConfig } = {}) {
+  constructor({ players, humanPlayers = [], aiAssignment = 'diverse', seed, extended = false, cardConfig, yieldAll = false } = {}) {
     this._numPlayers = players;
     this._humanSet = new Set(humanPlayers);
     this._aiAssignment = aiAssignment;
     this._seed = seed;
     this._extended = extended;
     this._cardConfig = cardConfig;
+    this._yieldAll = yieldAll;
 
     this._state = null;
     this._ais = null;
@@ -51,6 +64,7 @@ export class GameController {
   /**
    * Initialize and start the game.
    * Advances through AI decisions until the first human decision (or game over).
+   * In yieldAll mode, stops at every decision (AI or human).
    * @returns {{ done: boolean, decision?: object, state?: object }}
    */
   start() {
@@ -75,7 +89,7 @@ export class GameController {
     // Create the full game generator: setup then play
     this._gen = this._createGameGenerator();
 
-    // Advance to first human decision or completion
+    // Advance to first decision or completion
     return this._advance(this._gen.next());
   }
 
@@ -99,11 +113,48 @@ export class GameController {
   }
 
   /**
+   * Resolve an AI decision and submit the result.
+   * Convenience method for yieldAll mode — resolves using the appropriate AI.
+   * @param {object} decision - The decision object yielded by the generator
+   * @returns {{ done: boolean, decision?: object, state?: object }}
+   */
+  submitAIDecision(decision) {
+    const ai = this._ais[decision.playerIndex];
+    const choice = resolveWithAI(ai, decision);
+    return this.submitDecision(choice);
+  }
+
+  /**
+   * Check if a decision is for a human player.
+   * @param {object} decision - Decision object
+   * @returns {boolean}
+   */
+  isHumanDecision(decision) {
+    return this._humanSet.has(decision.playerIndex);
+  }
+
+  /**
    * Get the current game state.
    * @returns {object} Live game state reference
    */
   getState() {
     return this._state;
+  }
+
+  /**
+   * Get the AI objects array.
+   * @returns {object[]} AI instances for each player slot
+   */
+  getAIs() {
+    return this._ais;
+  }
+
+  /**
+   * Check if the game is complete.
+   * @returns {boolean}
+   */
+  isDone() {
+    return this._done;
   }
 
   /**
@@ -118,13 +169,19 @@ export class GameController {
 
   /**
    * Internal: advance the generator, auto-resolving AI decisions.
-   * Stops and returns when a human decision is needed or the game ends.
+   * In default mode: stops at human decisions or game end.
+   * In yieldAll mode: stops at every decision or game end.
    * @param {{ done: boolean, value: * }} result - Generator result
    * @returns {{ done: boolean, decision?: object, state?: object }}
    */
   _advance(result) {
     while (!result.done) {
       const request = result.value;
+
+      // In yieldAll mode, yield every decision to the caller
+      if (this._yieldAll) {
+        return { done: false, decision: request };
+      }
 
       // If this decision is for a human player, pause and return it
       if (this._humanSet.has(request.playerIndex)) {

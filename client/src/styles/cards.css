@@ -1,0 +1,130 @@
+/* Card Component Styles */
+.card {
+  width: 60px;
+  height: 90px;
+  border: 2px solid var(--border-subtle);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  font-size: 12px;
+  position: relative;
+  user-select: none;
+  flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.card-small {
+  width: 40px;
+  height: 60px;
+  font-size: 9px;
+  border-radius: 4px;
+}
+
+.card-clickable {
+  cursor: pointer;
+}
+
+.card-clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.card-selected {
+  border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 12px rgba(240, 192, 64, 0.4);
+  transform: translateY(-6px);
+}
+
+/* Minor Card */
+.card-minor {
+  border-width: 2px;
+}
+
+.card-rank {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-small .card-rank {
+  font-size: 10px;
+}
+
+.card-suit {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.card-small .card-suit {
+  font-size: 14px;
+}
+
+/* Major Card */
+.card-major {
+  background: linear-gradient(180deg, #2a1a4e 0%, #1a1040 100%);
+}
+
+.card-number {
+  font-size: 10px;
+  color: var(--text-muted);
+  position: absolute;
+  top: 3px;
+  left: 5px;
+}
+
+.card-small .card-number {
+  font-size: 8px;
+  top: 2px;
+  left: 3px;
+}
+
+.card-name {
+  font-size: 9px;
+  text-align: center;
+  padding: 0 3px;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.card-small .card-name {
+  font-size: 7px;
+  padding: 0 2px;
+}
+
+.card-category {
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: absolute;
+  bottom: 3px;
+}
+
+.card-small .card-category {
+  display: none;
+}
+
+/* Facedown Card */
+.card-facedown {
+  background: linear-gradient(135deg, #2a1a4e 0%, #0f3460 100%);
+  border-color: var(--border-subtle);
+}
+
+.card-back {
+  font-size: 24px;
+  color: var(--text-muted);
+}
+
+.card-small .card-back {
+  font-size: 16px;
+}
+
+/* Empty Card Slot */
+.card-empty {
+  border-style: dashed;
+  color: var(--text-muted);
+  font-size: 10px;
+}

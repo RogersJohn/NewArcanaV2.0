@@ -1,0 +1,70 @@
+import React, { useState, useMemo } from 'react';
+import Card from '../Card.jsx';
+
+export default function DiscardChoice({ decision, onSubmit }) {
+  const { type, state, playerIndex, numToDiscard } = decision;
+  const [selected, setSelected] = useState([]);
+
+  const player = state.players[playerIndex];
+
+  const sourceCards = useMemo(() => {
+    switch (type) {
+      case 'DISCARD': return player.hand;
+      case 'REALM_DISCARD': return player.realm;
+      case 'TOME_DISCARD': return player.tome;
+      default: return [];
+    }
+  }, [type, player]);
+
+  const numRequired = type === 'TOME_DISCARD' ? 1 : (numToDiscard || 1);
+
+  const zoneName = type === 'DISCARD' ? 'hand'
+    : type === 'REALM_DISCARD' ? 'realm'
+    : 'tome';
+
+  const toggleCard = (index) => {
+    setSelected(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      }
+      if (prev.length >= numRequired) {
+        return [...prev.slice(1), index];
+      }
+      return [...prev, index];
+    });
+  };
+
+  const handleConfirm = () => {
+    const discards = selected.map(i => sourceCards[i]);
+    if (numRequired === 1) {
+      onSubmit(discards[0]);
+    } else {
+      onSubmit(discards);
+    }
+  };
+
+  return (
+    <div className="action-panel discard-choice">
+      <div className="action-title">
+        Discard {numRequired} card{numRequired > 1 ? 's' : ''} from {zoneName}
+      </div>
+      <div className="discard-cards">
+        {sourceCards.map((card, i) => (
+          <Card
+            key={card.id || i}
+            card={card}
+            selected={selected.includes(i)}
+            onClick={() => toggleCard(i)}
+          />
+        ))}
+      </div>
+      <button
+        className="action-button confirm-button"
+        disabled={selected.length !== numRequired}
+        onClick={handleConfirm}
+      >
+        Confirm Discard ({selected.length}/{numRequired})
+      </button>
+    </div>
+  );
+}

@@ -1,0 +1,515 @@
+/* Game Screen Layout — CSS Grid */
+.game-screen {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.game-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 8px;
+  gap: 6px;
+}
+
+/* Game Header */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.header-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.header-stat {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pot-display {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.speed-control input[type="range"] {
+  width: 80px;
+  accent-color: var(--accent-gold);
+}
+
+.ff-button {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  font-size: 16px;
+}
+
+.ff-button.ff-active {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* Opponent Row */
+.opponent-row {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.opponent-summary {
+  flex: 1;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 8px;
+  min-width: 0;
+}
+
+.opponent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.opponent-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opponent-vp {
+  color: var(--accent-gold);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.opponent-details {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.opponent-realm {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.opponent-tome {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tome-icon {
+  background: var(--accent-purple);
+  color: white;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.round-marker-small {
+  background: var(--accent-red);
+  color: white;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.empty-zone {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Middle Row — Display + Actions */
+.middle-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.major-display {
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 8px;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.display-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.display-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.display-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.display-cost {
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.display-deck-info {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.action-area {
+  flex: 1;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Player Area — Realm + Tome + Info */
+.player-area {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.player-realm {
+  flex: 2;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.player-tome {
+  flex: 1;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 80px;
+}
+
+.player-vp {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  transition: color 0.3s;
+}
+
+.round-marker {
+  background: var(--accent-red);
+  color: white;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.zone-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.realm-cards, .tome-cards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Player Hand */
+.player-hand {
+  background: var(--bg-panel);
+  border-radius: 6px;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.hand-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.hand-cards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Game Log Sidebar */
+.game-log {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.log-header {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.log-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+}
+
+.log-entry {
+  font-size: 11px;
+  padding: 2px 0;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.log-attack { color: var(--accent-red); }
+.log-buy { color: var(--accent-blue); }
+.log-vp { color: var(--accent-gold); }
+.log-block { color: var(--accent-green); }
+.log-round { color: var(--accent-purple); }
+
+/* Action Panel Styles */
+.action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-gold);
+  margin-bottom: 4px;
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action-category {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.action-category-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.action-button {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-size: 12px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.action-button:hover {
+  border-color: var(--accent-gold);
+  background: var(--bg-surface);
+}
+
+.action-button.selected {
+  border-color: var(--accent-gold);
+  background: rgba(240, 192, 64, 0.1);
+}
+
+.confirm-button {
+  background: var(--accent-gold);
+  color: var(--bg-dark);
+  font-weight: 600;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.confirm-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.confirm-button:not(:disabled):hover {
+  background: #f5d060;
+}
+
+/* Major Keep Choice */
+.major-keep-cards {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.major-keep-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.keep-button {
+  text-align: center;
+}
+
+/* Wheel Keep */
+.wheel-keep-cards {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.wheel-keep-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Block Choice */
+.block-overlay {
+  background: rgba(231, 76, 60, 0.1);
+  border: 2px solid var(--accent-red);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.block-urgent {
+  color: var(--accent-red) !important;
+}
+
+.block-description {
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.block-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.block-yes {
+  background: var(--accent-green);
+  color: white;
+  border-color: var(--accent-green);
+  font-weight: 600;
+  padding: 8px 24px;
+}
+
+.block-no {
+  background: var(--accent-red);
+  color: white;
+  border-color: var(--accent-red);
+  font-weight: 600;
+  padding: 8px 24px;
+}
+
+/* Suit Choice */
+.suit-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.suit-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-width: 2px;
+}
+
+.suit-symbol {
+  font-size: 24px;
+}
+
+.suit-name {
+  font-size: 11px;
+}
+
+/* Wheel Sources */
+.wheel-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Discard Choice */
+.discard-cards {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}

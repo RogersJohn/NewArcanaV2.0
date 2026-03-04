@@ -1,0 +1,95 @@
+/* Animations */
+
+/* AI Thinking Dots */
+.ai-thinking-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.ai-thinking-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  animation: dotPulse 1.4s infinite ease-in-out both;
+}
+
+.ai-thinking-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.ai-thinking-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+.ai-thinking-dots .dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* VP change flash */
+@keyframes vpFlash {
+  0% { color: var(--accent-gold); }
+  50% { color: #fff; text-shadow: 0 0 8px var(--accent-gold); }
+  100% { color: var(--accent-gold); }
+}
+
+/* Card entrance */
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Overlay fade */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.round-transition-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.round-transition-content {
+  animation: cardSlideIn 0.3s ease-out;
+}
+
+/* Log entry slide-in */
+.log-entry {
+  animation: cardSlideIn 0.15s ease-out;
+}
+
+/* Scrollbar styling */
+.log-entries::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-entries::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-entries::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 3px;
+}
+
+.action-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.action-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.action-area::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 3px;
+}

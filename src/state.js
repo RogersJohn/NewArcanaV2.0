@@ -4,7 +4,7 @@
 
 import { createMinorDeck, createMajorDeck } from './cards.js';
 import { createRNG } from './rng.js';
-import { mergeConfig } from './config.js';
+import { mergeConfig } from './config-core.js';
 
 /**
  * Create the initial game state.

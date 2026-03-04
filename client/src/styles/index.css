@@ -1,0 +1,243 @@
+@import './layout.css';
+@import './cards.css';
+@import './animations.css';
+
+/* Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-dark: #1a1a2e;
+  --bg-panel: #16213e;
+  --bg-card: #0f3460;
+  --bg-surface: #1f2b47;
+  --text-primary: #e8e8e8;
+  --text-secondary: #8899aa;
+  --text-muted: #556677;
+  --accent-gold: #f0c040;
+  --accent-red: #e74c3c;
+  --accent-blue: #3498db;
+  --accent-green: #2ecc71;
+  --accent-purple: #9b59b6;
+  --border-subtle: #2a3a5a;
+  --border-highlight: #f0c040;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Start Screen */
+.start-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.start-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 48px;
+  text-align: center;
+  min-width: 400px;
+}
+
+.start-title {
+  font-size: 36px;
+  color: var(--accent-gold);
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+}
+
+.start-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  font-style: italic;
+}
+
+.start-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.start-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: left;
+}
+
+.start-select, .start-input {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 8px 12px;
+  font-size: 16px;
+}
+
+.start-select:focus, .start-input:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+}
+
+.start-button {
+  background: linear-gradient(135deg, #f0c040 0%, #e6a800 100%);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 36px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.start-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(240, 192, 64, 0.3);
+}
+
+/* Game Over Screen */
+.gameover-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.gameover-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 48px;
+  text-align: center;
+  min-width: 450px;
+}
+
+.gameover-title {
+  font-size: 32px;
+  color: var(--accent-gold);
+  margin-bottom: 8px;
+}
+
+.gameover-reason {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+.gameover-winner {
+  font-size: 24px;
+  color: var(--accent-green);
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.gameover-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 32px;
+}
+
+.gameover-table th,
+.gameover-table td {
+  padding: 8px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.gameover-table th {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.gameover-human {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+/* Round Transition Overlay */
+.round-transition-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  cursor: pointer;
+}
+
+.round-transition-content {
+  background: var(--bg-panel);
+  border: 2px solid var(--accent-gold);
+  border-radius: 12px;
+  padding: 32px 48px;
+  text-align: center;
+}
+
+.round-transition-content h2 {
+  color: var(--accent-gold);
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.round-transition-content p {
+  color: var(--text-secondary);
+}
+
+/* AI Thinking Indicator */
+.ai-thinking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+}
+
+.ai-thinking-text {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.ai-thinking-type {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 18px;
+}
