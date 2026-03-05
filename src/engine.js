@@ -834,14 +834,17 @@ function* resolvePlagueGen(state, playerIndex, targets) {
     const discardIdx = yield {
       type: DECISION_TYPES.TOME_DISCARD,
       playerIndex,
+      targetPlayerIndex: targets.playerIndex,
       state,
     };
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
-    const discarded = target.tome.splice(Math.min(discardIdx, target.tome.length - 1), 1)[0];
-    if (getProtection(state, discarded.number)) {
-      target.tomeProtections.delete(getProtection(state, discarded.number));
+    if (discardIdx >= 0 && discardIdx < target.tome.length) {
+      const discarded = target.tome.splice(discardIdx, 1)[0];
+      if (getProtection(state, discarded.number)) {
+        target.tomeProtections.delete(getProtection(state, discarded.number));
+      }
+      state.pit.push(discarded);
     }
-    state.pit.push(discarded);
   }
 
   // Plague goes to their tome (create a plague card representation)

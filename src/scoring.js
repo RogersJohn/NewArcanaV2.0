@@ -440,8 +440,10 @@ export function resolveWithAI(ai, request) {
       return ai.chooseDiscard(request.state, request.playerIndex, request.numToDiscard);
     case DECISION_TYPES.REALM_DISCARD:
       return ai.chooseRealmDiscard(request.state, request.playerIndex, request.numToDiscard);
-    case DECISION_TYPES.TOME_DISCARD:
-      return ai.chooseTomeDiscard(request.state, request.playerIndex);
+    case DECISION_TYPES.TOME_DISCARD: {
+      const tomeOwner = request.targetPlayerIndex ?? request.playerIndex;
+      return ai.chooseTomeDiscard(request.state, tomeOwner);
+    }
     case DECISION_TYPES.WHEEL_SOURCES:
       return ai.chooseWheelSources(request.state, request.playerIndex);
     case DECISION_TYPES.WHEEL_KEEP:
