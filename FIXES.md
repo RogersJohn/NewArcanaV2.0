@@ -7,7 +7,7 @@ After running game traces and direct code testing, several issues from the initi
 - **Flush detection IS implemented** (lines 107-125 of actions.js). Initial review missed this due to truncated file view.
 - **Set completion IS implemented** (lines 132-163 of actions.js). Same issue.
 - **Discard phase works correctly** — direct testing confirms hand sizes are reduced to the limit.
-- **Hand sizes >6 between rounds are rules-legal** — players keep hand cards between rounds and receive 6 more on deal.
+- ~~**Hand sizes >6 between rounds are rules-legal**~~ — **WRONG**: This was incorrect. RULES.md states hands are gathered between rounds (see Charity variant exception as evidence). Fixed in commit `9a207a4`.
 - **Death timing after buy-triggered display refill is correct** — game ends immediately, log ordering is just confusing.
 
 The REMAINING verified issues are below.
@@ -330,6 +330,42 @@ const topPayments = payments.slice(0, 3);
 ```
 
 Remove the duplicate log/recordEvent after the `if (bought)` block for display sources.
+
+---
+
+## Post-Playtest Fixes (2026-03-05)
+
+### Critical: Hands Not Gathered Between Rounds
+
+**Severity**: CRITICAL — invalidated all prior simulation data.
+
+**Bug**: `resetForNextRound()` in `src/engine.js` gathered realm cards, draw pile, discard pile, and pit back into the deck, but never cleared players' hands. Cards remaining in hand carried over, and `dealRoundCards` dealt 6 new cards on top. Players routinely had 10-13 cards in hand by Round 2.
+
+**Evidence**: The Charity variant in RULES.md says players who scored no points may "carry one card from their hand into the next round" — this only makes sense as a special exception if hands are normally gathered.
+
+**Impact**: Every simulation result, win rate, VP distribution, and card balance analysis produced before this fix is invalid. All results regenerated post-fix.
+
+**Fix**: Added hand gathering to `resetForNextRound()`. Updated statistical test threshold from 0.50 to 0.55 to account for changed game dynamics.
+
+### Chariot Tome Overflow Ordering
+
+**Bug**: Chariot pushed celestial to tome before checking overflow, causing temporary 4-card tome. Also lacked bounds check on discard index and protection removal for discarded cards.
+
+**Fix**: Discard before push (matching `executeMajorTomeGen` pattern), added bounds check and protection removal.
+
+### Plague TOME_DISCARD Wrong Player Index
+
+**Bug**: Plague yielded TOME_DISCARD with the attacker's `playerIndex`, causing AI to evaluate the attacker's tome instead of the target's. Added `targetPlayerIndex` field to the decision and updated the resolver in `scoring.js` to use it.
+
+### AggressorAI Fixes
+
+- `pickBestTarget` fallback had `===` instead of `!==`, targeting self instead of opponents
+- `pickBestTarget` always returned non-null, wasting Royal attacks on empty/tiny realms. Now returns `null` when no worthwhile target exists.
+
+### Client UI Fixes
+
+- SWORDS suit colour changed from `#2c3e50` to `#5dade2` — was invisible on dark card backgrounds
+- Discard prompt now explains hand+realm combined limit calculation
 
 ---
 
