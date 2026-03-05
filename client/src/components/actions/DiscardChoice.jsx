@@ -47,6 +47,16 @@ export default function DiscardChoice({ decision, onSubmit }) {
     <div className="action-panel discard-choice">
       <div className="action-title">
         Discard {numRequired} card{numRequired > 1 ? 's' : ''} from {zoneName}
+        {type === 'DISCARD' && (
+          <div className="action-subtitle" style={{ fontSize: '12px', color: '#8899aa', marginTop: '4px', fontWeight: 'normal' }}>
+            Hand ({player.hand.length}) + Realm ({player.realm.length}) = {player.hand.length + player.realm.length} — limit is {state.config?.gameRules?.handSizeLimit ?? 6}{player.tome?.some(c => c.type === 'major' && c.number === 15) ? ' (Devil +1)' : ''}
+          </div>
+        )}
+        {type === 'REALM_DISCARD' && (
+          <div className="action-subtitle" style={{ fontSize: '12px', color: '#8899aa', marginTop: '4px', fontWeight: 'normal' }}>
+            Realm has {player.realm.length} cards — maximum is 5
+          </div>
+        )}
       </div>
       <div className="discard-cards">
         {sourceCards.map((card, i) => (
