@@ -439,7 +439,10 @@ function addPlagueTargets(state, playerIndex, card, actions) {
 }
 
 /**
- * Add actions for playing Major Arcana as wild card to Realm.
+ * Add actions for playing a Major Arcana as wild card to Realm.
+ * Wild + minors must form a legal set at time of play.
+ * Legal sets: single, pair, three-of-a-kind, four-of-a-kind,
+ * five-of-a-kind, straight (5 cards), flush (5 cards), straight flush (5 cards).
  */
 function addWildActions(state, playerIndex, actions) {
   const player = state.players[playerIndex];
@@ -448,8 +451,10 @@ function addWildActions(state, playerIndex, actions) {
   if (hasWildInRealm) return;
 
   const majors = player.hand.filter(c => c.type === 'major');
+  const minors = player.hand.filter(c => c.type === 'minor');
+
   for (const card of majors) {
-    // Play wild alone
+    // Wild alone (single card) — always legal
     actions.push({
       type: 'PLAY_WILD',
       card,
@@ -457,31 +462,112 @@ function addWildActions(state, playerIndex, actions) {
       description: `Play ${cardName(card)} as wild card to Realm`,
     });
 
-    // Play wild with minor cards: only generate the top 3 best-scoring combinations
-    const minors = player.hand.filter(c => c.type === 'minor');
-    if (minors.length > 0) {
-      let bestCombos = [];
-      for (let n = 1; n <= Math.min(4, minors.length); n++) {
-        const combos = combinations(minors, n);
-        for (const combo of combos) {
-          const testRealm = [...player.realm, ...combo, { type: 'major' }];
-          const score = evaluateHand(testRealm);
-          bestCombos.push({ combo, score });
+    if (minors.length === 0) continue;
+
+    const validCombos = [];
+
+    // Wild + 1 minor = pair (wild declared as same rank, different suit). Always legal.
+    for (const m of minors) {
+      validCombos.push({ combo: [m], desc: 'pair' });
+    }
+
+    // Wild + 2 minors = three-of-a-kind (all same rank)
+    const byRank = groupBy(minors, c => c.numericRank);
+    for (const [rank, cards] of Object.entries(byRank)) {
+      if (cards.length >= 2) {
+        const combos2 = combinations(cards, 2);
+        for (const combo of combos2) {
+          validCombos.push({ combo, desc: `three ${rank}s` });
         }
       }
-      bestCombos.sort((a, b) => compareHands(b.score, a.score));
-      bestCombos = bestCombos.slice(0, 3);
+    }
 
-      for (const { combo } of bestCombos) {
-        actions.push({
-          type: 'PLAY_WILD',
-          card,
-          withCards: combo,
-          description: `Play ${cardName(card)} as wild with ${combo.map(cardName).join(', ')}`,
-        });
+    // Wild + 3 minors = four-of-a-kind (all same rank)
+    for (const [rank, cards] of Object.entries(byRank)) {
+      if (cards.length >= 3) {
+        const combos3 = combinations(cards, 3);
+        for (const combo of combos3) {
+          validCombos.push({ combo, desc: `four ${rank}s` });
+        }
       }
     }
+
+    // Wild + 4 minors — five-of-a-kind, flush, straight, or straight flush
+    if (minors.length >= 4) {
+      const combos4 = combinations(minors, 4);
+      for (const combo of combos4) {
+        if (isLegal5CardWildSet(combo)) {
+          validCombos.push({ combo, desc: 'five-card set' });
+        }
+      }
+    }
+
+    // Score all valid combos and keep the top 3
+    const scored = validCombos.map(({ combo, desc }) => {
+      const testRealm = [...player.realm, ...combo, { type: 'major' }];
+      const score = evaluateHand(testRealm);
+      return { combo, desc, score };
+    });
+    scored.sort((a, b) => compareHands(b.score, a.score));
+
+    // Deduplicate by card IDs
+    const seen = new Set();
+    const top = [];
+    for (const entry of scored) {
+      const key = entry.combo.map(c => c.id).sort().join(',');
+      if (!seen.has(key)) {
+        seen.add(key);
+        top.push(entry);
+      }
+      if (top.length >= 3) break;
+    }
+
+    for (const { combo } of top) {
+      actions.push({
+        type: 'PLAY_WILD',
+        card,
+        withCards: combo,
+        description: `Play ${cardName(card)} as wild with ${combo.map(cardName).join(', ')}`,
+      });
+    }
   }
+}
+
+/**
+ * Check if 4 minor cards + a wild can form a legal 5-card set.
+ * Legal 5-card sets: five-of-a-kind, flush, straight, straight flush.
+ */
+function isLegal5CardWildSet(minors) {
+  const ranks = minors.map(c => c.numericRank);
+  const suits = minors.map(c => c.suit);
+  const uniqueRanks = [...new Set(ranks)];
+  const uniqueSuits = [...new Set(suits)];
+
+  // Five-of-a-kind: all 4 minors same rank, wild makes 5th
+  if (uniqueRanks.length === 1) return true;
+
+  // Flush: all 4 minors same suit, wild declared as same suit + any rank
+  if (uniqueSuits.length === 1) return true;
+
+  // Straight: 4 unique ranks where wild fills exactly one gap to make 5 consecutive
+  if (uniqueRanks.length === 4) {
+    const sorted = uniqueRanks.slice().sort((a, b) => a - b);
+    const span = sorted[3] - sorted[0];
+
+    // Perfect case: span of 3, wild extends at either end (e.g. 3,4,5,6 + wild=2 or 7)
+    if (span === 3) return true;
+
+    // Gap case: span of 4 with one gap the wild fills (e.g. 3,4,6,7 + wild=5)
+    if (span === 4) {
+      let gaps = 0;
+      for (let r = sorted[0]; r <= sorted[3]; r++) {
+        if (!uniqueRanks.includes(r)) gaps++;
+      }
+      if (gaps === 1) return true;
+    }
+  }
+
+  return false;
 }
 
 /**
