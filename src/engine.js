@@ -1141,10 +1141,18 @@ function checkDeathInDisplay(state) {
 function resetForNextRound(state) {
   // Gather realm cards, minor deck, discard, pit -> shuffle for new deck
   for (const p of state.players) {
+    // Gather realm cards
     for (const card of p.realm) {
       state.minorDiscard.push(card);
     }
     p.realm = [];
+
+    // Gather hand cards (hands do not persist between rounds)
+    for (const card of p.hand) {
+      state.minorDiscard.push(card);
+    }
+    p.hand = [];
+
     // Tome persists
   }
 
