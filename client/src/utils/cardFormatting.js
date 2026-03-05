@@ -12,7 +12,7 @@ export const SUIT_SYMBOLS = {
 export const SUIT_COLORS = {
   WANDS: '#2d8a4e',   // green
   CUPS: '#c0392b',    // red
-  SWORDS: '#2c3e50',  // dark blue
+  SWORDS: '#5dade2',  // light blue (visible on dark backgrounds)
   COINS: '#d4a017',   // gold
 };
 
