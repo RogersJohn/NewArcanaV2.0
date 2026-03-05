@@ -1,5 +1,6 @@
 import React from 'react';
 import Card from './Card.jsx';
+import { getCardTooltip } from '../utils/cardTooltips.js';
 
 export default function OpponentSummary({ player }) {
   return (
@@ -20,7 +21,7 @@ export default function OpponentSummary({ player }) {
       </div>
       <div className="opponent-tome">
         {player.tome.map((card, i) => (
-          <span key={card.id || i} className="tome-icon" title={card.name}>
+          <span key={card.id || i} className="tome-icon" title={getCardTooltip(card)}>
             {card.number}
           </span>
         ))}

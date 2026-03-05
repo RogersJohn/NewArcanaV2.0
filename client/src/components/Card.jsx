@@ -1,5 +1,6 @@
 import React from 'react';
 import { SUIT_SYMBOLS, SUIT_COLORS, CATEGORY_COLORS, formatRank } from '../utils/cardFormatting.js';
+import { getCardTooltip } from '../utils/cardTooltips.js';
 
 export default function Card({ card, selected, onClick, small, facedown }) {
   if (!card || facedown) {
@@ -31,6 +32,7 @@ export default function Card({ card, selected, onClick, small, facedown }) {
     <div
       className={`card ${isMinor ? 'card-minor' : 'card-major'} ${selected ? 'card-selected' : ''} ${small ? 'card-small' : ''} ${onClick ? 'card-clickable' : ''}`}
       style={style}
+      title={getCardTooltip(card)}
       onClick={onClick}
     >
       {isMinor ? (
