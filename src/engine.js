@@ -659,17 +659,23 @@ function* resolveChariotGen(state, playerIndex, targets) {
   }
 
   if (celestial) {
-    player.tome.push(celestial);
-    if (player.tome.length > 3) {
+    // Check tome overflow BEFORE pushing (matches executeMajorTomeGen pattern)
+    if (player.tome.length >= 3) {
       const discardIdx = yield {
         type: DECISION_TYPES.TOME_DISCARD,
         playerIndex,
         state,
       };
       recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
-      const discarded = player.tome.splice(discardIdx, 1)[0];
-      state.pit.push(discarded);
+      if (discardIdx >= 0 && discardIdx < player.tome.length) {
+        const discarded = player.tome.splice(discardIdx, 1)[0];
+        state.pit.push(discarded);
+        if (getProtection(state, discarded.number)) {
+          player.tomeProtections.delete(getProtection(state, discarded.number));
+        }
+      }
     }
+    player.tome.push(celestial);
     log(state, `${player.name} takes ${cardName(celestial)} via Chariot`);
   }
 }
