@@ -89,14 +89,23 @@ export class AggressorAI extends RandomAI {
       }
     }
 
-    // Find attacks targeting the leader
+    // If no valid target found, don't waste the card
+    if (bestPi === -1) return null;
+
+    // Find attacks targeting the best target
     const targetAttacks = royalActions.filter(a =>
       a.target && a.target.playerIndex === bestPi
     );
     if (targetAttacks.length > 0) return targetAttacks[0];
 
-    // Any attack will do
-    return royalActions[0];
+    // Fallback: any attack on a player with cards (avoid wasting on empty/tiny realms)
+    const worthwhileAttacks = royalActions.filter(a => {
+      const tp = state.players[a.target.playerIndex];
+      return a.target.playerIndex !== playerIndex && tp.realm.length >= 2;
+    });
+    if (worthwhileAttacks.length > 0) return worthwhileAttacks[0];
+
+    return null;
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
