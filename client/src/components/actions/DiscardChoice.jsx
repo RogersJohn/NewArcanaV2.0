@@ -35,11 +35,13 @@ export default function DiscardChoice({ decision, onSubmit }) {
   };
 
   const handleConfirm = () => {
-    const discards = selected.map(i => sourceCards[i]);
-    if (numRequired === 1) {
-      onSubmit(discards[0]);
+    if (type === 'TOME_DISCARD') {
+      // Engine expects a single numeric index for tome discard
+      onSubmit(selected[0]);
     } else {
-      onSubmit(discards);
+      // Engine expects an array of numeric indices, sorted descending
+      const sortedIndices = [...selected].sort((a, b) => b - a);
+      onSubmit(sortedIndices);
     }
   };
 
