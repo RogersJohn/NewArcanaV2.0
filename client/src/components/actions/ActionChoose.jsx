@@ -18,11 +18,11 @@ function categorizeActions(actions) {
   for (const action of actions) {
     const t = action.type;
     if (t === 'PASS') categories.pass.push(action);
-    else if (t === 'PLAY_SET' || t === 'EXTEND_SET') categories.play.push(action);
-    else if (t === 'ATTACK' || t === 'ROYAL_ATTACK') categories.attack.push(action);
-    else if (t === 'PLAY_MAJOR' || t === 'PLAY_MAJOR_TO_TOME') categories.major.push(action);
+    else if (t === 'PLAY_SET') categories.play.push(action);
+    else if (t === 'PLAY_ROYAL') categories.attack.push(action);
+    else if (t === 'PLAY_MAJOR_TOME' || t === 'PLAY_MAJOR_ACTION') categories.major.push(action);
     else if (t === 'PLAY_WILD') categories.wild.push(action);
-    else if (t === 'BUY_MAJOR') categories.buy.push(action);
+    else if (t === 'BUY') categories.buy.push(action);
     else categories.other.push(action);
   }
 
@@ -30,26 +30,15 @@ function categorizeActions(actions) {
 }
 
 function describeAction(action) {
+  // All engine actions have a description field — use it
+  if (action.description) return action.description;
+
+  // Fallback for any action without a description
   switch (action.type) {
     case 'PASS':
-      return 'Pass';
-    case 'PLAY_SET':
-      return `Play set: ${action.cards.map(c => cardDisplayName(c)).join(', ')}`;
-    case 'EXTEND_SET':
-      return `Extend set: ${action.cards.map(c => cardDisplayName(c)).join(', ')}`;
-    case 'ATTACK':
-    case 'ROYAL_ATTACK':
-      return `Attack P${action.targetPlayer + 1} with ${cardDisplayName(action.card)} → ${cardDisplayName(action.targetCard)}`;
-    case 'PLAY_MAJOR':
-      return `Play ${action.card.name} (effect)`;
-    case 'PLAY_MAJOR_TO_TOME':
-      return `Play ${action.card.name} to Tome`;
-    case 'PLAY_WILD':
-      return `Play ${action.card.name} as Wild to Realm`;
-    case 'BUY_MAJOR':
-      return `Buy Major from ${action.source} (cost ${action.cost})`;
+      return 'Pass (do nothing)';
     default:
-      return `${action.type}`;
+      return action.type;
   }
 }
 
