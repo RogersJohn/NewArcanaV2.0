@@ -163,7 +163,7 @@ export function* playGameGen(state) {
     const handDesc = p.hand.length > 0 ? `${p.hand.length} cards` : 'empty';
     log(state, `[FINAL] ${p.name}: ${p.vp}vp | Realm: [${realmDesc}] | Tome: [${tomeDesc}] | Hand: ${handDesc}`);
   }
-  log(state, `[FINAL] Pot: ${state.pot}vp | Minor deck: ${state.minorDeck.length} | Pit: ${state.pit.length}`);
+  log(state, `[FINAL] Pot: ${state.pot}vp | Minor deck: ${state.minorDeck.length} | Major deck: ${state.majorDeck.length} | Pit: ${state.pit.length}`);
 
   return state;
 }
@@ -674,17 +674,23 @@ function* resolveChariotGen(state, playerIndex, targets) {
   }
 
   if (celestial) {
-    player.tome.push(celestial);
-    if (player.tome.length > 3) {
+    // Check tome overflow BEFORE pushing (matches executeMajorTomeGen pattern)
+    if (player.tome.length >= 3) {
       const discardIdx = yield {
         type: DECISION_TYPES.TOME_DISCARD,
         playerIndex,
         state,
       };
       recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
-      const discarded = player.tome.splice(discardIdx, 1)[0];
-      state.pit.push(discarded);
+      if (discardIdx >= 0 && discardIdx < player.tome.length) {
+        const discarded = player.tome.splice(discardIdx, 1)[0];
+        state.pit.push(discarded);
+        if (getProtection(state, discarded.number)) {
+          player.tomeProtections.delete(getProtection(state, discarded.number));
+        }
+      }
     }
+    player.tome.push(celestial);
     log(state, `${player.name} takes ${cardName(celestial)} via Chariot`);
   }
 }
@@ -843,14 +849,17 @@ function* resolvePlagueGen(state, playerIndex, targets) {
     const discardIdx = yield {
       type: DECISION_TYPES.TOME_DISCARD,
       playerIndex,
+      targetPlayerIndex: targets.playerIndex,
       state,
     };
     recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
-    const discarded = target.tome.splice(Math.min(discardIdx, target.tome.length - 1), 1)[0];
-    if (getProtection(state, discarded.number)) {
-      target.tomeProtections.delete(getProtection(state, discarded.number));
+    if (discardIdx >= 0 && discardIdx < target.tome.length) {
+      const discarded = target.tome.splice(discardIdx, 1)[0];
+      if (getProtection(state, discarded.number)) {
+        target.tomeProtections.delete(getProtection(state, discarded.number));
+      }
+      state.pit.push(discarded);
     }
-    state.pit.push(discarded);
   }
 
   // Plague goes to their tome (create a plague card representation)
@@ -1156,12 +1165,13 @@ function checkDeathInDisplay(state) {
 function resetForNextRound(state) {
   // Gather realm cards, minor deck, discard, pit -> shuffle for new deck
   for (const p of state.players) {
+    // Gather realm cards
     for (const card of p.realm) {
       state.minorDiscard.push(card);
     }
     p.realm = [];
 
-    // Gather hand cards (hands do not persist between rounds — see Charity variant)
+    // Gather hand cards (hands do not persist between rounds)
     for (const card of p.hand) {
       state.minorDiscard.push(card);
     }

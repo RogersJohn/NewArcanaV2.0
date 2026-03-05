@@ -26,7 +26,7 @@
  *   }
  */
 
-import { createInitialState } from './state.js';
+import { createInitialState, log } from './state.js';
 import { setupGen, playGameGen } from './engine.js';
 import { resolveWithAI } from './scoring.js';
 import { createAIs } from './ai/index.js';
@@ -121,6 +121,18 @@ export class GameController {
   submitAIDecision(decision) {
     const ai = this._ais[decision.playerIndex];
     const choice = resolveWithAI(ai, decision);
+
+    // Log AI decision for debugging
+    const playerName = this._state.players[decision.playerIndex]?.name || `Player-${decision.playerIndex}`;
+    if (decision.type === 'ACTION' && choice) {
+      const desc = choice.description || choice.type || 'unknown';
+      log(this._state, `[AI] ${playerName} (${ai.name}) decided: ${desc}`);
+    } else if (decision.type === 'ACE_BLOCK') {
+      log(this._state, `[AI] ${playerName} (${ai.name}) ace block: ${choice ? 'YES' : 'no'}`);
+    } else if (decision.type === 'KING_BLOCK') {
+      log(this._state, `[AI] ${playerName} (${ai.name}) king block: ${choice ? 'YES' : 'no'}`);
+    }
+
     return this.submitDecision(choice);
   }
 

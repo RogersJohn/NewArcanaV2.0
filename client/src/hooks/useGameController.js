@@ -78,6 +78,16 @@ export function useGameController() {
             processResult(nextResult);
           } catch (e) {
             console.error('AI decision error:', e);
+            const state = ctrl.getState();
+            if (state && state.log) {
+              state.log.push(`[ERROR] AI decision crashed: ${e.message}`);
+              state.log.push(`[ERROR] Decision type: ${result.decision?.type} Player: ${result.decision?.playerIndex}`);
+              state.log.push(`[ERROR] Stack: ${e.stack?.split('\n').slice(0, 3).join(' | ')}`);
+            }
+            setGameState(createSnapshot(state));
+            setDecision(null);
+            setIsAIThinking(false);
+            setPhase('gameover');
           }
         }, 0);
         abortRef.current = () => clearTimeout(timeoutId);
@@ -88,6 +98,16 @@ export function useGameController() {
             processResult(nextResult);
           } catch (e) {
             console.error('AI decision error:', e);
+            const state = ctrl.getState();
+            if (state && state.log) {
+              state.log.push(`[ERROR] AI decision crashed: ${e.message}`);
+              state.log.push(`[ERROR] Decision type: ${result.decision?.type} Player: ${result.decision?.playerIndex}`);
+              state.log.push(`[ERROR] Stack: ${e.stack?.split('\n').slice(0, 3).join(' | ')}`);
+            }
+            setGameState(createSnapshot(state));
+            setDecision(null);
+            setIsAIThinking(false);
+            setPhase('gameover');
           }
         }, delay);
         abortRef.current = () => clearTimeout(timeoutId);
@@ -132,7 +152,23 @@ export function useGameController() {
     if (!ctrl || ctrl.isDone()) return;
 
     const prevRound = ctrl.getState().roundNumber;
-    const result = ctrl.submitDecision(choice);
+    let result;
+    try {
+      result = ctrl.submitDecision(choice);
+    } catch (e) {
+      console.error('submitDecision error:', e);
+      // Log the error into the game state so it appears in the game log
+      const state = ctrl.getState();
+      if (state && state.log) {
+        state.log.push(`[ERROR] Engine crashed: ${e.message}`);
+        state.log.push(`[ERROR] Stack: ${e.stack?.split('\n').slice(0, 3).join(' | ')}`);
+      }
+      setGameState(createSnapshot(state));
+      setDecision(null);
+      setIsAIThinking(false);
+      setPhase('gameover');
+      return;
+    }
 
     // Check for round transition
     const newRound = ctrl.getState().roundNumber;
