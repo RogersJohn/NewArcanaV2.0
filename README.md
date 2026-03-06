@@ -174,7 +174,7 @@ node index.js --games 1000 --players 4 --config data/cards-modified.json
 node index.js --compare data/cards.json data/cards-modified.json
 ```
 
-See `DANNY_README.md` for a focused quick-start guide on card tweaking.
+See `archive/DANNY_README.md` for a focused quick-start guide on card tweaking.
 
 ---
 
@@ -219,7 +219,7 @@ results/              # Simulation output data and HTML reports
 RULES.md              # Full game rules
 CARDS.md              # Card reference
 CLAUDE.md             # Development guide
-DANNY_README.md       # Quick start for game designer
+archive/              # Planning docs, prompts, designer quick-start
 ```
 
 ---
@@ -229,4 +229,4 @@ DANNY_README.md       # Quick start for game designer
 - Celestial AI personality is overpowered (~58% win rate vs expected ~25%) and needs rebalancing
 - Collector AI personality wins 0% of games and needs rebalancing
 - Pot ties award to the first player found rather than splitting
-- Some rule ambiguities are documented in `questions-for-danny.md` awaiting designer decisions
+- Some rule ambiguities are documented in `archive/questions-for-danny.md` awaiting designer decisions
