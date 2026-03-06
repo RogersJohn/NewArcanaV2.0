@@ -63,6 +63,34 @@ Then open **http://localhost:5173** in your browser.
 
 ---
 
+## Card Editor (for Game Designers)
+
+A browser-based editor for viewing and modifying card definitions, game rules, and scoring values.
+
+```bash
+cd editor
+npm install   # first time only
+npm run dev
+```
+
+Then open **http://localhost:5175** in your browser.
+
+### How to use
+
+1. **Cards tab** — Browse, search, and filter all Major Arcana cards. Click a card to edit its name, category, suit, keywords, and effect definition. Add new cards or delete existing ones.
+2. **Game Rules tab** — Edit game rules (hand size, tome capacity, etc.), buy prices, and scoring values.
+3. **Import/Export tab** — Export your config as `cards.json`, import a previously saved config, or reset to defaults.
+
+### Workflow
+
+1. Make changes in the editor
+2. Export the config (downloads `cards.json`)
+3. Replace `data/cards.json` in the repo with the exported file
+4. Run the simulation to test the impact: `node index.js --games 1000 --players 4`
+5. Commit the updated `data/cards.json`
+
+---
+
 ## Running the Stats Engine (CLI)
 
 Basic usage:
