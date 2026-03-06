@@ -49,23 +49,29 @@ export function evaluateHand(cards) {
 }
 
 /**
- * Evaluate a hand with N wild cards by trying all possible assignments.
+ * Evaluate a hand with N wild cards using a pruned candidate approach.
+ * Instead of trying all 56^N combinations, generates only promising
+ * candidates (ranks that match existing cards, fill straights, or complete flushes).
  * @param {object[]} normals - Non-wild cards
  * @param {number} numWilds - Number of wild cards
  * @returns {object} Best hand evaluation
  */
 function evaluateWithWilds(normals, numWilds) {
-  // Generate all possible rank/suit assignments for wilds
-  // Optimization: only try ranks 1-14 and all 4 suits
-  const possibleRanks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-  const possibleSuits = SUITS;
+  const candidates = generateCandidates(normals);
+
+  // For each wild, try each candidate; take cartesian product for multiple wilds
+  let assignments = candidates.map(c => [c]);
+  for (let w = 1; w < numWilds; w++) {
+    const next = [];
+    for (const prev of assignments) {
+      for (const c of candidates) {
+        next.push([...prev, c]);
+      }
+    }
+    assignments = next;
+  }
 
   let best = null;
-
-  // For single wild, brute force all 56 possibilities
-  // For multiple wilds, still manageable (56^2 = 3136 for 2 wilds)
-  const assignments = generateWildAssignments(numWilds, possibleRanks, possibleSuits);
-
   for (const assignment of assignments) {
     const virtualCards = normals.concat(
       assignment.map(a => ({
@@ -87,32 +93,103 @@ function evaluateWithWilds(normals, numWilds) {
 }
 
 /**
- * Generate all possible wild card assignments.
+ * Generate a pruned set of promising wild card assignments.
+ * Key insight: for rank groupings (pair/trips/quads/five-of-a-kind),
+ * only the rank matters — use a neutral suit. For flush/straight-flush,
+ * try ranks in the dominant suit. For straights, fill gaps.
+ * Typical output: 8-15 candidates instead of 56.
  */
-function generateWildAssignments(numWilds, ranks, suits) {
-  if (numWilds === 0) return [[]];
-
-  const singleOptions = [];
-  for (const rank of ranks) {
-    for (const suit of suits) {
-      singleOptions.push({ rank, suit });
-    }
-  }
-
-  if (numWilds === 1) {
-    return singleOptions.map(o => [o]);
-  }
-
-  // Recursive for multiple wilds
-  const subAssignments = generateWildAssignments(numWilds - 1, ranks, suits);
+function generateCandidates(normals) {
+  const seen = new Set();
   const result = [];
-  for (const option of singleOptions) {
-    for (const sub of subAssignments) {
-      result.push([option, ...sub]);
+
+  function add(rank, suit) {
+    const key = rank * 5 + SUIT_IDX[suit];
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push({ rank, suit });
+  }
+
+  if (normals.length === 0) {
+    // With no normals, King is the best single card
+    add(14, 'WANDS');
+    return result;
+  }
+
+  // Analyze normals
+  const rankCounts = {};
+  const suitCounts = { WANDS: 0, CUPS: 0, SWORDS: 0, COINS: 0 };
+  for (const c of normals) {
+    rankCounts[c.numericRank] = (rankCounts[c.numericRank] || 0) + 1;
+    suitCounts[c.suit]++;
+  }
+
+  // Find dominant suit (most cards) and a neutral suit (fewest cards, for grouping)
+  let domSuit = 'WANDS', domCount = 0, neutSuit = 'WANDS', neutCount = Infinity;
+  for (const s of SUITS) {
+    if (suitCounts[s] > domCount) { domCount = suitCounts[s]; domSuit = s; }
+    if (suitCounts[s] < neutCount) { neutCount = suitCounts[s]; neutSuit = s; }
+  }
+
+  const presentRanks = Object.keys(rankCounts).map(Number);
+
+  // 1. Grouping candidates: match each existing rank in neutral suit
+  //    (suit doesn't affect rank grouping evaluation)
+  for (const r of presentRanks) {
+    add(r, neutSuit);
+  }
+
+  // 2. High card: King in neutral suit
+  add(14, neutSuit);
+
+  // 3. Straight gap fills
+  const uniqueSet = new Set(presentRanks);
+  for (let low = 1; low <= 10; low++) {
+    let present = 0;
+    for (let r = low; r <= low + 4; r++) {
+      if (uniqueSet.has(r)) present++;
+    }
+    if (present >= 3) {
+      for (let r = low; r <= low + 4; r++) {
+        if (!uniqueSet.has(r)) {
+          add(r, neutSuit);
+        }
+      }
     }
   }
+
+  // 4. Flush candidates: if dominant suit has >= 2 cards, try key ranks in that suit
+  if (domCount >= 2) {
+    // For straight-flush: fill gaps in windows using only dominant suit ranks
+    const domRankSet = new Set();
+    for (const c of normals) {
+      if (c.suit === domSuit) domRankSet.add(c.numericRank);
+    }
+    for (let low = 1; low <= 10; low++) {
+      let present = 0;
+      for (let r = low; r <= low + 4; r++) {
+        if (domRankSet.has(r)) present++;
+      }
+      if (present >= 2) {
+        for (let r = low; r <= low + 4; r++) {
+          if (!domRankSet.has(r)) add(r, domSuit);
+        }
+      }
+    }
+    // For plain flush: add top ranks in dominant suit
+    add(14, domSuit);
+    add(13, domSuit);
+    add(12, domSuit);
+    // Also add existing ranks in dominant suit (for grouping + flush combo)
+    for (const r of presentRanks) {
+      add(r, domSuit);
+    }
+  }
+
   return result;
 }
+
+const SUIT_IDX = { WANDS: 0, CUPS: 1, SWORDS: 2, COINS: 3 };
 
 /**
  * Evaluate a hand with no wild cards.
