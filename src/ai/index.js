@@ -89,12 +89,13 @@ export function createAIs(numPlayers, assignment = 'diverse', rng) {
   }
   if (assignment === 'random') {
     // Random selection for each seat
-    return Array.from({ length: numPlayers }, () => {
+    return Array.from({ length: numPlayers }, (_, i) => {
       if (rng) {
         const name = AI_NAMES[rng.nextInt(AI_NAMES.length)];
         return getAI(name);
       }
-      const name = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
+      // Deterministic fallback when no rng available
+      const name = AI_NAMES[i % AI_NAMES.length];
       return getAI(name);
     });
   }

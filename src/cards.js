@@ -131,14 +131,13 @@ export function createMajorDeck(extended = false, majorDefs) {
 /**
  * Fisher-Yates in-place shuffle.
  * @param {any[]} array - Array to shuffle in place
- * @param {object} [rng] - Optional SeededRNG instance; falls back to Math.random()
+ * @param {object} rng - SeededRNG instance (required)
  * @returns {any[]} The same array, shuffled
  */
 export function shuffle(array, rng) {
+  if (!rng) throw new Error('shuffle() requires a seeded RNG — do not use Math.random()');
   for (let i = array.length - 1; i > 0; i--) {
-    const j = rng
-      ? rng.nextInt(i + 1)
-      : Math.floor(Math.random() * (i + 1));
+    const j = rng.nextInt(i + 1);
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;

@@ -83,9 +83,7 @@ export class RandomAI {
    * @returns {number} Index of card to keep (0 or 1)
    */
   chooseMajorKeep(majorCards, state) {
-    const rng = state && state.rng;
-    if (rng) return rng.nextInt(majorCards.length);
-    return Math.floor(Math.random() * majorCards.length);
+    return state.rng.nextInt(majorCards.length);
   }
 
   /**
@@ -133,9 +131,7 @@ export class RandomAI {
    * @returns {number} Index to keep (0 or 1)
    */
   chooseWheelKeep(cards, state) {
-    const rng = state && state.rng;
-    if (rng) return rng.nextInt(cards.length);
-    return Math.floor(Math.random() * cards.length);
+    return state.rng.nextInt(cards.length);
   }
 
   /**
