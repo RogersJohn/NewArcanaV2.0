@@ -7,6 +7,7 @@ import { evaluateHand, compareHands } from './poker.js';
 import { isCelestial, cardName, SUITS } from './cards.js';
 import { log, recordEvent } from './state.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
+import { isHierophantCard, isHermitCard, isPlagueCard } from './effect-resolver.js';
 
 /**
  * Score the end of a round (generator version).
@@ -31,14 +32,14 @@ export function* scoreRoundEndGen(state) {
   // Evaluate bonus cards for all players
   for (let pi = 0; pi < state.players.length; pi++) {
     const player = state.players[pi];
-    const hasHierophant = player.tome.some(c => c.type === 'major' && c.number === 5);
+    const hasHierophant = player.tome.some(c => isHierophantCard(state, c));
     const hasRealmCards = player.realm.length > 0;
 
     for (const tomeCard of player.tome) {
       if (tomeCard.type !== 'major') continue;
       if (!isBonusCard(tomeCard)) continue;
-      if (tomeCard.number === 5) continue; // Hierophant itself is not a bonus
-      if (tomeCard.number === 9) continue; // Hermit handled separately below
+      if (isHierophantCard(state, tomeCard)) continue; // Hierophant itself is not a bonus
+      if (isHermitCard(state, tomeCard)) continue; // Hermit handled separately below
 
       if (hasRealmCards) {
         // Normal bonus evaluation
@@ -83,7 +84,7 @@ export function* scoreRoundEndGen(state) {
 
     // Hermit bonus: 1vp if Hermit is the only card in Tome (separate check)
     if (hasRealmCards) {
-      const hermit = player.tome.find(c => c.type === 'major' && c.number === 9);
+      const hermit = player.tome.find(c => isHermitCard(state, c));
       const hermitCfg = state.config?.bonusCards?.[9];
       const hermitVp = hermitCfg?.vp ?? 1;
       if (hermit && player.tome.length === 1) {
@@ -160,44 +161,38 @@ function isBonusCard(card) {
  */
 export function* resolveBonusGen(state, playerIndex, card) {
   const player = state.players[playerIndex];
-  const bonusCfg = state.config?.bonusCards?.[card.number];
 
-  // Fool and Hierophant have special logic, not config-driven
-  if (card.number === 0) return yield* resolveFoolGen(state, playerIndex);
-  if (card.number === 5) return 0; // Hierophant itself is not a bonus
+  // Hierophant itself is not a bonus
+  if (isHierophantCard(state, card)) return 0;
 
-  // If we have a config entry, use config-driven resolution
-  if (bonusCfg) {
-    switch (bonusCfg.bonusType) {
-      case 'suitMajority':
-        return yield* resolveMagicianGen(state, playerIndex);
-      case 'suitHighest':
-        return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1);
-      case 'pairCounting':
-        return resolveLovers(state, playerIndex, bonusCfg.vpPerPair ?? 1);
-      case 'hermitExclusive':
-        return player.tome.length === 1 && player.tome[0].number === 9 ? (bonusCfg.vp ?? 1) : 0;
-      case 'noSuitInRealm':
-        return resolveNoneOfSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.vp ?? 1);
-      default:
-        return 0;
-    }
+  // Look up bonus config — first from bonusCards map, then from effect definition
+  let bonusCfg = state.config?.bonusCards?.[card.number];
+  if (!bonusCfg) {
+    // Try to get from the card's effect definition
+    const majorDefs = state.config?.majorArcana;
+    const def = majorDefs?.find(m => m.number === card.number);
+    bonusCfg = def?.effect?.bonus;
   }
 
-  // Fallback for cards without config entries (hardcoded defaults)
-  switch (card.number) {
-    case 1: return yield* resolveMagicianGen(state, playerIndex);
-    case 2: return resolveSuitBonus(state, playerIndex, 'WANDS', false, true);
-    case 3: return resolveSuitBonus(state, playerIndex, 'CUPS', false, true);
-    case 4: return resolveSuitBonus(state, playerIndex, 'COINS', false, true);
-    case 6: return resolveLovers(state, playerIndex);
-    case 9: return player.tome.length === 1 && player.tome[0].number === 9 ? 1 : 0;
-    case 11: return resolveSuitBonus(state, playerIndex, 'SWORDS', false, true);
-    case 14: return resolveNoneOfSuitBonus(state, playerIndex, 'CUPS');
-    case 22: return resolveNoneOfSuitBonus(state, playerIndex, 'SWORDS');
-    case 23: return resolveNoneOfSuitBonus(state, playerIndex, 'WANDS');
-    case 25: return resolveNoneOfSuitBonus(state, playerIndex, 'COINS');
-    default: return 0;
+  if (!bonusCfg) return 0;
+
+  switch (bonusCfg.bonusType) {
+    case 'foolDuplicate':
+      return yield* resolveFoolGen(state, playerIndex);
+    case 'suitMajority':
+      return yield* resolveMagicianGen(state, playerIndex);
+    case 'suitHighest':
+      return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1);
+    case 'pairCounting':
+      return resolveLovers(state, playerIndex, bonusCfg.vpPerPair ?? 1);
+    case 'hermitExclusive':
+      return player.tome.length === 1 && isHermitCard(state, player.tome[0]) ? (bonusCfg.vp ?? 1) : 0;
+    case 'noSuitInRealm':
+      return resolveNoneOfSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.vp ?? 1);
+    case 'hierophant_blessing':
+      return 0; // Hierophant is not itself a bonus
+    default:
+      return 0;
   }
 }
 
@@ -374,7 +369,7 @@ export function scoreGameEnd(state) {
 
     // Plague: plagueVp if in Tome
     for (const card of player.tome) {
-      if (card.type === 'major' && card.number === 26) {
+      if (isPlagueCard(state, card)) {
         player.vp += plagueVp;
         log(state, `${player.name} loses ${Math.abs(plagueVp)}vp from Plague in Tome`);
       }

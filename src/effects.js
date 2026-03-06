@@ -4,12 +4,13 @@
  */
 
 import { cardName, PROTECTION_MAP as DEFAULT_PROTECTION_MAP, isCelestial } from './cards.js';
+import { drawMinorCard, drawMajorCard, refillDisplay, getHandSize, log } from './state.js';
+import { isDeathCard, isPlagueCard, getActionHandler, resolveTomeOnPlayGen } from './effect-resolver.js';
 
 /** Get the protection suit for a card number, using config if available. */
 function getProtection(state, cardNumber) {
   return state.config?.protectionMap?.[cardNumber] ?? DEFAULT_PROTECTION_MAP[cardNumber];
 }
-import { drawMinorCard, drawMajorCard, refillDisplay, getHandSize, log } from './state.js';
 
 /**
  * Resolve a Royal attack (Page/Knight/Queen).
@@ -170,15 +171,17 @@ export function shouldBlockWithKing(state, ais, defenderIndex, attackCard) {
  * @param {object[]} ais
  */
 export function resolveMajorAction(state, playerIndex, card, targets, ais) {
-  switch (card.number) {
-    case 7: return resolveChariot(state, ais, playerIndex, targets);
-    case 8: return resolveStrength(state, ais, playerIndex, targets);
-    case 10: return resolveWheelOfFortune(state, ais, playerIndex);
-    case 12: return resolveHangedMan(state, ais, playerIndex, targets);
-    case 16: return resolveTower(state, ais, playerIndex, targets);
-    case 20: return resolveJudgement(state, ais, playerIndex);
-    case 26: return resolvePlague(state, ais, playerIndex, targets);
-  }
+  const handler = getActionHandler(state, card);
+  const dispatch = {
+    resolveChariot: () => resolveChariot(state, ais, playerIndex, targets),
+    resolveStrength: () => resolveStrength(state, ais, playerIndex, targets),
+    resolveWheelOfFortune: () => resolveWheelOfFortune(state, ais, playerIndex),
+    resolveHangedMan: () => resolveHangedMan(state, ais, playerIndex, targets),
+    resolveTower: () => resolveTower(state, ais, playerIndex, targets),
+    resolveJudgement: () => resolveJudgement(state, ais, playerIndex),
+    resolvePlague: () => resolvePlague(state, ais, playerIndex, targets),
+  };
+  if (handler && dispatch[handler]) dispatch[handler]();
 }
 
 /**
@@ -352,7 +355,7 @@ export function resolvePlague(state, ais, playerIndex, targets) {
   }
 
   // Retrieve Plague from Pit (it was placed there by executeMajorAction)
-  const plagueIdx = state.pit.findIndex(c => c.type === 'major' && c.number === 26);
+  const plagueIdx = state.pit.findIndex(c => isPlagueCard(state, c));
   if (plagueIdx !== -1) {
     const plague = state.pit.splice(plagueIdx, 1)[0];
     target.tome.push(plague);
@@ -368,48 +371,10 @@ export function resolvePlague(state, ais, playerIndex, targets) {
  * @param {object} card
  */
 export function applyTomeEffect(state, ais, playerIndex, card) {
-  const player = state.players[playerIndex];
-
-  switch (card.number) {
-    case 9: { // Hermit: take tome cards into hand
-      const tomeCopy = player.tome.filter(c => c.id !== card.id);
-      for (const tc of tomeCopy) {
-        const idx = player.tome.findIndex(c => c.id === tc.id);
-        if (idx !== -1) {
-          player.tome.splice(idx, 1);
-          player.hand.push(tc);
-          if (getProtection(state, tc.number)) {
-            player.tomeProtections.delete(getProtection(state, tc.number));
-          }
-        }
-      }
-      log(state, `${player.name} takes Tome cards into hand via Hermit`);
-      break;
-    }
-    case 15: { // Devil: draw up to devilHandSizeLimit
-      const limit = state.config?.gameRules?.devilHandSizeLimit ?? 7;
-      const currentSize = getHandSize(player);
-      const toDraw = Math.max(0, limit - currentSize);
-      for (let i = 0; i < toDraw; i++) {
-        const drawn = drawMinorCard(state);
-        if (drawn) player.hand.push(drawn);
-        else break;
-      }
-      log(state, `${player.name} draws up to 7 via Devil`);
-      break;
-    }
-    case 14: // Temperance
-    case 22: // Faith
-    case 23: // Hope
-    case 25: { // Prudence
-      const suit = getProtection(state, card.number);
-      if (suit) {
-        player.tomeProtections.add(suit);
-        log(state, `${player.name}'s ${suit} cards are now protected`);
-      }
-      break;
-    }
-  }
+  // Drive the generator synchronously (no decision points in tome on-play effects)
+  const gen = resolveTomeOnPlayGen(state, playerIndex, card);
+  let r = gen.next();
+  while (!r.done) r = gen.next();
 }
 
 /**
@@ -419,7 +384,7 @@ export function applyTomeEffect(state, ais, playerIndex, card) {
  */
 export function checkDeathRevealed(state) {
   for (let i = 0; i < 3; i++) {
-    if (state.display[i] && state.display[i].number === 13) {
+    if (state.display[i] && isDeathCard(state, state.display[i])) {
       state.gameEnded = true;
       state.gameEndReason = 'death_revealed';
       log(state, 'Death revealed in display! Game ends!');

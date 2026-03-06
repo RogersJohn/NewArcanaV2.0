@@ -11,6 +11,7 @@ import {
 import { getLegalActions } from './actions.js';
 import { scoreRoundEndGen, scoreGameEnd, checkCelestialWin, resolveWithAI, driveWithAIs } from './scoring.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
+import { isDeathCard, isPlagueCard, getActionHandler, resolveTomeOnPlayGen } from './effect-resolver.js';
 
 // Defaults used when config is not available (e.g. in tests without full state)
 const DEFAULT_MAX_TURNS_PER_ROUND = 50;
@@ -36,7 +37,7 @@ export function* setupGen(state) {
   shuffle(state.minorDeck, state.rng);
 
   // Separate Death from major deck
-  const deathIndex = state.majorDeck.findIndex(c => c.number === 13);
+  const deathIndex = state.majorDeck.findIndex(c => isDeathCard(state, c));
   const deathCard = state.majorDeck.splice(deathIndex, 1)[0];
 
   // Shuffle remaining major deck
@@ -92,7 +93,7 @@ export function* setupGen(state) {
       });
     }
     // Check for Death in display
-    if (state.display[i] && state.display[i].number === 13) {
+    if (state.display[i] && isDeathCard(state, state.display[i])) {
       state.gameEnded = true;
       state.gameEndReason = 'death_revealed';
       log(state, 'Death revealed during setup display fill!');
@@ -551,56 +552,7 @@ function* executeMajorTomeGen(state, playerIndex, action) {
  * but most effects are synchronous.
  */
 function* applyTomeEffectGen(state, playerIndex, card) {
-  const player = state.players[playerIndex];
-
-  switch (card.number) {
-    case 9: // Hermit: choose cards from tome to take into hand
-      {
-        const tomeCopy = [...player.tome];
-        for (const tc of tomeCopy) {
-          if (tc.id !== card.id) {
-            const idx = player.tome.findIndex(c => c.id === tc.id);
-            if (idx !== -1) {
-              player.tome.splice(idx, 1);
-              player.hand.push(tc);
-              // Remove protection
-              if (getProtection(state, tc.number)) {
-                player.tomeProtections.delete(getProtection(state, tc.number));
-              }
-            }
-          }
-        }
-        log(state, `${player.name} takes Tome cards into hand via Hermit`);
-      }
-      break;
-
-    case 15: // Devil: draw up to devilHandSizeLimit
-      {
-        const limit = state.config?.gameRules?.devilHandSizeLimit ?? 7;
-        const currentSize = getHandSize(player);
-        const toDraw = Math.max(0, limit - currentSize);
-        for (let i = 0; i < toDraw; i++) {
-          const drawn = drawMinorCard(state);
-          if (drawn) player.hand.push(drawn);
-          else break;
-        }
-        log(state, `${player.name} draws up to 7 via Devil`);
-      }
-      break;
-
-    case 14: // Temperance: protect CUPS
-    case 22: // Faith: protect SWORDS
-    case 23: // Hope: protect WANDS
-    case 25: // Prudence: protect COINS
-      {
-        const suit = getProtection(state, card.number);
-        if (suit) {
-          player.tomeProtections.add(suit);
-          log(state, `${player.name}'s ${suit} cards are now protected`);
-        }
-      }
-      break;
-  }
+  yield* resolveTomeOnPlayGen(state, playerIndex, card);
 }
 
 /**
@@ -624,26 +576,27 @@ function* executeMajorActionGen(state, playerIndex, action) {
     cardNumber: card.number, cardName: card.name, player: playerIndex,
   });
 
-  switch (card.number) {
-    case 7: // Chariot
+  const handler = getActionHandler(state, card);
+  switch (handler) {
+    case 'resolveChariot':
       yield* resolveChariotGen(state, playerIndex, targets);
       break;
-    case 8: // Strength
+    case 'resolveStrength':
       resolveStrength(state, playerIndex, targets);
       break;
-    case 10: // Wheel of Fortune
+    case 'resolveWheelOfFortune':
       yield* resolveWheelOfFortuneGen(state, playerIndex);
       break;
-    case 12: // Hanged Man
+    case 'resolveHangedMan':
       yield* resolveHangedManGen(state, playerIndex, targets);
       break;
-    case 16: // Tower
+    case 'resolveTower':
       resolveTower(state, playerIndex, targets);
       break;
-    case 20: // Judgement
+    case 'resolveJudgement':
       resolveJudgement(state, playerIndex);
       break;
-    case 26: // Plague
+    case 'resolvePlague':
       yield* resolvePlagueGen(state, playerIndex, targets);
       break;
   }
@@ -870,7 +823,7 @@ function* resolvePlagueGen(state, playerIndex, targets) {
 
   // Actually the card was already moved to pit in executeMajorAction.
   // Let me retrieve it from pit
-  const plagueIdx = state.pit.findIndex(c => c.type === 'major' && c.number === 26);
+  const plagueIdx = state.pit.findIndex(c => isPlagueCard(state, c));
   if (plagueIdx !== -1) {
     const plague = state.pit.splice(plagueIdx, 1)[0];
     target.tome.push(plague);
@@ -949,7 +902,7 @@ function executeBuy(state, playerIndex, action) {
     state.display[slot] = null;
     // Log the purchase BEFORE refilling so Death log comes after
     if (bought) {
-      if (bought.number === 13) {
+      if (isDeathCard(state, bought)) {
         state.gameEnded = true;
         state.gameEndReason = 'death_purchased';
         log(state, `${player.name} purchased Death! Game ends!`);
@@ -971,7 +924,7 @@ function executeBuy(state, playerIndex, action) {
 
   if (bought && !source.startsWith('display')) {
     // Check for Death (draw/discard sources only — display handled above)
-    if (bought.number === 13) {
+    if (isDeathCard(state, bought)) {
       state.gameEnded = true;
       state.gameEndReason = 'death_purchased';
       log(state, `${player.name} purchased Death! Game ends!`);
@@ -1149,7 +1102,7 @@ function ageDisplay(state) {
  */
 function checkDeathInDisplay(state) {
   for (let i = 0; i < 3; i++) {
-    if (state.display[i] && state.display[i].number === 13) {
+    if (state.display[i] && isDeathCard(state, state.display[i])) {
       state.gameEnded = true;
       state.gameEndReason = 'death_revealed';
       log(state, 'Death revealed in display! Game ends!');
