@@ -47,6 +47,7 @@ export default function CardList({ cards, selectedIdx, onSelect, onAdd }) {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <p className="text-xs text-gray-500">Cards are defined in data/cards.json. Changes here are in-memory only until exported.</p>
       </div>
       <div className="flex-1 overflow-y-auto">
         {filtered.map(card => (

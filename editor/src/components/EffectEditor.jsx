@@ -1,5 +1,7 @@
 import React from 'react';
 import { ACTION_TYPES, TOME_ONPLAY_TYPES, SUITS } from '../utils/defaults.js';
+import { ACTION_EFFECTS, TOME_ONPLAY, CELESTIAL } from '../utils/tooltips.js';
+import Tooltip, { Label } from './Tooltip.jsx';
 import BonusEditor from './BonusEditor.jsx';
 
 export default function EffectEditor({ category, effect, onChange }) {
@@ -29,19 +31,20 @@ function ActionEffect({ effect, onChange }) {
           className="rounded"
         />
         Game-end trigger (e.g. Death)
+        <Tooltip text={ACTION_EFFECTS.gameEndTrigger} />
       </label>
 
       {isGameEnd ? (
-        <Field label="Trigger">
+        <Label text="Trigger" tooltip="The trigger identifier. 'death_revealed' ends the game when this card appears.">
           <input
             type="text"
             value={effect.trigger || ''}
             onChange={e => onChange({ ...effect, trigger: e.target.value })}
             className="input"
           />
-        </Field>
+        </Label>
       ) : (
-        <Field label="Action">
+        <Label text="Action" tooltip={ACTION_EFFECTS[effect.action] || 'Select an action type to see its description.'}>
           <select
             value={effect.action || ''}
             onChange={e => onChange({ ...effect, type: 'action', action: e.target.value })}
@@ -49,7 +52,7 @@ function ActionEffect({ effect, onChange }) {
           >
             {ACTION_TYPES.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
-        </Field>
+        </Label>
       )}
     </div>
   );
@@ -60,7 +63,7 @@ function TomeEffect({ effect, onChange }) {
 
   return (
     <div className="space-y-3">
-      <Field label="On-Play Action">
+      <Label text="On-Play Action" tooltip={onPlayAction ? TOME_ONPLAY[onPlayAction] : 'Optional effect that triggers when this card is played to Tome.'}>
         <select
           value={onPlayAction || ''}
           onChange={e => {
@@ -79,10 +82,10 @@ function TomeEffect({ effect, onChange }) {
           <option value="">None</option>
           {TOME_ONPLAY_TYPES.filter(Boolean).map(a => <option key={a} value={a}>{a}</option>)}
         </select>
-      </Field>
+      </Label>
 
       {onPlayAction === 'PROTECT_SUIT' && (
-        <Field label="Protected Suit">
+        <Label text="Protected Suit" tooltip={TOME_ONPLAY.protectedSuit}>
           <select
             value={effect.onPlay?.suit || 'CUPS'}
             onChange={e => onChange({ ...effect, onPlay: { ...effect.onPlay, suit: e.target.value } })}
@@ -90,18 +93,18 @@ function TomeEffect({ effect, onChange }) {
           >
             {SUITS.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-        </Field>
+        </Label>
       )}
 
       {onPlayAction === 'DRAW_TO_LIMIT' && (
-        <Field label="Draw Limit">
+        <Label text="Draw Limit" tooltip={TOME_ONPLAY.drawLimit}>
           <input
             type="number"
             value={effect.onPlay?.limit ?? 7}
             onChange={e => onChange({ ...effect, onPlay: { ...effect.onPlay, limit: Number(e.target.value) } })}
             className="input"
           />
-        </Field>
+        </Label>
       )}
 
       <div className="border-t border-gray-700 pt-3">
@@ -118,22 +121,22 @@ function TomeEffect({ effect, onChange }) {
 function CelestialEffect({ effect, onChange }) {
   return (
     <div className="space-y-3">
-      <Field label="VP at Game End">
+      <Label text="VP at Game End" tooltip={CELESTIAL.vpAtGameEnd}>
         <input
           type="number"
           value={effect.vpAtGameEnd ?? 2}
           onChange={e => onChange({ ...effect, type: 'celestial', vpAtGameEnd: Number(e.target.value) })}
           className="input"
         />
-      </Field>
-      <Field label="Win Condition Group">
+      </Label>
+      <Label text="Win Condition Group" tooltip={CELESTIAL.winConditionGroup}>
         <input
           type="text"
           value={effect.winConditionGroup || 'celestial'}
           onChange={e => onChange({ ...effect, type: 'celestial', winConditionGroup: e.target.value })}
           className="input"
         />
-      </Field>
+      </Label>
     </div>
   );
 }
@@ -146,14 +149,5 @@ function BonusRoundEffect({ effect, onChange }) {
         onChange={bonus => onChange({ ...effect, type: 'bonus', bonus })}
       />
     </div>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <label className="block">
-      <span className="text-sm text-gray-400">{label}</span>
-      {children}
-    </label>
   );
 }

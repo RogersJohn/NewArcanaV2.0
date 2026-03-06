@@ -7,7 +7,7 @@ import { evaluateHand, compareHands } from './poker.js';
 import { isCelestial, cardName, SUITS } from './cards.js';
 import { log, recordEvent } from './state.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
-import { isHierophantCard, isHermitCard, isPlagueCard } from './effect-resolver.js';
+import { isHierophantCard, isHermitCard, isPlagueCard, getCardEffect } from './effect-resolver.js';
 
 /**
  * Score the end of a round (generator version).
@@ -85,7 +85,8 @@ export function* scoreRoundEndGen(state) {
     // Hermit bonus: 1vp if Hermit is the only card in Tome (separate check)
     if (hasRealmCards) {
       const hermit = player.tome.find(c => isHermitCard(state, c));
-      const hermitCfg = state.config?.bonusCards?.[9];
+      const hermitEffect = getCardEffect(state, hermit);
+      const hermitCfg = hermitEffect?.bonus || state.config?.bonusCards?.[hermit.number];
       const hermitVp = hermitCfg?.vp ?? 1;
       if (hermit && player.tome.length === 1) {
         player.vp += hermitVp;
@@ -165,13 +166,13 @@ export function* resolveBonusGen(state, playerIndex, card) {
   // Hierophant itself is not a bonus
   if (isHierophantCard(state, card)) return 0;
 
-  // Look up bonus config — first from bonusCards map, then from effect definition
-  let bonusCfg = state.config?.bonusCards?.[card.number];
+  // Look up bonus config — effect.bonus is authoritative (what the editor edits)
+  const effect = getCardEffect(state, card);
+  let bonusCfg = effect?.bonus;
+
+  // Fallback to legacy bonusCards map
   if (!bonusCfg) {
-    // Try to get from the card's effect definition
-    const majorDefs = state.config?.majorArcana;
-    const def = majorDefs?.find(m => m.number === card.number);
-    bonusCfg = def?.effect?.bonus;
+    bonusCfg = state.config?.bonusCards?.[card.number];
   }
 
   if (!bonusCfg) return 0;
@@ -251,9 +252,12 @@ function* resolveMagicianGen(state, playerIndex) {
   };
   recordDecision(state, DECISION_TYPES.MAGICIAN_SUIT, playerIndex, suit);
 
-  const bonusCfg = state.config?.bonusCards?.[1];
-  const vp = bonusCfg?.vp ?? 1;
-  const countWilds = bonusCfg?.countWilds ?? true;
+  // Find the Magician's bonus config from the card that triggered this generator.
+  // The Magician is the card whose bonusType === 'suitMajority' — look it up from config.
+  const magicianDef = state.config?.majorArcana?.find(m => m.effect?.bonus?.bonusType === 'suitMajority');
+  const magicianBonusCfg = magicianDef?.effect?.bonus || state.config?.bonusCards?.[1];
+  const vp = magicianBonusCfg?.vp ?? 1;
+  const countWilds = magicianBonusCfg?.countWilds ?? true;
   const myCount = countSuitInRealm(state.players[playerIndex], suit, countWilds);
 
   for (let pi = 0; pi < state.players.length; pi++) {

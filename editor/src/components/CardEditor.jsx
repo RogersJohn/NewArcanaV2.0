@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES, SUITS } from '../utils/defaults.js';
 import { validateCard } from '../utils/schema.js';
+import { CARD_FIELDS } from '../utils/tooltips.js';
+import { Label } from './Tooltip.jsx';
 import EffectEditor from './EffectEditor.jsx';
 
 function buildDefaultEffect(category) {
@@ -103,26 +105,23 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <label className="block">
-          <span className="text-sm text-gray-400">Number</span>
+        <Label text="Number" tooltip={CARD_FIELDS.number}>
           <input
             type="number"
             value={draft.number}
             onChange={e => update('number', Number(e.target.value))}
             className="input"
           />
-        </label>
-        <label className="block">
-          <span className="text-sm text-gray-400">Name</span>
+        </Label>
+        <Label text="Name" tooltip={CARD_FIELDS.name}>
           <input
             type="text"
             value={draft.name}
             onChange={e => update('name', e.target.value)}
             className="input"
           />
-        </label>
-        <label className="block">
-          <span className="text-sm text-gray-400">Category</span>
+        </Label>
+        <Label text="Category" tooltip={CARD_FIELDS.category}>
           <select
             value={draft.category}
             onChange={e => update('category', e.target.value)}
@@ -130,9 +129,8 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
           >
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-        </label>
-        <label className="block">
-          <span className="text-sm text-gray-400">Suit</span>
+        </Label>
+        <Label text="Suit" tooltip={CARD_FIELDS.suit}>
           <select
             value={draft.suit || ''}
             onChange={e => update('suit', e.target.value || null)}
@@ -141,16 +139,15 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
             <option value="">None</option>
             {SUITS.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-        </label>
-        <label className="block col-span-2">
-          <span className="text-sm text-gray-400">Keywords (comma-separated)</span>
+        </Label>
+        <Label text="Keywords (comma-separated)" tooltip={CARD_FIELDS.keywords}>
           <input
             type="text"
             value={(draft.keywords || []).join(', ')}
             onChange={handleKeywordsChange}
             className="input"
           />
-        </label>
+        </Label>
       </div>
 
       <div className="border-t border-gray-700 pt-4">

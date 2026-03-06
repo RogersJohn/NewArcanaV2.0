@@ -1,15 +1,17 @@
 import React from 'react';
+import { GAME_RULES, BUY_PRICES, SCORING } from '../utils/tooltips.js';
+import Tooltip from './Tooltip.jsx';
 
 const GAME_RULES_FIELDS = [
-  { key: 'handSizeLimit', label: 'Hand Size Limit', type: 'number' },
-  { key: 'devilHandSizeLimit', label: 'Devil Hand Size Limit', type: 'number' },
-  { key: 'tomeCapacity', label: 'Tome Capacity', type: 'number' },
-  { key: 'realmTrigger', label: 'Realm Trigger (cards to end round)', type: 'number' },
-  { key: 'displaySlots', label: 'Display Slots', type: 'number' },
-  { key: 'maxTurnsPerRound', label: 'Max Turns Per Round', type: 'number' },
-  { key: 'maxRounds', label: 'Max Rounds', type: 'number' },
-  { key: 'initialDealCount', label: 'Initial Deal Count', type: 'number' },
-  { key: 'roundDealCount', label: 'Round Deal Count', type: 'number' },
+  { key: 'handSizeLimit', label: 'Hand Size Limit' },
+  { key: 'devilHandSizeLimit', label: 'Devil Hand Size Limit' },
+  { key: 'tomeCapacity', label: 'Tome Capacity' },
+  { key: 'realmTrigger', label: 'Realm Trigger (cards to end round)' },
+  { key: 'displaySlots', label: 'Display Slots' },
+  { key: 'maxTurnsPerRound', label: 'Max Turns Per Round' },
+  { key: 'maxRounds', label: 'Max Rounds' },
+  { key: 'initialDealCount', label: 'Initial Deal Count' },
+  { key: 'roundDealCount', label: 'Round Deal Count' },
 ];
 
 const BUY_PRICES_FIELDS = [
@@ -36,6 +38,7 @@ export default function GameRulesEditor({ config, onUpdateSection, onUpdateScala
           <NumberField
             key={f.key}
             label={f.label}
+            tooltip={GAME_RULES[f.key]}
             value={config.gameRules?.[f.key]}
             onChange={v => onUpdateSection('gameRules', f.key, v)}
           />
@@ -47,6 +50,7 @@ export default function GameRulesEditor({ config, onUpdateSection, onUpdateScala
           <NumberField
             key={f.key}
             label={f.label}
+            tooltip={BUY_PRICES[f.key]}
             value={config.buyPrices?.[f.key]}
             onChange={v => onUpdateSection('buyPrices', f.key, v)}
           />
@@ -58,6 +62,7 @@ export default function GameRulesEditor({ config, onUpdateSection, onUpdateScala
           <NumberField
             key={f.key}
             label={f.label}
+            tooltip={SCORING[f.key]}
             value={config.scoring?.[f.key]}
             onChange={v => onUpdateSection('scoring', f.key, v)}
           />
@@ -67,6 +72,7 @@ export default function GameRulesEditor({ config, onUpdateSection, onUpdateScala
       <Section title="Other">
         <NumberField
           label="Max Payment Cards"
+          tooltip={SCORING.maxPaymentCards}
           value={config.maxPaymentCards}
           onChange={v => onUpdateScalar('maxPaymentCards', v)}
         />
@@ -86,10 +92,13 @@ function Section({ title, children }) {
   );
 }
 
-function NumberField({ label, value, onChange }) {
+function NumberField({ label, tooltip, value, onChange }) {
   return (
     <label className="block">
-      <span className="text-sm text-gray-400">{label}</span>
+      <span className="text-sm text-gray-400 inline-flex items-center gap-1">
+        {label}
+        <Tooltip text={tooltip} />
+      </span>
       <input
         type="number"
         value={value ?? ''}

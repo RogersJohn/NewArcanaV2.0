@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { createInitialState } from '../src/state.js';
+import { createMinorCard } from '../src/cards.js';
+import { setup, playGame } from '../src/engine.js';
+import { createAIs } from '../src/ai/index.js';
+import { resolveBonus } from '../src/scoring.js';
+import { resolveTomeOnPlayGen } from '../src/effect-resolver.js';
 import {
   isDeathCard, isPlagueCard, isHierophantCard, isHermitCard,
   getActionHandler, getTomeOnPlayHandler, deriveProtectionMap, getCardEffect,
@@ -141,20 +146,19 @@ describe('Effect Resolver', () => {
       expect(map[25]).toBe('COINS');
     });
 
-    it('matches the explicit protectionMap in config', () => {
+    it('protectionMap on state is derived automatically from effects', () => {
       const state = makeState();
-      const derived = deriveProtectionMap(state.config);
-      const explicit = state.config.protectionMap;
-      for (const [num, suit] of Object.entries(explicit)) {
-        expect(derived[Number(num)]).toBe(suit);
-      }
+      // protectionMap is now derived in createInitialState
+      expect(state.config.protectionMap[14]).toBe('CUPS');
+      expect(state.config.protectionMap[22]).toBe('SWORDS');
+      expect(state.config.protectionMap[23]).toBe('WANDS');
+      expect(state.config.protectionMap[25]).toBe('COINS');
     });
   });
 
   describe('Custom card support', () => {
     it('a custom card with PROTECT_SUIT appears in derived protection map', () => {
       const state = makeState();
-      // Add a custom card
       state.config.majorArcana.push({
         number: 99,
         name: 'Custom Shield',
@@ -169,6 +173,149 @@ describe('Effect Resolver', () => {
       });
       const map = deriveProtectionMap(state.config);
       expect(map[99]).toBe('WANDS');
+    });
+
+    it('custom PROTECT_SUIT card registers via createInitialState', () => {
+      const customConfig = {
+        majorArcana: [
+          ...createInitialState(4, true, 1).config.majorArcana,
+          {
+            number: 99, name: 'Custom Shield', category: 'tome',
+            keywords: ['tome'], suit: 'COINS',
+            effect: { type: 'tome', onPlay: { action: 'PROTECT_SUIT', suit: 'COINS' }, bonus: null },
+          },
+        ],
+      };
+      const state = createInitialState(4, true, 1, customConfig);
+      expect(state.config.protectionMap[99]).toBe('COINS');
+    });
+
+    it('custom suitHighest bonus card scores VP end-to-end', () => {
+      const state = makeState();
+      state.config.majorArcana.push({
+        number: 99, name: 'Custom Bonus', category: 'bonus-round',
+        keywords: ['bonus'], suit: 'WANDS',
+        effect: { type: 'bonus', bonus: { bonusType: 'suitHighest', suit: 'WANDS', countWilds: false, allowTie: true, vp: 2 } },
+      });
+      const customCard = {
+        id: 9999, type: 'major', number: 99, name: 'Custom Bonus',
+        category: 'bonus-round', keywords: ['bonus'], suit: 'WANDS', purchaseValue: 99,
+        effect: { type: 'bonus', bonus: { bonusType: 'suitHighest', suit: 'WANDS', countWilds: false, allowTie: true, vp: 2 } },
+      };
+      state.players[0].tome.push(customCard);
+      state.players[0].realm.push(createMinorCard('WANDS', 5));
+      const ais = createAIs(4, 'random', state.rng);
+      const vp = resolveBonus(state, 0, customCard, ais);
+      expect(vp).toBe(2);
+    });
+
+    it('custom suitMajority bonus requires strict advantage', () => {
+      const state = makeState();
+      state.config.majorArcana.push({
+        number: 98, name: 'Custom Majority', category: 'bonus-round',
+        keywords: ['bonus'], suit: null,
+        effect: { type: 'bonus', bonus: { bonusType: 'suitMajority', requiresStrictAdvantage: true, countWilds: true, vp: 2, requiresChoice: true } },
+      });
+      const customCard = {
+        id: 9998, type: 'major', number: 98, name: 'Custom Majority',
+        category: 'bonus-round', keywords: ['bonus'], suit: null, purchaseValue: 98,
+        effect: { type: 'bonus', bonus: { bonusType: 'suitMajority', requiresStrictAdvantage: true, countWilds: true, vp: 2, requiresChoice: true } },
+      };
+      state.players[0].tome.push(customCard);
+      // Give player 0 two WANDS, player 1 two WANDS (tied — should score 0)
+      state.players[0].realm.push(createMinorCard('WANDS', 3), createMinorCard('WANDS', 4));
+      state.players[1].realm.push(createMinorCard('WANDS', 5), createMinorCard('WANDS', 6));
+      // resolveBonusGen for suitMajority yields for suit choice, then checks counts
+      // The sync wrapper uses AI to choose suit — RandomAI picks randomly
+      const ais = createAIs(4, 'random', state.rng);
+      const vp = resolveBonus(state, 0, customCard, ais);
+      // Tied in WANDS — should be 0 regardless of which suit AI picks (all others are 0 too)
+      expect(vp).toBe(0);
+    });
+
+    it('config change affects scoring (Empress VP from 1 to 3)', () => {
+      const state = makeState();
+      // Find and modify the Empress in config
+      const empressDef = state.config.majorArcana.find(m => m.number === 3);
+      empressDef.effect.bonus.vp = 3;
+      const empress = findMajor(state, 3);
+      state.players[0].tome.push(empress);
+      state.players[0].realm.push(createMinorCard('CUPS', 5));
+      const ais = createAIs(4, 'random', state.rng);
+      const vp = resolveBonus(state, 0, empress, ais);
+      expect(vp).toBe(3);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('getCardEffect returns null for minor cards', () => {
+      const state = makeState();
+      const minor = createMinorCard('CUPS', 5);
+      expect(getCardEffect(state, minor)).toBe(null);
+    });
+
+    it('isDeathCard and isPlagueCard return false for minor cards', () => {
+      const state = makeState();
+      const minor = createMinorCard('CUPS', 5);
+      expect(isDeathCard(state, minor)).toBe(false);
+      expect(isPlagueCard(state, minor)).toBe(false);
+    });
+
+    it('getActionHandler returns null for card with no effect', () => {
+      const state = makeState();
+      const fakeCard = { id: 9999, type: 'major', number: 999, name: 'Unknown', category: 'action', keywords: [] };
+      expect(getActionHandler(state, fakeCard)).toBe(null);
+    });
+
+    it('getTomeOnPlayHandler returns null for card with no effect', () => {
+      const state = makeState();
+      const fakeCard = { id: 9999, type: 'major', number: 999, name: 'Unknown', category: 'tome', keywords: [] };
+      expect(getTomeOnPlayHandler(state, fakeCard)).toBe(null);
+    });
+
+    it('resolveTomeOnPlayGen for Devil draws cards', () => {
+      const state = makeState();
+      const devil = findMajor(state, 15);
+      state.players[0].tome.push(devil);
+      state.players[0].hand = [];
+      state.players[0].realm = [];
+      // Run the generator to completion
+      const gen = resolveTomeOnPlayGen(state, 0, devil);
+      let result = gen.next();
+      while (!result.done) result = gen.next();
+      // Player should now have cards drawn up to limit 7
+      expect(state.players[0].hand.length).toBeGreaterThan(0);
+      expect(state.players[0].hand.length).toBeLessThanOrEqual(7);
+    });
+
+    it('resolveTomeOnPlayGen for protection card adds protection', () => {
+      const state = makeState();
+      const temperance = findMajor(state, 14);
+      state.players[0].tome.push(temperance);
+      const gen = resolveTomeOnPlayGen(state, 0, temperance);
+      let result = gen.next();
+      while (!result.done) result = gen.next();
+      expect(state.players[0].tomeProtections.has('CUPS')).toBe(true);
+    });
+  });
+
+  describe('Deterministic reproducibility', () => {
+    it('same seed produces identical game results', () => {
+      function runGame(seed) {
+        const state = createInitialState(4, false, seed);
+        const ais = createAIs(4, 'diverse', state.rng);
+        for (let pi = 0; pi < 4; pi++) state.players[pi].name = `P${pi}`;
+        setup(state, ais);
+        playGame(state, ais);
+        return {
+          vpDist: state.players.map(p => p.vp),
+          endReason: state.gameEndReason,
+          rounds: state.roundNumber,
+        };
+      }
+      const r1 = runGame(12345);
+      const r2 = runGame(12345);
+      expect(r1).toEqual(r2);
     });
   });
 });

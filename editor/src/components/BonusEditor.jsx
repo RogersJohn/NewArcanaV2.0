@@ -1,5 +1,7 @@
 import React from 'react';
 import { BONUS_TYPES, SUITS } from '../utils/defaults.js';
+import { BONUS } from '../utils/tooltips.js';
+import Tooltip, { Label } from './Tooltip.jsx';
 
 export default function BonusEditor({ bonus, onChange }) {
   if (!bonus) {
@@ -18,8 +20,7 @@ export default function BonusEditor({ bonus, onChange }) {
   return (
     <div className="space-y-2 pl-2 border-l-2 border-gray-700">
       <div className="flex items-center justify-between">
-        <label className="block">
-          <span className="text-sm text-gray-400">Bonus Type</span>
+        <Label text="Bonus Type" tooltip={BONUS[bonus.bonusType] || BONUS.bonusType}>
           <select
             value={bonus.bonusType || ''}
             onChange={e => onChange({ bonusType: e.target.value })}
@@ -27,7 +28,7 @@ export default function BonusEditor({ bonus, onChange }) {
           >
             {BONUS_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-        </label>
+        </Label>
         <button
           onClick={() => onChange(null)}
           className="text-xs text-red-400 hover:text-red-300 mt-4"
@@ -37,8 +38,7 @@ export default function BonusEditor({ bonus, onChange }) {
       </div>
 
       {needsSuit(bonus.bonusType) && (
-        <label className="block">
-          <span className="text-sm text-gray-400">Suit</span>
+        <Label text="Suit" tooltip={BONUS.suit}>
           <select
             value={bonus.suit || ''}
             onChange={e => update('suit', e.target.value)}
@@ -46,31 +46,29 @@ export default function BonusEditor({ bonus, onChange }) {
           >
             {SUITS.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-        </label>
+        </Label>
       )}
 
       {needsVp(bonus.bonusType) && (
-        <label className="block">
-          <span className="text-sm text-gray-400">VP</span>
+        <Label text="VP" tooltip={BONUS.vp}>
           <input
             type="number"
             value={bonus.vp ?? 1}
             onChange={e => update('vp', Number(e.target.value))}
             className="input"
           />
-        </label>
+        </Label>
       )}
 
       {bonus.bonusType === 'pairCounting' && (
-        <label className="block">
-          <span className="text-sm text-gray-400">VP per Pair</span>
+        <Label text="VP per Pair" tooltip={BONUS.vpPerPair}>
           <input
             type="number"
             value={bonus.vpPerPair ?? 1}
             onChange={e => update('vpPerPair', Number(e.target.value))}
             className="input"
           />
-        </label>
+        </Label>
       )}
 
       {bonus.bonusType === 'suitMajority' && (
@@ -82,6 +80,7 @@ export default function BonusEditor({ bonus, onChange }) {
               onChange={e => update('requiresStrictAdvantage', e.target.checked)}
             />
             Requires strict advantage
+            <Tooltip text={BONUS.requiresStrictAdvantage} />
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -90,6 +89,7 @@ export default function BonusEditor({ bonus, onChange }) {
               onChange={e => update('countWilds', e.target.checked)}
             />
             Count wilds
+            <Tooltip text={BONUS.countWilds} />
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -98,6 +98,7 @@ export default function BonusEditor({ bonus, onChange }) {
               onChange={e => update('requiresChoice', e.target.checked)}
             />
             Requires choice (player picks suit)
+            <Tooltip text={BONUS.requiresChoice} />
           </label>
         </>
       )}
@@ -110,6 +111,7 @@ export default function BonusEditor({ bonus, onChange }) {
             onChange={e => update('allowTie', e.target.checked)}
           />
           Allow tie
+          <Tooltip text={BONUS.allowTie} />
         </label>
       )}
     </div>

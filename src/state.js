@@ -5,6 +5,7 @@
 import { createMinorDeck, createMajorDeck } from './cards.js';
 import { createRNG } from './rng.js';
 import { mergeConfig } from './config-core.js';
+import { deriveProtectionMap } from './effect-resolver.js';
 
 /**
  * Create the initial game state.
@@ -16,6 +17,9 @@ import { mergeConfig } from './config-core.js';
  */
 export function createInitialState(numPlayers, extended = false, seed, cardConfig) {
   const config = mergeConfig(cardConfig);
+
+  // Derive protection map from card effect data (any card with PROTECT_SUIT)
+  config.protectionMap = deriveProtectionMap(config);
 
   const players = [];
   for (let i = 0; i < numPlayers; i++) {
@@ -109,9 +113,18 @@ export function getHandSize(player) {
  */
 export function getEffectiveHandLimit(player, config) {
   const normalLimit = config?.gameRules?.handSizeLimit ?? 6;
-  const devilLimit = config?.gameRules?.devilHandSizeLimit ?? 7;
-  const hasDevil = player.tome.some(c => c.type === 'major' && c.number === 15);
-  return hasDevil ? devilLimit : normalLimit;
+
+  // Check if any tome card has a DRAW_TO_LIMIT on-play effect
+  for (const card of player.tome) {
+    if (card.type !== 'major') continue;
+    const def = config?.majorArcana?.find(m => m.number === card.number);
+    const onPlay = def?.effect?.onPlay;
+    if (onPlay?.action === 'DRAW_TO_LIMIT') {
+      return onPlay.limit ?? config?.gameRules?.devilHandSizeLimit ?? 7;
+    }
+  }
+
+  return normalLimit;
 }
 
 /**

@@ -198,6 +198,28 @@ These rules were wrong in the old project and must stay correct. Read RULES.md a
 
 ---
 
+## Known Limitations
+
+### AI Personas and Custom Cards
+The 10 AI persona files in `src/ai/` contain hardcoded card-number references for
+strategic heuristics (e.g., "if it's the Devil, rate it highly"). This means:
+
+- **Existing cards**: AI plays correctly. Changing a card's VP values or bonus
+  parameters in the editor WILL affect AI behavior correctly (AIs use the scoring
+  engine which is fully data-driven).
+- **New cards**: AI will treat new cards as generic/unrecognized and play them
+  with default (low) priority. The AI won't know that your new card is powerful
+  until someone adds explicit heuristics for it in the relevant AI file.
+- **Changing what a card DOES** (e.g., making The Chariot do something other than
+  MOVE_CELESTIAL_TO_TOME): The AI may play it at the wrong time because it still
+  thinks it does the old thing. The card WILL work correctly — the engine is
+  data-driven — but the AI's strategic evaluation will be stale.
+
+This is acceptable for playtesting balance changes. If Danny adds significant new
+cards that AI should play well, a developer should update the relevant AI files.
+
+---
+
 ## Expansion Roadmap
 
 Full details in PLAN.md. Below is the summary for task-by-task execution.

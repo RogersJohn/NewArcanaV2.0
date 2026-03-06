@@ -53,8 +53,7 @@ export function isHierophantCard(state, card) {
 export function isHermitCard(state, card) {
   if (!card || card.type !== 'major') return false;
   const effect = getCardEffect(state, card);
-  const bonus = effect?.bonus || (state.config?.bonusCards?.[card.number]);
-  return bonus?.bonusType === 'hermitExclusive';
+  return effect?.bonus?.bonusType === 'hermitExclusive';
 }
 
 /**
