@@ -1,0 +1,34 @@
+{
+  "name": "new-arcana",
+  "version": "2.0.0",
+  "description": "New Arcana — Card Game Design Tool",
+  "main": "main.js",
+  "author": "Danny Rafferty",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "node build.js",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.newarcana.designer",
+    "productName": "New Arcana",
+    "win": {
+      "target": "portable",
+      "icon": "icons/icon.ico"
+    },
+    "portable": {
+      "artifactName": "NewArcana.exe"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "build/**/*"
+    ],
+    "extraResources": []
+  }
+}
