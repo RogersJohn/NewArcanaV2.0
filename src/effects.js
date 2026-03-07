@@ -255,14 +255,27 @@ export function resolveWheelOfFortune(state, ais, playerIndex) {
     let card = null;
     if (src.source === 'draw') {
       card = drawMajorCard(state);
+      if (card && isDeathCard(state, card)) {
+        state.gameEnded = true;
+        state.gameEndReason = 'death_revealed';
+        log(state, `Death drawn from Major deck via Wheel of Fortune! Game ends!`);
+        return;
+      }
     } else if (src.source === 'display') {
       card = state.display[src.slotIndex];
       if (card) {
         state.display[src.slotIndex] = null;
         refillDisplay(state, src.slotIndex);
+        if (state.gameEnded) return; // Death appeared during display refill
       }
     } else if (src.source === 'discard') {
       card = state.majorDiscard.pop();
+      if (card && isDeathCard(state, card)) {
+        state.gameEnded = true;
+        state.gameEndReason = 'death_revealed';
+        log(state, `Death drawn from Major discard via Wheel of Fortune! Game ends!`);
+        return;
+      }
     }
     if (card) drawn.push(card);
   }

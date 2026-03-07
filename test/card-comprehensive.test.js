@@ -9,7 +9,7 @@ import { scoreRoundEnd, scoreGameEnd, resolveBonus, checkCelestialWin } from '..
 import { resolveRoyalAttack, resolveChariot, resolveStrength, resolveHangedMan,
          resolveTower, resolveJudgement, resolvePlague, applyTomeEffect,
          checkDeathRevealed, resolveWheelOfFortune } from '../src/effects.js';
-import { setup, playGame } from '../src/engine.js';
+import { setup, playGame, executeAction } from '../src/engine.js';
 import { createAIs } from '../src/ai/index.js';
 import { runSimulation } from '../src/simulation.js';
 import { RandomAI } from '../src/ai/base.js';
@@ -45,6 +45,14 @@ class FixedSuitAI extends RandomAI {
   chooseMagicianSuit() { return this._suit; }
 }
 function makeAIsWithSuit(n, suit) { return Array.from({ length: n }, () => new FixedSuitAI(suit)); }
+
+/** AI that returns fixed sources for Wheel of Fortune */
+class FixedWheelAI extends RandomAI {
+  constructor(sources) { super(); this._sources = sources; }
+  chooseWheelSources() { return this._sources; }
+  chooseWheelKeep() { return 0; }
+}
+function makeWheelAIs(n, sources) { return Array.from({ length: n }, () => new FixedWheelAI(sources)); }
 
 // ============================================================
 // 2.1 Bonus Card Tests
@@ -575,6 +583,58 @@ describe('Card 13 — Death', () => {
     const state = makeState(2);
     state.display = [null, null, null];
     expect(checkDeathRevealed(state)).toBe(false);
+  });
+
+  it('buying from draw pile and getting Death ends game', () => {
+    const state = makeState(2);
+    const death = major(13);
+    state.majorDeck = [death];
+    const king = mc('WANDS', 'KING'); // purchaseValue 14, enough for draw (cost 6)
+    state.players[0].hand.push(king);
+    executeAction(state, makeAIs(2), 0, {
+      type: 'BUY', source: 'draw', payment: [king],
+    });
+    expect(state.gameEnded).toBe(true);
+    expect(state.gameEndReason).toBe('death_purchased');
+    // Death should NOT be in player's hand
+    expect(state.players[0].hand.some(c => c.number === 13)).toBe(false);
+  });
+
+  it('Wheel of Fortune drawing Death ends game immediately', () => {
+    const state = makeState(2);
+    const death = major(13);
+    state.majorDeck = [death];
+    resolveWheelOfFortune(state, makeWheelAIs(2, [{ source: 'draw' }]), 0);
+    expect(state.gameEnded).toBe(true);
+    expect(state.gameEndReason).toBe('death_revealed');
+    // Death should NOT be in player's hand
+    expect(state.players[0].hand.some(c => c.number === 13)).toBe(false);
+  });
+
+  it('Wheel drawing Death as first card aborts before second draw', () => {
+    const state = makeState(2);
+    const death = major(13);
+    const star = major(17);
+    state.majorDeck = [star, death]; // Death on top, Star below
+    resolveWheelOfFortune(state, makeWheelAIs(2, [{ source: 'draw' }, { source: 'draw' }]), 0);
+    expect(state.gameEnded).toBe(true);
+    // Star should NOT have been drawn
+    expect(state.players[0].hand.some(c => c.number === 17)).toBe(false);
+  });
+
+  it('Death drawn from deck during buy does not go to player hand', () => {
+    const state = makeState(2);
+    const death = major(13);
+    state.majorDeck = [death];
+    const king = mc('WANDS', 'KING');
+    state.players[0].hand.push(king);
+    executeAction(state, makeAIs(2), 0, {
+      type: 'BUY', source: 'draw', payment: [king],
+    });
+    // No player should have Death in hand
+    for (const p of state.players) {
+      expect(p.hand.some(c => c.number === 13)).toBe(false);
+    }
   });
 });
 
