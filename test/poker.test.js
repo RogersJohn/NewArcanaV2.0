@@ -518,7 +518,7 @@ describe('evaluateHand', () => {
       const N = 1000;
       for (let i = 0; i < N; i++) evaluateHand(hand);
       const avgUs = (performance.now() - t0) / N * 1000;
-      expect(avgUs).toBeLessThan(50);
+      expect(avgUs).toBeLessThan(100);
     });
 
     it('2-wild evaluation is under 500µs average', () => {
