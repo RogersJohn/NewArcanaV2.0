@@ -79,6 +79,13 @@ export default function GameOverScreen({ gameState, onPlayAgain }) {
           <button className="start-button" onClick={onPlayAgain}>
             Play Again
           </button>
+          <a
+            href="../launcher/index.html"
+            className="start-button"
+            style={{ background: '#1a1a2e', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+          >
+            Back to Menu
+          </a>
           <button
             className="start-button"
             style={{ background: '#2c3e50' }}

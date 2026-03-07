@@ -6,3 +6,5 @@ NUL
 *.iml
 results/
 archive/
+desktop/build/
+desktop/dist/

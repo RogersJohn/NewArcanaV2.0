@@ -76,16 +76,25 @@ export default function SaveManager({ config, onImport, activeSlotId, onSetActiv
     setStatus({ type: 'success', msg: `Loaded "${slot.name}"` });
   };
 
-  const handleExportSlot = (slot) => {
+  const handleExportSlot = async (slot) => {
     const json = JSON.stringify(slot.config, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = sanitizeFilename(slot.name) + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    setStatus({ type: 'success', msg: `Exported "${slot.name}" as ${sanitizeFilename(slot.name)}.json` });
+    const filename = sanitizeFilename(slot.name) + '.json';
+
+    if (window.electronAPI?.isElectron) {
+      const result = await window.electronAPI.saveFile({ defaultName: filename, content: json });
+      if (result.success) {
+        setStatus({ type: 'success', msg: `Saved "${slot.name}" to ${result.filePath}` });
+      }
+    } else {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus({ type: 'success', msg: `Exported "${slot.name}" as ${filename}` });
+    }
   };
 
   const handleDelete = (slot) => {
@@ -108,18 +117,28 @@ export default function SaveManager({ config, onImport, activeSlotId, onSetActiv
     setEditName('');
   };
 
-  const handleExportCurrent = () => {
+  const handleExportCurrent = async () => {
     const json = JSON.stringify(config, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const activeSlot = activeSlotId ? load(activeSlotId) : null;
-    a.download = activeSlot ? sanitizeFilename(activeSlot.name) + '.json' : 'cards-unsaved.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    onMarkExported();
-    setStatus({ type: 'success', msg: 'Config exported' });
+    const activeSlotData = activeSlotId ? load(activeSlotId) : null;
+    const filename = activeSlotData ? sanitizeFilename(activeSlotData.name) + '.json' : 'cards-unsaved.json';
+
+    if (window.electronAPI?.isElectron) {
+      const result = await window.electronAPI.saveFile({ defaultName: filename, content: json });
+      if (result.success) {
+        onMarkExported();
+        setStatus({ type: 'success', msg: `Saved to ${result.filePath}` });
+      }
+    } else {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      onMarkExported();
+      setStatus({ type: 'success', msg: 'Config exported' });
+    }
   };
 
   const handleImportFile = async (e) => {
@@ -140,6 +159,24 @@ export default function SaveManager({ config, onImport, activeSlotId, onSetActiv
       setStatus({ type: 'error', msg: `Failed to parse: ${err.message}` });
     }
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleImportElectron = async () => {
+    const result = await window.electronAPI.openFile();
+    if (!result.success) return;
+    try {
+      const parsed = JSON.parse(result.content);
+      const errors = validateConfig(parsed);
+      if (errors.length > 0) {
+        setStatus({ type: 'error', msg: `Validation errors:\n${errors.join('\n')}` });
+        return;
+      }
+      onImport(parsed);
+      onSetActiveSlot(null);
+      setStatus({ type: 'success', msg: `Imported ${parsed.majorArcana.length} cards from ${result.filePath}` });
+    } catch (err) {
+      setStatus({ type: 'error', msg: `Failed to parse: ${err.message}` });
+    }
   };
 
   const handleReset = () => {
@@ -240,13 +277,19 @@ export default function SaveManager({ config, onImport, activeSlotId, onSetActiv
         </div>
         <div>
           <p className="text-sm text-gray-400 mb-1">Import a config file:</p>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".json"
-            onChange={handleImportFile}
-            className="block text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-gray-700 file:text-gray-200 file:cursor-pointer hover:file:bg-gray-600"
-          />
+          {window.electronAPI?.isElectron ? (
+            <button onClick={handleImportElectron} className="btn-secondary">
+              Open Config File...
+            </button>
+          ) : (
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportFile}
+              className="block text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-gray-700 file:text-gray-200 file:cursor-pointer hover:file:bg-gray-600"
+            />
+          )}
         </div>
         <div className="border-t border-gray-700 pt-3">
           <button onClick={handleReset} className="btn-danger">Reset to Defaults</button>

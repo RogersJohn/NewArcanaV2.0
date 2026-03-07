@@ -74,7 +74,10 @@ export default function App() {
   }, [handleUndo, handleRedo]);
 
   const [selectedIdx, setSelectedIdx] = useState(null);
-  const [tab, setTab] = useState('Cards');
+  const [tab, setTab] = useState(() => {
+    if (window.location.hash === '#simulate') return 'Simulate';
+    return 'Cards';
+  });
 
   const cards = config.majorArcana;
 
@@ -114,6 +117,9 @@ export default function App() {
     setConfig(prev => ({ ...prev, [key]: value }));
   }, [setConfig]);
 
+  // Set window title
+  useEffect(() => { document.title = 'New Arcana \u2014 Card Editor'; }, []);
+
   // Active slot name for header
   const activeSlot = activeSlotId ? load(activeSlotId) : null;
   const slotLabel = activeSlot ? activeSlot.name : 'Unsaved';
@@ -122,6 +128,11 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <header className="bg-gray-800 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
+          <a
+            href="../launcher/index.html"
+            className="text-gray-400 hover:text-amber-400 text-sm mr-1"
+            title="Back to Menu"
+          >&larr; Menu</a>
           <h1 className="text-xl font-bold text-amber-400">New Arcana — Card Editor</h1>
           <span className="text-sm text-gray-500">· {slotLabel}</span>
           {hasUnsavedChanges && (

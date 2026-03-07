@@ -16,6 +16,10 @@ export default function StartScreen({ onStart }) {
   return (
     <div className="start-screen">
       <div className="start-panel">
+        <a
+          href="../launcher/index.html"
+          style={{ fontSize: '13px', color: '#8899aa', textDecoration: 'none', marginBottom: '12px', display: 'inline-block' }}
+        >&larr; Back to Menu</a>
         <h1 className="start-title">New Arcana</h1>
         <p className="start-subtitle">A Tarot Card Game</p>
 
