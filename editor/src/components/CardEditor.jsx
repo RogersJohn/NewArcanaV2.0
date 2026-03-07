@@ -14,62 +14,34 @@ function buildDefaultEffect(category) {
 }
 
 export default function CardEditor({ card, allCards, onChange, onDelete }) {
-  const [draft, setDraft] = useState(card);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    setDraft(card);
     setShowDeleteConfirm(false);
   }, [card]);
 
-  const errors = validateCard(draft, allCards);
-  const isDirty = JSON.stringify(draft) !== JSON.stringify(card);
+  const errors = validateCard(card, allCards);
 
   const update = (key, val) => {
-    setDraft(prev => {
-      const next = { ...prev, [key]: val };
-      if (key === 'category' && val !== prev.category) {
-        next.effect = buildDefaultEffect(val);
-      }
-      return next;
-    });
-  };
-
-  const handleSave = () => {
-    if (errors.length === 0) onChange(draft);
+    const next = { ...card, [key]: val };
+    if (key === 'category' && val !== card.category) {
+      next.effect = buildDefaultEffect(val);
+    }
+    onChange(next);
   };
 
   const handleKeywordsChange = (e) => {
     const kw = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-    setDraft(prev => ({ ...prev, keywords: kw }));
+    onChange({ ...card, keywords: kw });
   };
 
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-amber-400">
-          #{draft.number} {draft.name || '(unnamed)'}
+          #{card.number} {card.name || '(unnamed)'}
         </h2>
         <div className="flex gap-2">
-          {isDirty && (
-            <button
-              onClick={() => setDraft(card)}
-              className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded"
-            >
-              Revert
-            </button>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={errors.length > 0 || !isDirty}
-            className={`px-4 py-1 text-sm rounded font-medium ${
-              errors.length > 0 || !isDirty
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-amber-600 hover:bg-amber-500 text-white'
-            }`}
-          >
-            Save
-          </button>
           {!showDeleteConfirm ? (
             <button
               onClick={() => setShowDeleteConfirm(true)}
@@ -108,7 +80,7 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
         <Label text="Number" tooltip={CARD_FIELDS.number}>
           <input
             type="number"
-            value={draft.number}
+            value={card.number}
             onChange={e => update('number', Number(e.target.value))}
             className="input"
           />
@@ -116,14 +88,14 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
         <Label text="Name" tooltip={CARD_FIELDS.name}>
           <input
             type="text"
-            value={draft.name}
+            value={card.name}
             onChange={e => update('name', e.target.value)}
             className="input"
           />
         </Label>
         <Label text="Category" tooltip={CARD_FIELDS.category}>
           <select
-            value={draft.category}
+            value={card.category}
             onChange={e => update('category', e.target.value)}
             className="input"
           >
@@ -132,7 +104,7 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
         </Label>
         <Label text="Suit" tooltip={CARD_FIELDS.suit}>
           <select
-            value={draft.suit || ''}
+            value={card.suit || ''}
             onChange={e => update('suit', e.target.value || null)}
             className="input"
           >
@@ -143,7 +115,7 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
         <Label text="Keywords (comma-separated)" tooltip={CARD_FIELDS.keywords}>
           <input
             type="text"
-            value={(draft.keywords || []).join(', ')}
+            value={(card.keywords || []).join(', ')}
             onChange={handleKeywordsChange}
             className="input"
           />
@@ -153,9 +125,9 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
       <div className="border-t border-gray-700 pt-4">
         <h3 className="text-sm font-medium text-gray-300 mb-3">Effect</h3>
         <EffectEditor
-          category={draft.category}
-          effect={draft.effect || buildDefaultEffect(draft.category)}
-          onChange={eff => setDraft(prev => ({ ...prev, effect: eff }))}
+          category={card.category}
+          effect={card.effect || buildDefaultEffect(card.category)}
+          onChange={eff => onChange({ ...card, effect: eff })}
         />
       </div>
     </div>
