@@ -19,7 +19,8 @@
     "productName": "New Arcana",
     "win": {
       "target": "portable",
-      "icon": "icons/icon.ico"
+      "icon": "icons/icon.ico",
+      "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "NewArcana.exe"

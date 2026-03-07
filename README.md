@@ -252,6 +252,26 @@ archive/              # Planning docs, prompts, designer quick-start
 
 ---
 
+## Desktop App (Windows)
+
+Download `NewArcana.exe` from the Releases page. Double-click to run — no installation needed.
+
+The app includes:
+- **Card Editor** — edit cards, rules, run simulations, compare configs
+- **Play Game** — play New Arcana against AI opponents
+- **Quick Sim** — run balance tests with your current card config
+
+### Building from Source
+
+```bash
+cd desktop
+npm install
+node build.js           # Build React apps
+npx electron-builder    # Package into NewArcana.exe (in desktop/dist/)
+```
+
+---
+
 ## Known Issues
 
 - Celestial AI personality is overpowered (~58% win rate vs expected ~25%) and needs rebalancing
