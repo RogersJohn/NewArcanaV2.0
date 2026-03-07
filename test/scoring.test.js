@@ -320,21 +320,21 @@ describe('Game End Scoring', () => {
 });
 
 describe('Fool Duplication', () => {
-  it('duplicates best opponent bonus', () => {
+  it('duplicates best opponent bonus (evaluated from owner perspective)', () => {
     const state = makeTestState(2);
     const fool = major(0);
     state.players[0].tome = [fool];
-    state.players[0].realm = [mc('SWORDS', 5), mc('SWORDS', 8)];
+    // Owner has most Swords (3) — Fool evaluates from OWNER's perspective
+    state.players[0].realm = [mc('SWORDS', 5), mc('SWORDS', 8), mc('SWORDS', 10)];
 
-    // Opponent has Justice (Swords bonus) and meets it
+    // Opponent has Justice (Swords bonus) in Tome
     const justice = major(11);
     state.players[1].tome = [justice];
-    state.players[1].realm = [mc('SWORDS', 3), mc('SWORDS', 9), mc('SWORDS', 'KING')];
+    state.players[1].realm = [mc('SWORDS', 3)];
 
     const ais = [new RandomAI(), new RandomAI()];
     const bonus = resolveFool(state, 0, ais);
-    // Fool duplicates the opponent's Justice bonus evaluation
-    // Opponent has 3 swords (most), so bonus = 1
+    // Fool copies Justice and checks owner's Swords count — owner has most
     expect(bonus).toBe(1);
   });
 });

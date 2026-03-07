@@ -52,15 +52,47 @@ function makeAIsWithSuit(n, suit) { return Array.from({ length: n }, () => new F
 
 describe('Bonus cards', () => {
   describe('Card 0 — The Fool (foolDuplicate)', () => {
-    it('duplicates opponent best scoring bonus', () => {
+    it('evaluates from Fool OWNER perspective, not opponent', () => {
+      // Opponent has Justice (most Swords) with 2 Swords
+      // Fool owner has 0 Swords — should NOT score
       const state = makeState(2);
-      state.players[0].tome.push(major(0)); // Fool
-      state.players[0].realm.push(mc('WANDS', 5));
-      state.players[1].tome.push(major(3)); // Empress (CUPS suitHighest)
-      state.players[1].realm.push(mc('CUPS', 5), mc('CUPS', 8));
+      state.players[0].tome.push(major(0)); // Fool owner
+      state.players[0].realm.push(mc('CUPS', 5), mc('CUPS', 8)); // No swords
+      state.players[1].tome.push(major(11)); // Justice (swords bonus)
+      state.players[1].realm.push(mc('SWORDS', 3), mc('SWORDS', 9));
       const vp = resolveBonus(state, 0, state.players[0].tome[0], makeAIs(2));
-      // Fool evaluates Empress against opponent — opponent has CUPS, so Empress scores
-      expect(vp).toBeGreaterThanOrEqual(0);
+      expect(vp).toBe(0); // Owner doesn't meet the requirement
+    });
+
+    it('scores when Fool OWNER meets the duplicated requirement', () => {
+      const state = makeState(2);
+      state.players[0].tome.push(major(0));
+      state.players[0].realm.push(mc('SWORDS', 5), mc('SWORDS', 8), mc('SWORDS', 10));
+      state.players[1].tome.push(major(11)); // Justice
+      state.players[1].realm.push(mc('SWORDS', 3));
+      const vp = resolveBonus(state, 0, state.players[0].tome[0], makeAIs(2));
+      expect(vp).toBe(1); // Owner has most Swords
+    });
+
+    it('returns 0 when Fool owner has no realm cards', () => {
+      const state = makeState(2);
+      state.players[0].tome.push(major(0));
+      state.players[0].realm = []; // Empty realm
+      state.players[1].tome.push(major(11));
+      state.players[1].realm.push(mc('SWORDS', 5));
+      const vp = resolveBonus(state, 0, state.players[0].tome[0], makeAIs(2));
+      expect(vp).toBe(0);
+    });
+
+    it('duplicating Magician: Fool owner chooses suit', () => {
+      // Fool owner has 3 CUPS, opponent has Magician in tome
+      const state = makeState(2);
+      state.players[0].tome.push(major(0));
+      state.players[0].realm.push(mc('CUPS', 5), mc('CUPS', 8), mc('CUPS', 10));
+      state.players[1].tome.push(major(1)); // Magician
+      state.players[1].realm.push(mc('CUPS', 3)); // Opponent has fewer CUPS
+      const vp = resolveBonus(state, 0, state.players[0].tome[0], makeAIsWithSuit(2, 'CUPS'));
+      expect(vp).toBe(1); // Owner has strictly more CUPS
     });
 
     it('returns 0 when no opponents have scoring bonuses', () => {

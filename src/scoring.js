@@ -215,15 +215,16 @@ export function resolveBonus(state, playerIndex, card, ais) {
 function* resolveFoolGen(state, playerIndex) {
   let bestBonus = 0;
 
+  // Owner must have cards in realm to score (standard bonus rule)
+  if (state.players[playerIndex].realm.length === 0) return 0;
+
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === playerIndex) continue;
-    if (state.players[pi].realm.length === 0) continue;
 
     for (const card of state.players[pi].tome) {
       if (!isBonusCard(card)) continue;
-      // Evaluate this bonus as if the Fool's owner had it
-      // But use the OPPONENT'S state for evaluation (requirements are duplicated)
-      const bonusVp = yield* resolveBonusGen(state, pi, card);
+      // Evaluate from the FOOL OWNER's perspective — check owner's Realm
+      const bonusVp = yield* resolveBonusGen(state, playerIndex, card);
       if (bonusVp > bestBonus) {
         bestBonus = bonusVp;
       }
