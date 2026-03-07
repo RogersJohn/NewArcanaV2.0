@@ -156,4 +156,16 @@ export class RandomAI {
     if (options.length === 0) return -1;
     return state.rng.nextInt(options.length);
   }
+
+  /**
+   * Choose which Tome cards to take via Hermit.
+   * @param {object} state
+   * @param {number} playerIndex
+   * @param {number[]} eligibleIndices - Tome indices that can be taken
+   * @returns {number[]} Indices to take (subset of eligibleIndices)
+   */
+  chooseHermitCards(state, playerIndex, eligibleIndices) {
+    // Default: take all eligible cards
+    return [...eligibleIndices];
+  }
 }

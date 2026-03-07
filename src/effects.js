@@ -384,10 +384,22 @@ export function resolvePlague(state, ais, playerIndex, targets) {
  * @param {object} card
  */
 export function applyTomeEffect(state, ais, playerIndex, card) {
-  // Drive the generator synchronously (no decision points in tome on-play effects)
+  // Drive the generator, handling decision yields (e.g., HERMIT_CHOOSE)
   const gen = resolveTomeOnPlayGen(state, playerIndex, card);
   let r = gen.next();
-  while (!r.done) r = gen.next();
+  while (!r.done) {
+    if (r.value && r.value.type && r.value.playerIndex != null) {
+      const ai = ais[r.value.playerIndex];
+      const req = r.value;
+      let choice;
+      if (req.type === 'HERMIT_CHOOSE') {
+        choice = ai.chooseHermitCards(req.state, req.playerIndex, req.eligibleIndices);
+      }
+      r = gen.next(choice);
+    } else {
+      r = gen.next();
+    }
+  }
 }
 
 /**

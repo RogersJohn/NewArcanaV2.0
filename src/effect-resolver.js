@@ -5,6 +5,7 @@
  */
 
 import { drawMinorCard, getHandSize, log } from './state.js';
+import { recordDecision, DECISION_TYPES } from './history.js';
 
 /**
  * Look up the effect definition for a card from config.
@@ -119,21 +120,36 @@ export function* resolveTomeOnPlayGen(state, playerIndex, card) {
 
   switch (onPlay.action) {
     case 'TOME_CARDS_TO_HAND': {
-      const tomeCopy = [...player.tome];
-      for (const tc of tomeCopy) {
-        if (tc.id !== card.id) {
-          const idx = player.tome.findIndex(c => c.id === tc.id);
-          if (idx !== -1) {
-            player.tome.splice(idx, 1);
-            player.hand.push(tc);
-            const protSuit = getProtectionSuit(state, tc.number);
-            if (protSuit) {
-              player.tomeProtections.delete(protSuit);
-            }
-          }
+      // Get indices of all non-Hermit cards in Tome
+      const eligibleIndices = [];
+      for (let i = 0; i < player.tome.length; i++) {
+        if (player.tome[i].id !== card.id) eligibleIndices.push(i);
+      }
+
+      if (eligibleIndices.length === 0) break;
+
+      // Yield decision: which cards to take?
+      const chosenIndices = yield {
+        type: DECISION_TYPES.HERMIT_CHOOSE,
+        playerIndex,
+        eligibleIndices,
+        state,
+      };
+      recordDecision(state, DECISION_TYPES.HERMIT_CHOOSE, playerIndex, chosenIndices);
+
+      // Take chosen cards (process in reverse index order to avoid shifting)
+      const sorted = [...(chosenIndices || [])].sort((a, b) => b - a);
+      for (const idx of sorted) {
+        if (idx >= 0 && idx < player.tome.length && player.tome[idx].id !== card.id) {
+          const tc = player.tome.splice(idx, 1)[0];
+          player.hand.push(tc);
+          const protSuit = getProtectionSuit(state, tc.number);
+          if (protSuit) player.tomeProtections.delete(protSuit);
         }
       }
-      log(state, `${player.name} takes Tome cards into hand via Hermit`);
+      if (sorted.length > 0) {
+        log(state, `${player.name} takes ${sorted.length} Tome card(s) into hand via Hermit`);
+      }
       break;
     }
     case 'DRAW_TO_LIMIT': {

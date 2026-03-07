@@ -93,7 +93,7 @@ describe('Statistical Regression', () => {
       }
 
       // Early exit once we've found all types
-      if (allDecisionTypes.size >= 10) break;
+      if (allDecisionTypes.size >= Object.keys(DECISION_TYPES).length) break;
     }
 
     const expectedTypes = Object.values(DECISION_TYPES);

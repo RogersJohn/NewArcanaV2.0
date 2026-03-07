@@ -54,6 +54,13 @@ class FixedWheelAI extends RandomAI {
 }
 function makeWheelAIs(n, sources) { return Array.from({ length: n }, () => new FixedWheelAI(sources)); }
 
+/** AI that returns fixed indices for Hermit choice */
+class FixedHermitAI extends RandomAI {
+  constructor(indices) { super(); this._indices = indices; }
+  chooseHermitCards() { return this._indices; }
+}
+function makeHermitAIs(n, indices) { return Array.from({ length: n }, () => new FixedHermitAI(indices)); }
+
 // ============================================================
 // 2.1 Bonus Card Tests
 // ============================================================
@@ -471,7 +478,7 @@ describe('Action cards', () => {
 
 describe('Tome on-play effects', () => {
   describe('Card 9 — Hermit on-play (TOME_CARDS_TO_HAND)', () => {
-    it('moves all other Tome cards to hand', () => {
+    it('moves all other Tome cards to hand (default AI)', () => {
       const state = makeState(2);
       const hermit = major(9);
       const other = major(5);
@@ -480,6 +487,40 @@ describe('Tome on-play effects', () => {
       expect(state.players[0].tome.length).toBe(1);
       expect(state.players[0].tome[0].number).toBe(9);
       expect(state.players[0].hand.some(c => c.number === 5)).toBe(true);
+    });
+
+    it('owner can choose to take no cards', () => {
+      const state = makeState(2);
+      const hermit = major(9);
+      const other1 = major(5);
+      const other2 = major(6);
+      state.players[0].tome.push(other1, other2, hermit);
+      applyTomeEffect(state, makeHermitAIs(2, []), 0, hermit);
+      expect(state.players[0].tome.length).toBe(3); // All remain
+      expect(state.players[0].hand.length).toBe(0);
+    });
+
+    it('owner can choose to take some cards', () => {
+      const state = makeState(2);
+      const hermit = major(9);
+      const other1 = major(5);
+      const other2 = major(6);
+      state.players[0].tome.push(other1, other2, hermit);
+      applyTomeEffect(state, makeHermitAIs(2, [0]), 0, hermit); // Take first only
+      expect(state.players[0].tome.length).toBe(2); // hermit + other2
+      expect(state.players[0].hand.some(c => c.number === 5)).toBe(true);
+      expect(state.players[0].hand.some(c => c.number === 6)).toBe(false);
+    });
+
+    it('taking a protection card removes protection', () => {
+      const state = makeState(2);
+      const hermit = major(9);
+      const temperance = major(14); // Temperance protects CUPS
+      state.players[0].tome.push(temperance, hermit);
+      state.players[0].tomeProtections.add('CUPS');
+      applyTomeEffect(state, makeHermitAIs(2, [0]), 0, hermit); // Take Temperance
+      expect(state.players[0].tomeProtections.has('CUPS')).toBe(false);
+      expect(state.players[0].hand.some(c => c.number === 14)).toBe(true);
     });
   });
 
