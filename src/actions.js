@@ -588,7 +588,7 @@ function addBuyActions(state, playerIndex, actions) {
   }
   for (let i = 0; i < 3; i++) {
     if (state.display[i]) {
-      sources.push({ source: `display${i}`, price: buyPrices[`display${i}`] ?? (7 + i) });
+      sources.push({ source: `display${i}`, price: buyPrices[`display${i}`] ?? (9 - i) });
     }
   }
   if (state.majorDiscard.length > 0) {

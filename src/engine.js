@@ -591,7 +591,7 @@ function* executeMajorActionGen(state, playerIndex, action) {
       yield* resolveHangedManGen(state, playerIndex, targets);
       break;
     case 'resolveTower':
-      resolveTower(state, playerIndex, targets);
+      yield* resolveTowerGen(state, playerIndex, targets);
       break;
     case 'resolveJudgement':
       resolveJudgement(state, playerIndex);
@@ -773,23 +773,28 @@ function* resolveHangedManGen(state, playerIndex, targets) {
 /**
  * Resolve Tower. (No decision points — stays synchronous.)
  */
-function resolveTower(state, playerIndex, targets) {
+function* resolveTowerGen(state, playerIndex, targets) {
   const myTomeSize = state.players[playerIndex].tome.length;
 
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === playerIndex) continue;
-    if (state.players[pi].tome.length > myTomeSize) {
-      // Destroy a major in their tome (pick last one as default)
-      if (state.players[pi].tome.length > 0) {
-        // Find a valid target
-        const tomeIdx = state.players[pi].tome.length - 1;
-        const card = state.players[pi].tome.splice(tomeIdx, 1)[0];
-        if (getProtection(state, card.number)) {
-          state.players[pi].tomeProtections.delete(getProtection(state, card.number));
-        }
-        state.pit.push(card);
-        log(state, `Tower destroys ${cardName(card)} in ${state.players[pi].name}'s Tome`);
+    if (state.players[pi].tome.length > myTomeSize && state.players[pi].tome.length > 0) {
+      // Tower player chooses which card to destroy
+      const tomeIdx = yield {
+        type: DECISION_TYPES.TOWER_CHOOSE,
+        playerIndex,
+        targetPlayerIndex: pi,
+        state,
+      };
+      recordDecision(state, DECISION_TYPES.TOWER_CHOOSE, playerIndex, tomeIdx);
+
+      const safeIdx = Math.max(0, Math.min(tomeIdx, state.players[pi].tome.length - 1));
+      const card = state.players[pi].tome.splice(safeIdx, 1)[0];
+      if (getProtection(state, card.number)) {
+        state.players[pi].tomeProtections.delete(getProtection(state, card.number));
       }
+      state.pit.push(card);
+      log(state, `Tower destroys ${cardName(card)} in ${state.players[pi].name}'s Tome`);
     }
   }
 }

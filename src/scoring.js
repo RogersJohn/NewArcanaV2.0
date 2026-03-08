@@ -452,6 +452,8 @@ export function resolveWithAI(ai, request) {
       return ai.chooseMagicianSuit(request.state, request.playerIndex);
     case DECISION_TYPES.HERMIT_CHOOSE:
       return ai.chooseHermitCards(request.state, request.playerIndex, request.eligibleIndices);
+    case DECISION_TYPES.TOWER_CHOOSE:
+      return ai.chooseTowerTarget(request.state, request.playerIndex, request.targetPlayerIndex);
     default:
       throw new Error(`Unknown decision type: ${request.type}`);
   }

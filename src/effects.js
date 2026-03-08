@@ -329,8 +329,9 @@ export function resolveTower(state, ais, playerIndex, targets) {
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === playerIndex) continue;
     if (state.players[pi].tome.length > myTomeSize && state.players[pi].tome.length > 0) {
-      const tomeIdx = state.players[pi].tome.length - 1;
-      const card = state.players[pi].tome.splice(tomeIdx, 1)[0];
+      const tomeIdx = ais[playerIndex].chooseTowerTarget(state, playerIndex, pi);
+      const safeIdx = Math.max(0, Math.min(tomeIdx, state.players[pi].tome.length - 1));
+      const card = state.players[pi].tome.splice(safeIdx, 1)[0];
       if (getProtection(state, card?.number)) {
         state.players[pi].tomeProtections.delete(getProtection(state, card.number));
       }

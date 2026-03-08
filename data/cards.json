@@ -13,9 +13,9 @@
 
   "buyPrices": {
     "draw": 6,
-    "display0": 7,
+    "display0": 9,
     "display1": 8,
-    "display2": 9,
+    "display2": 7,
     "discard": 10
   },
   "maxPaymentCards": 3,

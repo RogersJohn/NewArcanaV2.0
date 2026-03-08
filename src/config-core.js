@@ -22,9 +22,9 @@ export function getDefaultConfig() {
     },
     buyPrices: {
       draw: 6,
-      display0: 7,
+      display0: 9,    // newest slot (most expensive)
       display1: 8,
-      display2: 9,
+      display2: 7,    // oldest slot (cheapest, about to age off)
       discard: 10,
     },
     maxPaymentCards: 3,

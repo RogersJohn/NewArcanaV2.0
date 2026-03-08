@@ -168,4 +168,16 @@ export class RandomAI {
     // Default: take all eligible cards
     return [...eligibleIndices];
   }
+
+  /**
+   * Choose which card to destroy in opponent's Tome via Tower.
+   * @param {object} state
+   * @param {number} playerIndex - Tower player
+   * @param {number} targetPlayerIndex - Opponent whose Tome is targeted
+   * @returns {number} Index into target's Tome
+   */
+  chooseTowerTarget(state, playerIndex, targetPlayerIndex) {
+    // Default: destroy last card
+    return state.players[targetPlayerIndex].tome.length - 1;
+  }
 }

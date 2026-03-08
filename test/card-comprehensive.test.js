@@ -61,6 +61,13 @@ class FixedHermitAI extends RandomAI {
 }
 function makeHermitAIs(n, indices) { return Array.from({ length: n }, () => new FixedHermitAI(indices)); }
 
+/** AI that targets a specific index in opponent's Tome via Tower */
+class FixedTowerAI extends RandomAI {
+  constructor(idx) { super(); this._idx = idx; }
+  chooseTowerTarget() { return this._idx; }
+}
+function makeTowerAIs(n, idx) { return Array.from({ length: n }, () => new FixedTowerAI(idx)); }
+
 // ============================================================
 // 2.1 Bonus Card Tests
 // ============================================================
@@ -429,6 +436,27 @@ describe('Action cards', () => {
       resolveTower(state, makeAIs(2), 0, {});
       expect(state.players[1].tome.length).toBe(1);
     });
+
+    it('Tower player can target specific card (first)', () => {
+      const state = makeState(2);
+      state.players[0].tome = [];
+      state.players[1].tome.push(major(17), major(5), major(6)); // Star, Hierophant, Lovers
+      resolveTower(state, makeTowerAIs(2, 0), 0, {}); // Target index 0 (Star)
+      expect(state.players[1].tome.length).toBe(2);
+      expect(state.players[1].tome.some(c => c.number === 17)).toBe(false); // Star destroyed
+      expect(state.players[1].tome.some(c => c.number === 5)).toBe(true);
+    });
+
+    it('Tower player can target protection card', () => {
+      const state = makeState(2);
+      state.players[0].tome = [];
+      const temperance = major(14);
+      state.players[1].tome.push(major(5), temperance); // Hierophant, Temperance
+      state.players[1].tomeProtections.add('CUPS');
+      resolveTower(state, makeTowerAIs(2, 1), 0, {}); // Target index 1 (Temperance)
+      expect(state.players[1].tomeProtections.has('CUPS')).toBe(false);
+      expect(state.players[1].tome.some(c => c.number === 14)).toBe(false);
+    });
   });
 
   describe('Card 20 — Judgement (CLAIM_ROUND_END_MARKER)', () => {
@@ -676,6 +704,27 @@ describe('Card 13 — Death', () => {
     for (const p of state.players) {
       expect(p.hand.some(c => c.number === 13)).toBe(false);
     }
+  });
+});
+
+// ============================================================
+// 2.4b Display Pricing Tests
+// ============================================================
+
+describe('Display pricing (fixed)', () => {
+  it('newest display slot costs 9', () => {
+    const state = makeState(4);
+    expect(state.config.buyPrices.display0).toBe(9);
+  });
+
+  it('oldest display slot costs 7', () => {
+    const state = makeState(4);
+    expect(state.config.buyPrices.display2).toBe(7);
+  });
+
+  it('middle display slot costs 8', () => {
+    const state = makeState(4);
+    expect(state.config.buyPrices.display1).toBe(8);
   });
 });
 

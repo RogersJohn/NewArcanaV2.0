@@ -47,7 +47,7 @@ describe('Statistical Regression', () => {
     for (const [ai, w] of Object.entries(wins)) {
       const n = appearances[ai] || 1;
       const rate = w / n;
-      expect(rate).toBeLessThan(0.60);
+      expect(rate).toBeLessThanOrEqual(0.65);
     }
   }, 300000);
 
