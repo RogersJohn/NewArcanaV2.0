@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Arcana — Major Arcana Analysis (1000 Games)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e17; --bg2: #1a1932; --bg3: #232147;
+  --gold: #f0c040; --gold2: #d4a830; --gold3: #aa8520;
+  --text: #e8e4d9; --text2: #a09b8c; --text3: #6b6760;
+  --red: #f87171; --green: #4ade80; --blue: #60a5fa;
+  --purple: #a78bfa; --orange: #fb923c; --pink: #f472b6;
+  --celestial: #a78bfa; --action: #f87171; --tome: #60a5fa; --bonus: #4ade80;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Crimson Text', Georgia, serif; line-height: 1.6; }
+h1, h2, h3 { font-family: 'Cinzel', serif; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header { text-align: center; padding: 60px 20px 40px; border-bottom: 1px solid var(--gold3); margin-bottom: 40px; }
+.header h1 { font-size: 2.8em; color: var(--gold); letter-spacing: 3px; margin-bottom: 8px; }
+.header .subtitle { font-size: 1.2em; color: var(--text2); font-style: italic; }
+.header .meta { margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: var(--text3); }
+
+/* Summary cards */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
+.summary-card { background: var(--bg2); border: 1px solid var(--gold3); border-radius: 8px; padding: 20px; text-align: center; }
+.summary-card .value { font-family: 'Cinzel', serif; font-size: 2.2em; color: var(--gold); font-weight: 700; }
+.summary-card .label { font-size: 0.9em; color: var(--text2); margin-top: 4px; }
+
+/* Section */
+.section { margin-bottom: 56px; }
+.section h2 { font-size: 1.8em; color: var(--gold); margin-bottom: 8px; border-bottom: 2px solid var(--gold3); padding-bottom: 8px; }
+.section .desc { color: var(--text2); font-style: italic; margin-bottom: 24px; font-size: 1.05em; }
+
+/* Chart containers */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+.chart-box { background: var(--bg2); border: 1px solid #2a2850; border-radius: 8px; padding: 20px; }
+.chart-box h3 { font-size: 1.1em; color: var(--text); margin-bottom: 12px; }
+.chart-box.full { grid-column: 1 / -1; }
+canvas { max-height: 400px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+th { font-family: 'Cinzel', serif; font-size: 0.85em; color: var(--gold2); text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--gold3); letter-spacing: 1px; text-transform: uppercase; }
+td { padding: 8px 12px; border-bottom: 1px solid #1f1d35; }
+tr:hover { background: var(--bg3); }
+.cat-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+.cat-celestial { background: rgba(167,139,250,0.2); color: var(--celestial); }
+.cat-action { background: rgba(248,113,113,0.2); color: var(--action); }
+.cat-tome { background: rgba(96,165,250,0.2); color: var(--tome); }
+.cat-bonus { background: rgba(74,222,128,0.2); color: var(--bonus); }
+.flag-high { background: rgba(74,222,128,0.15); color: var(--green); font-weight: 600; }
+.flag-low { background: rgba(248,113,113,0.15); color: var(--red); font-weight: 600; }
+.flag-op { background: rgba(248,113,113,0.2); color: var(--red); font-weight: 700; }
+.flag-weak { background: rgba(251,146,60,0.15); color: var(--orange); font-weight: 600; }
+.num-pos { color: var(--green); }
+.num-neg { color: var(--red); }
+.num-neutral { color: var(--text2); }
+
+/* Power ranking bars */
+.rank-entry { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #1f1d35; }
+.rank-num { font-family: 'Cinzel', serif; font-size: 1.3em; color: var(--gold3); width: 36px; text-align: right; }
+.rank-num.top3 { color: var(--gold); }
+.rank-name { width: 200px; font-weight: 600; }
+.rank-bar-wrap { flex: 1; height: 24px; background: #1a1830; border-radius: 4px; overflow: hidden; position: relative; }
+.rank-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.rank-score { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; color: var(--text2); width: 50px; text-align: right; }
+.rank-subs { font-size: 0.8em; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+/* Insights */
+.insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+.insight { background: var(--bg2); border-left: 3px solid var(--gold); padding: 16px; border-radius: 0 8px 8px 0; }
+.insight .title { font-family: 'Cinzel', serif; font-size: 0.9em; color: var(--gold2); margin-bottom: 4px; }
+.insight .body { font-size: 1em; color: var(--text); }
+.insight .detail { font-size: 0.85em; color: var(--text2); margin-top: 4px; }
+
+.legend { display: flex; gap: 20px; margin-bottom: 16px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.85em; color: var(--text2); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+@media (max-width: 800px) {
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .chart-row { grid-template-columns: 1fr; }
+  .insight-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>New Arcana</h1>
+  <div class="subtitle">Major Arcana Strength &amp; Weakness Analysis</div>
+  <div class="meta">1,000 games · 4 players · diverse AI · seed 42 · 8 March 2026</div>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-grid">
+  <div class="summary-card"><div class="value">1,000</div><div class="label">Games Played</div></div>
+  <div class="summary-card"><div class="value">4.4</div><div class="label">Avg Rounds per Game</div></div>
+  <div class="summary-card"><div class="value">2.1%</div><div class="label">Celestial Win Rate</div></div>
+  <div class="summary-card"><div class="value">16.3</div><div class="label">Avg Winner VP</div></div>
+</div>
+
+<!-- Section 1: Power Rankings -->
+<div class="section">
+  <h2>I. Power Rankings</h2>
+  <p class="desc">Composite score combining Tome presence in winning games (50%), purchase frequency (30%), and VP contribution (20%).</p>
+  
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--celestial)"></div> Celestial</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--action)"></div> Action</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--tome)"></div> Tome</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--bonus)"></div> Bonus</div>
+  </div>
+
+  
+  <div class="rank-entry">
+    <div class="rank-num top3">1</div>
+    <div class="rank-name">The Sun (19)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:100.0%; background:#a78bfa"></div>
+    </div>
+    <div class="rank-score">0.776</div>
+    <div class="rank-subs">T:1.00 B:0.92 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num top3">2</div>
+    <div class="rank-name">The Star (17)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:99.0%; background:#a78bfa"></div>
+    </div>
+    <div class="rank-score">0.768</div>
+    <div class="rank-subs">T:0.96 B:0.96 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num top3">3</div>
+    <div class="rank-name">The World (21)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:98.2%; background:#a78bfa"></div>
+    </div>
+    <div class="rank-score">0.762</div>
+    <div class="rank-subs">T:0.92 B:1.00 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">4</div>
+    <div class="rank-name">The Moon (18)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:94.8%; background:#a78bfa"></div>
+    </div>
+    <div class="rank-score">0.736</div>
+    <div class="rank-subs">T:0.89 B:0.97 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">5</div>
+    <div class="rank-name">Temperance (14)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:81.4%; background:#60a5fa"></div>
+    </div>
+    <div class="rank-score">0.632</div>
+    <div class="rank-subs">T:0.50 B:0.82 V:0.69</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">6</div>
+    <div class="rank-name">The Lovers (6)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:68.4%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.531</div>
+    <div class="rank-subs">T:0.29 B:0.62 V:1.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">7</div>
+    <div class="rank-name">The Devil (15)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:62.2%; background:#60a5fa"></div>
+    </div>
+    <div class="rank-score">0.483</div>
+    <div class="rank-subs">T:0.45 B:0.85 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">8</div>
+    <div class="rank-name">The High Priestess (2)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:58.5%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.454</div>
+    <div class="rank-subs">T:0.32 B:0.61 V:0.54</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">9</div>
+    <div class="rank-name">Justice (11)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:54.9%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.426</div>
+    <div class="rank-subs">T:0.27 B:0.61 V:0.54</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">10</div>
+    <div class="rank-name">The Magician (1)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:53.5%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.415</div>
+    <div class="rank-subs">T:0.25 B:0.66 V:0.48</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">11</div>
+    <div class="rank-name">The Empress (3)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:53.2%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.413</div>
+    <div class="rank-subs">T:0.23 B:0.68 V:0.47</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">12</div>
+    <div class="rank-name">The Hierophant (5)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:51.8%; background:#60a5fa"></div>
+    </div>
+    <div class="rank-score">0.402</div>
+    <div class="rank-subs">T:0.34 B:0.77 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">13</div>
+    <div class="rank-name">The Hermit (9)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:51.2%; background:#60a5fa"></div>
+    </div>
+    <div class="rank-score">0.397</div>
+    <div class="rank-subs">T:0.18 B:0.82 V:0.29</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">14</div>
+    <div class="rank-name">The Emperor (4)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:49.9%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.387</div>
+    <div class="rank-subs">T:0.20 B:0.60 V:0.54</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">15</div>
+    <div class="rank-name">The Fool (0)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:48.1%; background:#4ade80"></div>
+    </div>
+    <div class="rank-score">0.373</div>
+    <div class="rank-subs">T:0.22 B:0.64 V:0.34</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">16</div>
+    <div class="rank-name">Wheel of Fortune (10)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:33.1%; background:#f87171"></div>
+    </div>
+    <div class="rank-score">0.257</div>
+    <div class="rank-subs">T:0.00 B:0.86 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">17</div>
+    <div class="rank-name">The Hanged Man (12)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:20.6%; background:#f87171"></div>
+    </div>
+    <div class="rank-score">0.160</div>
+    <div class="rank-subs">T:0.00 B:0.53 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">18</div>
+    <div class="rank-name">Judgement (20)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:20.0%; background:#f87171"></div>
+    </div>
+    <div class="rank-score">0.155</div>
+    <div class="rank-subs">T:0.00 B:0.52 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">19</div>
+    <div class="rank-name">The Chariot (7)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:19.7%; background:#f87171"></div>
+    </div>
+    <div class="rank-score">0.153</div>
+    <div class="rank-subs">T:0.00 B:0.51 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">20</div>
+    <div class="rank-name">Strength (8)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:19.7%; background:#f87171"></div>
+    </div>
+    <div class="rank-score">0.153</div>
+    <div class="rank-subs">T:0.00 B:0.51 V:0.00</div>
+  </div>
+  <div class="rank-entry">
+    <div class="rank-num ">21</div>
+    <div class="rank-name">The Tower (16)</div>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar" style="width:19.1%; background:#f87171"></div>
+    </div>
+    <div class="rank-score">0.148</div>
+    <div class="rank-subs">T:0.00 B:0.49 V:0.00</div>
+  </div>
+</div>
+
+<!-- Section 2: Purchase & Demand -->
+<div class="section">
+  <h2>II. Card Demand</h2>
+  <p class="desc">How often each card is purchased vs. left to age off the display. High purchase rate = high demand.</p>
+  <div class="chart-row">
+    <div class="chart-box full"><h3>Purchase Rate (bought vs aged off)</h3><canvas id="chartPurchaseRate"></canvas></div>
+  </div>
+  <div class="chart-row">
+    <div class="chart-box"><h3>Total Purchases (per 1000 games)</h3><canvas id="chartPurchaseFreq"></canvas></div>
+    <div class="chart-box"><h3>Wild Card Usage</h3><canvas id="chartWildUsage"></canvas></div>
+  </div>
+</div>
+
+<!-- Section 3: Winner Correlation -->
+<div class="section">
+  <h2>III. Winner Affinity</h2>
+  <p class="desc">Does owning this card correlate with winning? Winner affinity = purchases by winners / total purchases.</p>
+  <div class="chart-row">
+    <div class="chart-box full"><h3>Winner Affinity &amp; VP Delta</h3><canvas id="chartWinnerAffinity"></canvas></div>
+  </div>
+  
+  <div class="insight-grid">
+    
+    <div class="insight">
+      <div class="title">Strongest: The Tower (16)</div>
+      <div class="body num-pos">+7.7 VP delta</div>
+      <div class="detail">Holders average 7.7 more VP than non-holders</div>
+    </div>
+    <div class="insight">
+      <div class="title">Strongest: The Hanged Man (12)</div>
+      <div class="body num-pos">+6.4 VP delta</div>
+      <div class="detail">Holders average 6.4 more VP than non-holders</div>
+    </div>
+    <div class="insight">
+      <div class="title">Strongest: Wheel of Fortune (10)</div>
+      <div class="body num-pos">+4.8 VP delta</div>
+      <div class="detail">Holders average 4.8 more VP than non-holders</div>
+    </div>
+  </div>
+  <div class="insight-grid" style="margin-top:12px">
+    
+    <div class="insight" style="border-left-color:var(--red)">
+      <div class="title">Weakest: The Hermit (9)</div>
+      <div class="body num-neg">-4.1 VP delta</div>
+      <div class="detail">Holders average 4.1 fewer VP than non-holders</div>
+    </div>
+    <div class="insight" style="border-left-color:var(--red)">
+      <div class="title">Weakest: The Empress (3)</div>
+      <div class="body num-neg">-2.6 VP delta</div>
+      <div class="detail">Holders average 2.6 fewer VP than non-holders</div>
+    </div>
+    <div class="insight" style="border-left-color:var(--red)">
+      <div class="title">Weakest: The Fool (0)</div>
+      <div class="body num-neg">-2.4 VP delta</div>
+      <div class="detail">Holders average 2.4 fewer VP than non-holders</div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 4: Bonus Cards -->
+<div class="section">
+  <h2>IV. Bonus Card Performance</h2>
+  <p class="desc">How often each bonus card's conditions are met and it scores VP.</p>
+  <div class="chart-row">
+    <div class="chart-box"><h3>Bonus Hit Rate</h3><canvas id="chartBonusRate"></canvas></div>
+    <div class="chart-box"><h3>Bonus VP Contribution</h3><canvas id="chartBonusVp"></canvas></div>
+  </div>
+  
+  <table>
+    <tr><th>Card</th><th>Scored</th><th>Failed</th><th>Hierophant</th><th>Hit Rate</th><th>Avg VP</th><th>Flag</th></tr>
+    <tr>
+        <td>The Hermit (9)</td>
+        <td>128</td>
+        <td>0</td>
+        <td>0</td>
+        <td class="">100.0%</td>
+        <td>1.0</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The Lovers (6)</td>
+        <td>285</td>
+        <td>345</td>
+        <td>65</td>
+        <td class="">45.2%</td>
+        <td>1.3</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The High Priestess (2)</td>
+        <td>189</td>
+        <td>519</td>
+        <td>52</td>
+        <td class="">26.7%</td>
+        <td>1.0</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>Justice (11)</td>
+        <td>169</td>
+        <td>510</td>
+        <td>71</td>
+        <td class="">24.9%</td>
+        <td>1.0</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The Emperor (4)</td>
+        <td>175</td>
+        <td>538</td>
+        <td>65</td>
+        <td class="">24.5%</td>
+        <td>1.0</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>Temperance (14)</td>
+        <td>213</td>
+        <td>739</td>
+        <td>92</td>
+        <td class="">22.4%</td>
+        <td>1.0</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The Empress (3)</td>
+        <td>136</td>
+        <td>514</td>
+        <td>75</td>
+        <td class="">20.9%</td>
+        <td>1.0</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The Magician (1)</td>
+        <td>141</td>
+        <td>588</td>
+        <td>72</td>
+        <td class="flag-low">19.3%</td>
+        <td>1.0</td>
+        <td class="flag-low">LOW</td>
+      </tr><tr>
+        <td>The Fool (0)</td>
+        <td>83</td>
+        <td>505</td>
+        <td>59</td>
+        <td class="flag-low">14.1%</td>
+        <td>1.1</td>
+        <td class="flag-low">LOW</td>
+      </tr>
+  </table>
+</div>
+
+<!-- Section 5: Action Cards -->
+<div class="section">
+  <h2>V. Action Card Effectiveness</h2>
+  <p class="desc">How often action cards resolve successfully vs being Ace-blocked.</p>
+  <div class="chart-row">
+    <div class="chart-box full"><h3>Action Success Rate</h3><canvas id="chartActionSuccess"></canvas></div>
+  </div>
+  
+  <table>
+    <tr><th>Card</th><th>Played</th><th>Ace-Blocked</th><th>Success Rate</th><th>Flag</th></tr>
+    <tr>
+        <td>The Tower (16)</td>
+        <td>302</td>
+        <td>29</td>
+        <td class="">91.2%</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>Wheel of Fortune (10)</td>
+        <td>449</td>
+        <td>53</td>
+        <td class="">89.4%</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The Chariot (7)</td>
+        <td>446</td>
+        <td>68</td>
+        <td class="">86.8%</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>The Hanged Man (12)</td>
+        <td>305</td>
+        <td>65</td>
+        <td class="">82.4%</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>Strength (8)</td>
+        <td>222</td>
+        <td>48</td>
+        <td class="">82.2%</td>
+        <td class="">-</td>
+      </tr><tr>
+        <td>Judgement (20)</td>
+        <td>76</td>
+        <td>33</td>
+        <td class="">69.7%</td>
+        <td class="">-</td>
+      </tr>
+  </table>
+</div>
+
+<!-- Section 6: Celestial Cards -->
+<div class="section">
+  <h2>VI. Celestial Cards</h2>
+  <p class="desc">The four Celestials — pursued for 2 VP each at game end and the instant-win condition (3 = victory).</p>
+  <div class="chart-row">
+    <div class="chart-box"><h3>Celestial Presence in Winning Tomes</h3><canvas id="chartCelestialWin"></canvas></div>
+    <div class="chart-box"><h3>Celestial Purchase Rate</h3><canvas id="chartCelestialPurchase"></canvas></div>
+  </div>
+</div>
+
+<!-- Section 7: Game Overview -->
+<div class="section">
+  <h2>VII. Game Overview</h2>
+  <p class="desc">How games end, how long they last, and how VP distributes.</p>
+  <div class="chart-row">
+    <div class="chart-box"><h3>Game End Reasons</h3><canvas id="chartGameEnd"></canvas></div>
+    <div class="chart-box"><h3>AI Strategy Win Rates</h3><canvas id="chartAiWinRates"></canvas></div>
+  </div>
+</div>
+
+<!-- Section 8: Full Card Reference -->
+<div class="section">
+  <h2>VIII. Complete Card Reference</h2>
+  <p class="desc">Every Major Arcana card across all metrics. Click column headers to sort.</p>
+  <div style="overflow-x:auto">
+  <table id="fullTable">
+    <tr>
+      <th onclick="sortTable(0)">Card</th>
+      <th onclick="sortTable(1)">Type</th>
+      <th onclick="sortTable(2)">Purchased</th>
+      <th onclick="sortTable(3)">To Tome</th>
+      <th onclick="sortTable(4)">As Wild</th>
+      <th onclick="sortTable(5)">Winner Tome</th>
+      <th onclick="sortTable(6)">Bonus Rate</th>
+      <th onclick="sortTable(7)">Avg Bonus VP</th>
+      <th onclick="sortTable(8)">Power Score</th>
+    </tr>
+    <tr>
+        <td><strong>The World (21)</strong></td>
+        <td><span class="cat-badge cat-celestial">Celestial</span></td>
+        <td>669</td>
+        <td>650</td>
+        <td>255</td>
+        <td>146</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.762</td>
+      </tr><tr>
+        <td><strong>The Moon (18)</strong></td>
+        <td><span class="cat-badge cat-celestial">Celestial</span></td>
+        <td>647</td>
+        <td>619</td>
+        <td>296</td>
+        <td>135</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.736</td>
+      </tr><tr>
+        <td><strong>The Star (17)</strong></td>
+        <td><span class="cat-badge cat-celestial">Celestial</span></td>
+        <td>640</td>
+        <td>635</td>
+        <td>251</td>
+        <td>138</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.768</td>
+      </tr><tr>
+        <td><strong>The Sun (19)</strong></td>
+        <td><span class="cat-badge cat-celestial">Celestial</span></td>
+        <td>615</td>
+        <td>626</td>
+        <td>258</td>
+        <td>145</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.776</td>
+      </tr><tr>
+        <td><strong>Wheel of Fortune (10)</strong></td>
+        <td><span class="cat-badge cat-action">Action</span></td>
+        <td>573</td>
+        <td>0</td>
+        <td>150</td>
+        <td>0</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.257</td>
+      </tr><tr>
+        <td><strong>The Devil (15)</strong></td>
+        <td><span class="cat-badge cat-tome">Tome</span></td>
+        <td>570</td>
+        <td>501</td>
+        <td>283</td>
+        <td>76</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.483</td>
+      </tr><tr>
+        <td><strong>The Hermit (9)</strong></td>
+        <td><span class="cat-badge cat-tome">Tome</span></td>
+        <td>552</td>
+        <td>428</td>
+        <td>207</td>
+        <td>28</td>
+        <td>100.0%</td>
+        <td>1.0</td>
+        <td>0.397</td>
+      </tr><tr>
+        <td><strong>Temperance (14)</strong></td>
+        <td><span class="cat-badge cat-tome">Tome</span></td>
+        <td>547</td>
+        <td>535</td>
+        <td>204</td>
+        <td>83</td>
+        <td>29.2%</td>
+        <td>1.0</td>
+        <td>0.632</td>
+      </tr><tr>
+        <td><strong>The Hierophant (5)</strong></td>
+        <td><span class="cat-badge cat-tome">Tome</span></td>
+        <td>518</td>
+        <td>483</td>
+        <td>202</td>
+        <td>61</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.402</td>
+      </tr><tr>
+        <td><strong>The Empress (3)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>453</td>
+        <td>398</td>
+        <td>138</td>
+        <td>39</td>
+        <td>29.1%</td>
+        <td>1.0</td>
+        <td>0.413</td>
+      </tr><tr>
+        <td><strong>The Magician (1)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>438</td>
+        <td>408</td>
+        <td>169</td>
+        <td>56</td>
+        <td>26.6%</td>
+        <td>1.0</td>
+        <td>0.415</td>
+      </tr><tr>
+        <td><strong>The Fool (0)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>431</td>
+        <td>350</td>
+        <td>142</td>
+        <td>49</td>
+        <td>21.9%</td>
+        <td>1.1</td>
+        <td>0.373</td>
+      </tr><tr>
+        <td><strong>The Lovers (6)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>413</td>
+        <td>362</td>
+        <td>141</td>
+        <td>48</td>
+        <td>50.4%</td>
+        <td>1.3</td>
+        <td>0.531</td>
+      </tr><tr>
+        <td><strong>The High Priestess (2)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>410</td>
+        <td>421</td>
+        <td>160</td>
+        <td>59</td>
+        <td>31.7%</td>
+        <td>1.0</td>
+        <td>0.454</td>
+      </tr><tr>
+        <td><strong>Justice (11)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>410</td>
+        <td>369</td>
+        <td>155</td>
+        <td>57</td>
+        <td>32.0%</td>
+        <td>1.0</td>
+        <td>0.426</td>
+      </tr><tr>
+        <td><strong>The Emperor (4)</strong></td>
+        <td><span class="cat-badge cat-bonus">Bonus</span></td>
+        <td>400</td>
+        <td>384</td>
+        <td>166</td>
+        <td>34</td>
+        <td>30.8%</td>
+        <td>1.0</td>
+        <td>0.387</td>
+      </tr><tr>
+        <td><strong>The Hanged Man (12)</strong></td>
+        <td><span class="cat-badge cat-action">Action</span></td>
+        <td>356</td>
+        <td>0</td>
+        <td>108</td>
+        <td>0</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.160</td>
+      </tr><tr>
+        <td><strong>Judgement (20)</strong></td>
+        <td><span class="cat-badge cat-action">Action</span></td>
+        <td>345</td>
+        <td>0</td>
+        <td>103</td>
+        <td>0</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.155</td>
+      </tr><tr>
+        <td><strong>The Chariot (7)</strong></td>
+        <td><span class="cat-badge cat-action">Action</span></td>
+        <td>342</td>
+        <td>0</td>
+        <td>82</td>
+        <td>0</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.153</td>
+      </tr><tr>
+        <td><strong>Strength (8)</strong></td>
+        <td><span class="cat-badge cat-action">Action</span></td>
+        <td>341</td>
+        <td>0</td>
+        <td>75</td>
+        <td>0</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.153</td>
+      </tr><tr>
+        <td><strong>The Tower (16)</strong></td>
+        <td><span class="cat-badge cat-action">Action</span></td>
+        <td>330</td>
+        <td>0</td>
+        <td>110</td>
+        <td>0</td>
+        <td>-</td>
+        <td>-</td>
+        <td>0.148</td>
+      </tr>
+  </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+Chart.defaults.color = '#a09b8c';
+Chart.defaults.borderColor = '#2a2850';
+Chart.defaults.font.family = "'Crimson Text', Georgia, serif";
+
+// Purchase Rate chart
+new Chart(document.getElementById('chartPurchaseRate'), {
+  type: 'bar',
+  data: {
+    labels: ["The Sun (19)","The Moon (18)","The Star (17)","The World (21)","The Devil (15)","Temperance (14)","The Hermit (9)","Wheel of Fortune (10)","The Hierophant (5)","The Fool (0)","The Empress (3)","The High Priestess (2)","The Magician (1)","The Emperor (4)","Justice (11)","The Lovers (6)","The Hanged Man (12)","Judgement (20)","The Chariot (7)","The Tower (16)","Strength (8)"],
+    datasets: [{
+      label: 'Buy Rate',
+      data: [97.8,97.4,97.3,97.1,87.2,84.5,81.4,80,79.3,70,68.6,67.7,67.1,66,64.5,63.8,59.2,57.4,55.5,54.8,53.4],
+      backgroundColor: ["#a78bfa","#a78bfa","#a78bfa","#a78bfa","#60a5fa","#60a5fa","#60a5fa","#f87171","#60a5fa","#4ade80","#4ade80","#4ade80","#4ade80","#4ade80","#4ade80","#4ade80","#f87171","#f87171","#f87171","#f87171","#f87171"],
+      borderRadius: 3,
+    }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { max: 100, title: { display: true, text: '% purchased (vs aged off)' } } } }
+});
+
+// Purchase frequency
+new Chart(document.getElementById('chartPurchaseFreq'), {
+  type: 'bar',
+  data: {
+    labels: ["The World (21)","The Moon (18)","The Star (17)","The Sun (19)","Wheel of Fortune (10)","The Devil (15)","The Hermit (9)","Temperance (14)","The Hierophant (5)","The Empress (3)","The Magician (1)","The Fool (0)","The Lovers (6)","The High Priestess (2)","Justice (11)"],
+    datasets: [{
+      label: 'Total purchases',
+      data: [669,647,640,615,573,570,552,547,518,453,438,431,413,410,410],
+      backgroundColor: ["#a78bfa","#a78bfa","#a78bfa","#a78bfa","#f87171","#60a5fa","#60a5fa","#60a5fa","#60a5fa","#4ade80","#4ade80","#4ade80","#4ade80","#4ade80","#4ade80"],
+      borderRadius: 3,
+    }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+
+// Wild usage
+new Chart(document.getElementById('chartWildUsage'), {
+  type: 'bar',
+  data: {
+    labels: ["The Moon (18)","The Devil (15)","The Sun (19)","The World (21)","The Star (17)","The Hermit (9)","Temperance (14)","The Hierophant (5)","The Magician (1)","The Emperor (4)","The High Priestess (2)","Justice (11)"],
+    datasets: [{
+      label: 'Wild plays',
+      data: [296,283,258,255,251,207,204,202,169,166,160,155],
+      backgroundColor: ["#a78bfa","#60a5fa","#a78bfa","#a78bfa","#a78bfa","#60a5fa","#60a5fa","#60a5fa","#4ade80","#4ade80","#4ade80","#4ade80"],
+      borderRadius: 3,
+    }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+
+// Winner affinity + VP delta combo
+new Chart(document.getElementById('chartWinnerAffinity'), {
+  type: 'bar',
+  data: {
+    labels: ["The Tower (16)","The Hanged Man (12)","Wheel of Fortune (10)","Judgement (20)","The Chariot (7)","Strength (8)","The Sun (19)","The World (21)","The Star (17)","The Moon (18)","The Devil (15)","The Magician (1)","The High Priestess (2)","The Lovers (6)","Temperance (14)","The Hierophant (5)","Justice (11)","The Emperor (4)","The Fool (0)","The Empress (3)","The Hermit (9)"],
+    datasets: [
+      {
+        label: 'VP Delta (holders vs non-holders)',
+        data: [7.67,6.43,4.81,4.4,3.89,2.93,1.5,1.28,1.08,0.9,0.17,-0.02,-0.52,-0.62,-1,-1.02,-1.48,-1.64,-2.36,-2.59,-4.14],
+        backgroundColor: ["rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(74,222,128,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)","rgba(248,113,113,0.6)"],
+        borderRadius: 3,
+      }
+    ]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: true } }, scales: { x: { title: { display: true, text: 'VP advantage of holders' } } } }
+});
+
+// Bonus hit rate
+new Chart(document.getElementById('chartBonusRate'), {
+  type: 'doughnut',
+  data: {
+    labels: ["The Hermit (9)","The Lovers (6)","The High Priestess (2)","Justice (11)","The Emperor (4)","Temperance (14)","The Empress (3)","The Magician (1)","The Fool (0)"],
+    datasets: [{
+      data: [100,45.2,26.7,24.9,24.5,22.4,20.9,19.3,14.1],
+      backgroundColor: ['#f0c040','#4ade80','#60a5fa','#a78bfa','#fb923c','#f472b6','#38bdf8','#facc15','#e879f9'],
+      borderWidth: 0,
+    }]
+  },
+  options: { plugins: { legend: { position: 'right' } } }
+});
+
+// Bonus VP contribution
+const bonusCardsWithVp = [{"n":6,"name":"The Lovers (6)","purchased":413,"purchasedByWinner":64,"toTome":362,"toTomeByWinner":48,"actionPlayed":0,"wildPlayed":141,"bonusScored":350,"bonusFailed":345,"bonusVpTotal":445,"bonusScoredByWinner":78,"gamesAppearing":571,"bonusSuccessRate":0.5035971223021583,"winnerAffinity":0.1549636803874092,"avgBonusVp":1.2714285714285714},{"n":14,"name":"Temperance (14)","purchased":547,"purchasedByWinner":98,"toTome":535,"toTomeByWinner":83,"actionPlayed":0,"wildPlayed":204,"bonusScored":305,"bonusFailed":739,"bonusVpTotal":305,"bonusScoredByWinner":75,"gamesAppearing":760,"bonusSuccessRate":0.2921455938697318,"winnerAffinity":0.17915904936014626,"avgBonusVp":1},{"n":2,"name":"The High Priestess (2)","purchased":410,"purchasedByWinner":63,"toTome":421,"toTomeByWinner":59,"actionPlayed":0,"wildPlayed":160,"bonusScored":241,"bonusFailed":519,"bonusVpTotal":241,"bonusScoredByWinner":54,"gamesAppearing":611,"bonusSuccessRate":0.3171052631578947,"winnerAffinity":0.15365853658536585,"avgBonusVp":1},{"n":11,"name":"Justice (11)","purchased":410,"purchasedByWinner":68,"toTome":369,"toTomeByWinner":57,"actionPlayed":0,"wildPlayed":155,"bonusScored":240,"bonusFailed":510,"bonusVpTotal":240,"bonusScoredByWinner":60,"gamesAppearing":587,"bonusSuccessRate":0.32,"winnerAffinity":0.16585365853658537,"avgBonusVp":1},{"n":4,"name":"The Emperor (4)","purchased":400,"purchasedByWinner":62,"toTome":384,"toTomeByWinner":34,"actionPlayed":0,"wildPlayed":166,"bonusScored":240,"bonusFailed":538,"bonusVpTotal":240,"bonusScoredByWinner":26,"gamesAppearing":583,"bonusSuccessRate":0.30848329048843187,"winnerAffinity":0.155,"avgBonusVp":1},{"n":1,"name":"The Magician (1)","purchased":438,"purchasedByWinner":67,"toTome":408,"toTomeByWinner":56,"actionPlayed":0,"wildPlayed":169,"bonusScored":213,"bonusFailed":588,"bonusVpTotal":213,"bonusScoredByWinner":60,"gamesAppearing":619,"bonusSuccessRate":0.26591760299625467,"winnerAffinity":0.15296803652968036,"avgBonusVp":1},{"n":3,"name":"The Empress (3)","purchased":453,"purchasedByWinner":57,"toTome":398,"toTomeByWinner":39,"actionPlayed":0,"wildPlayed":138,"bonusScored":211,"bonusFailed":514,"bonusVpTotal":211,"bonusScoredByWinner":35,"gamesAppearing":598,"bonusSuccessRate":0.2910344827586207,"winnerAffinity":0.12582781456953643,"avgBonusVp":1},{"n":0,"name":"The Fool (0)","purchased":431,"purchasedByWinner":57,"toTome":350,"toTomeByWinner":49,"actionPlayed":0,"wildPlayed":142,"bonusScored":142,"bonusFailed":505,"bonusVpTotal":151,"bonusScoredByWinner":27,"gamesAppearing":584,"bonusSuccessRate":0.21947449768160743,"winnerAffinity":0.13225058004640372,"avgBonusVp":1.0633802816901408},{"n":9,"name":"The Hermit (9)","purchased":552,"purchasedByWinner":67,"toTome":428,"toTomeByWinner":28,"actionPlayed":0,"wildPlayed":207,"bonusScored":128,"bonusFailed":0,"bonusVpTotal":128,"bonusScoredByWinner":48,"gamesAppearing":700,"bonusSuccessRate":1,"winnerAffinity":0.1213768115942029,"avgBonusVp":1}];
+new Chart(document.getElementById('chartBonusVp'), {
+  type: 'bar',
+  data: {
+    labels: bonusCardsWithVp.map(c => c.name),
+    datasets: [{
+      label: 'Total bonus VP generated',
+      data: bonusCardsWithVp.map(c => c.bonusVpTotal),
+      backgroundColor: '#f0c040',
+      borderRadius: 3,
+    }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+
+// Action success
+new Chart(document.getElementById('chartActionSuccess'), {
+  type: 'bar',
+  data: {
+    labels: ["The Tower (16)","Wheel of Fortune (10)","The Chariot (7)","The Hanged Man (12)","Strength (8)","Judgement (20)"],
+    datasets: [
+      { label: 'Succeeded', data: [273,396,378,240,174,43], backgroundColor: 'rgba(74,222,128,0.7)', borderRadius: 3 },
+      { label: 'Ace-Blocked', data: [29,53,68,65,48,33], backgroundColor: 'rgba(248,113,113,0.7)', borderRadius: 3 },
+    ]
+  },
+  options: { scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { display: true } } }
+});
+
+// Celestial win tome presence
+const celestials = [17,18,19,21].map(n => {
+  const c = [{"n":21,"name":"The World (21)","purchased":669,"purchasedByWinner":171,"toTome":650,"toTomeByWinner":146,"actionPlayed":0,"wildPlayed":255,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":882,"bonusSuccessRate":null,"winnerAffinity":0.2556053811659193,"avgBonusVp":0},{"n":18,"name":"The Moon (18)","purchased":647,"purchasedByWinner":178,"toTome":619,"toTomeByWinner":135,"actionPlayed":0,"wildPlayed":296,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":885,"bonusSuccessRate":null,"winnerAffinity":0.2751159196290572,"avgBonusVp":0},{"n":17,"name":"The Star (17)","purchased":640,"purchasedByWinner":145,"toTome":635,"toTomeByWinner":138,"actionPlayed":0,"wildPlayed":251,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":876,"bonusSuccessRate":null,"winnerAffinity":0.2265625,"avgBonusVp":0},{"n":19,"name":"The Sun (19)","purchased":615,"purchasedByWinner":159,"toTome":626,"toTomeByWinner":145,"actionPlayed":0,"wildPlayed":258,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":861,"bonusSuccessRate":null,"winnerAffinity":0.25853658536585367,"avgBonusVp":0},{"n":10,"name":"Wheel of Fortune (10)","purchased":573,"purchasedByWinner":52,"toTome":0,"toTomeByWinner":0,"actionPlayed":449,"wildPlayed":150,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":691,"bonusSuccessRate":null,"winnerAffinity":0.09075043630017451,"avgBonusVp":0},{"n":15,"name":"The Devil (15)","purchased":570,"purchasedByWinner":117,"toTome":501,"toTomeByWinner":76,"actionPlayed":0,"wildPlayed":283,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":782,"bonusSuccessRate":null,"winnerAffinity":0.20526315789473684,"avgBonusVp":0},{"n":9,"name":"The Hermit (9)","purchased":552,"purchasedByWinner":67,"toTome":428,"toTomeByWinner":28,"actionPlayed":0,"wildPlayed":207,"bonusScored":128,"bonusFailed":0,"bonusVpTotal":128,"bonusScoredByWinner":48,"gamesAppearing":700,"bonusSuccessRate":1,"winnerAffinity":0.1213768115942029,"avgBonusVp":1},{"n":14,"name":"Temperance (14)","purchased":547,"purchasedByWinner":98,"toTome":535,"toTomeByWinner":83,"actionPlayed":0,"wildPlayed":204,"bonusScored":305,"bonusFailed":739,"bonusVpTotal":305,"bonusScoredByWinner":75,"gamesAppearing":760,"bonusSuccessRate":0.2921455938697318,"winnerAffinity":0.17915904936014626,"avgBonusVp":1},{"n":5,"name":"The Hierophant (5)","purchased":518,"purchasedByWinner":76,"toTome":483,"toTomeByWinner":61,"actionPlayed":0,"wildPlayed":202,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":696,"bonusSuccessRate":null,"winnerAffinity":0.14671814671814673,"avgBonusVp":0},{"n":3,"name":"The Empress (3)","purchased":453,"purchasedByWinner":57,"toTome":398,"toTomeByWinner":39,"actionPlayed":0,"wildPlayed":138,"bonusScored":211,"bonusFailed":514,"bonusVpTotal":211,"bonusScoredByWinner":35,"gamesAppearing":598,"bonusSuccessRate":0.2910344827586207,"winnerAffinity":0.12582781456953643,"avgBonusVp":1},{"n":1,"name":"The Magician (1)","purchased":438,"purchasedByWinner":67,"toTome":408,"toTomeByWinner":56,"actionPlayed":0,"wildPlayed":169,"bonusScored":213,"bonusFailed":588,"bonusVpTotal":213,"bonusScoredByWinner":60,"gamesAppearing":619,"bonusSuccessRate":0.26591760299625467,"winnerAffinity":0.15296803652968036,"avgBonusVp":1},{"n":0,"name":"The Fool (0)","purchased":431,"purchasedByWinner":57,"toTome":350,"toTomeByWinner":49,"actionPlayed":0,"wildPlayed":142,"bonusScored":142,"bonusFailed":505,"bonusVpTotal":151,"bonusScoredByWinner":27,"gamesAppearing":584,"bonusSuccessRate":0.21947449768160743,"winnerAffinity":0.13225058004640372,"avgBonusVp":1.0633802816901408},{"n":6,"name":"The Lovers (6)","purchased":413,"purchasedByWinner":64,"toTome":362,"toTomeByWinner":48,"actionPlayed":0,"wildPlayed":141,"bonusScored":350,"bonusFailed":345,"bonusVpTotal":445,"bonusScoredByWinner":78,"gamesAppearing":571,"bonusSuccessRate":0.5035971223021583,"winnerAffinity":0.1549636803874092,"avgBonusVp":1.2714285714285714},{"n":2,"name":"The High Priestess (2)","purchased":410,"purchasedByWinner":63,"toTome":421,"toTomeByWinner":59,"actionPlayed":0,"wildPlayed":160,"bonusScored":241,"bonusFailed":519,"bonusVpTotal":241,"bonusScoredByWinner":54,"gamesAppearing":611,"bonusSuccessRate":0.3171052631578947,"winnerAffinity":0.15365853658536585,"avgBonusVp":1},{"n":11,"name":"Justice (11)","purchased":410,"purchasedByWinner":68,"toTome":369,"toTomeByWinner":57,"actionPlayed":0,"wildPlayed":155,"bonusScored":240,"bonusFailed":510,"bonusVpTotal":240,"bonusScoredByWinner":60,"gamesAppearing":587,"bonusSuccessRate":0.32,"winnerAffinity":0.16585365853658537,"avgBonusVp":1},{"n":4,"name":"The Emperor (4)","purchased":400,"purchasedByWinner":62,"toTome":384,"toTomeByWinner":34,"actionPlayed":0,"wildPlayed":166,"bonusScored":240,"bonusFailed":538,"bonusVpTotal":240,"bonusScoredByWinner":26,"gamesAppearing":583,"bonusSuccessRate":0.30848329048843187,"winnerAffinity":0.155,"avgBonusVp":1},{"n":12,"name":"The Hanged Man (12)","purchased":356,"purchasedByWinner":69,"toTome":0,"toTomeByWinner":0,"actionPlayed":305,"wildPlayed":108,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":465,"bonusSuccessRate":null,"winnerAffinity":0.19382022471910113,"avgBonusVp":0},{"n":20,"name":"Judgement (20)","purchased":345,"purchasedByWinner":54,"toTome":0,"toTomeByWinner":0,"actionPlayed":76,"wildPlayed":103,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":398,"bonusSuccessRate":null,"winnerAffinity":0.1565217391304348,"avgBonusVp":0},{"n":7,"name":"The Chariot (7)","purchased":342,"purchasedByWinner":68,"toTome":0,"toTomeByWinner":0,"actionPlayed":446,"wildPlayed":82,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":468,"bonusSuccessRate":null,"winnerAffinity":0.19883040935672514,"avgBonusVp":0},{"n":8,"name":"Strength (8)","purchased":341,"purchasedByWinner":55,"toTome":0,"toTomeByWinner":0,"actionPlayed":222,"wildPlayed":75,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":416,"bonusSuccessRate":null,"winnerAffinity":0.16129032258064516,"avgBonusVp":0},{"n":16,"name":"The Tower (16)","purchased":330,"purchasedByWinner":62,"toTome":0,"toTomeByWinner":0,"actionPlayed":302,"wildPlayed":110,"bonusScored":0,"bonusFailed":0,"bonusVpTotal":0,"bonusScoredByWinner":0,"gamesAppearing":446,"bonusSuccessRate":null,"winnerAffinity":0.18787878787878787,"avgBonusVp":0}].find(x => x.n === n);
+  return { name: c?.name || 'Card '+n, inWinnerTome: c?.toTomeByWinner || 0, total: c?.toTome || 0 };
+});
+new Chart(document.getElementById('chartCelestialWin'), {
+  type: 'bar',
+  data: {
+    labels: celestials.map(c => c.name),
+    datasets: [
+      { label: 'In winner Tome', data: celestials.map(c => c.inWinnerTome), backgroundColor: 'rgba(167,139,250,0.8)', borderRadius: 3 },
+      { label: 'In any Tome', data: celestials.map(c => c.total), backgroundColor: 'rgba(167,139,250,0.25)', borderRadius: 3 },
+    ]
+  },
+  options: { plugins: { legend: { display: true } } }
+});
+
+// Celestial purchase
+const celestialPurch = [17,18,19,21].map(n => {
+  const c = [{"number":19,"name":"The Sun (19)","purchased":615,"displayed":593,"agedOff":14,"purchaseRate":0.9777424483306836,"flag":""},{"number":18,"name":"The Moon (18)","purchased":647,"displayed":600,"agedOff":17,"purchaseRate":0.9743975903614458,"flag":""},{"number":17,"name":"The Star (17)","purchased":640,"displayed":568,"agedOff":18,"purchaseRate":0.9726443768996961,"flag":""},{"number":21,"name":"The World (21)","purchased":669,"displayed":590,"agedOff":20,"purchaseRate":0.9709724238026125,"flag":""},{"number":15,"name":"The Devil (15)","purchased":570,"displayed":618,"agedOff":84,"purchaseRate":0.8715596330275229,"flag":""},{"number":14,"name":"Temperance (14)","purchased":547,"displayed":601,"agedOff":100,"purchaseRate":0.8454404945904173,"flag":""},{"number":9,"name":"The Hermit (9)","purchased":552,"displayed":658,"agedOff":126,"purchaseRate":0.8141592920353983,"flag":""},{"number":10,"name":"Wheel of Fortune (10)","purchased":573,"displayed":653,"agedOff":143,"purchaseRate":0.8002793296089385,"flag":""},{"number":5,"name":"The Hierophant (5)","purchased":518,"displayed":628,"agedOff":135,"purchaseRate":0.7932618683001531,"flag":""},{"number":0,"name":"The Fool (0)","purchased":431,"displayed":654,"agedOff":185,"purchaseRate":0.6996753246753247,"flag":""},{"number":3,"name":"The Empress (3)","purchased":453,"displayed":672,"agedOff":207,"purchaseRate":0.6863636363636364,"flag":""},{"number":2,"name":"The High Priestess (2)","purchased":410,"displayed":616,"agedOff":196,"purchaseRate":0.6765676567656765,"flag":""},{"number":1,"name":"The Magician (1)","purchased":438,"displayed":666,"agedOff":215,"purchaseRate":0.6707503828483921,"flag":""},{"number":4,"name":"The Emperor (4)","purchased":400,"displayed":629,"agedOff":206,"purchaseRate":0.6600660066006601,"flag":""},{"number":11,"name":"Justice (11)","purchased":410,"displayed":632,"agedOff":226,"purchaseRate":0.6446540880503144,"flag":""},{"number":6,"name":"The Lovers (6)","purchased":413,"displayed":642,"agedOff":234,"purchaseRate":0.6383307573415765,"flag":""},{"number":12,"name":"The Hanged Man (12)","purchased":356,"displayed":668,"agedOff":245,"purchaseRate":0.5923460898502496,"flag":""},{"number":20,"name":"Judgement (20)","purchased":345,"displayed":664,"agedOff":256,"purchaseRate":0.5740432612312812,"flag":""},{"number":7,"name":"The Chariot (7)","purchased":342,"displayed":688,"agedOff":274,"purchaseRate":0.5551948051948052,"flag":""},{"number":16,"name":"The Tower (16)","purchased":330,"displayed":676,"agedOff":272,"purchaseRate":0.5481727574750831,"flag":""},{"number":8,"name":"Strength (8)","purchased":341,"displayed":721,"agedOff":297,"purchaseRate":0.5344827586206896,"flag":""}].find(x => x.number === n);
+  return { name: c?.name || 'Card '+n, rate: c ? +(c.purchaseRate*100).toFixed(1) : 0 };
+});
+new Chart(document.getElementById('chartCelestialPurchase'), {
+  type: 'bar',
+  data: {
+    labels: celestialPurch.map(c => c.name),
+    datasets: [{ label: 'Purchase Rate %', data: celestialPurch.map(c => c.rate), backgroundColor: 'rgba(167,139,250,0.7)', borderRadius: 3 }]
+  },
+  options: { scales: { y: { max: 100 } }, plugins: { legend: { display: false } } }
+});
+
+// Game end reasons
+const ger = {"death_revealed":759,"death_purchased":210,"celestial_win":21,"max_rounds":10};
+new Chart(document.getElementById('chartGameEnd'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Death (revealed)', 'Death (purchased)', 'Celestial Win', 'Max Rounds'],
+    datasets: [{ data: [ger.death_revealed||0, ger.death_purchased||0, ger.celestial_win||0, ger.max_rounds||0], backgroundColor: ['#f87171','#fb923c','#a78bfa','#6b7280'], borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { position: 'right' } } }
+});
+
+// AI win rates
+const aiData = Object.entries({"Scoring":{"wins":231,"games":506,"winRate":0.45652173913043476,"ci95":[0.4136106335699018,0.500088052453365]},"Aggressor":{"wins":83,"games":526,"winRate":0.15779467680608364,"ci95":[0.12913564437564562,0.1914160072877949]},"Controller":{"wins":124,"games":478,"winRate":0.2594142259414226,"ci95":[0.22214829140558237,0.30051641832475223]},"Celestial":{"wins":107,"games":513,"winRate":0.20857699805068225,"ci95":[0.1756482242009088,0.245837971956676]},"Opportunist":{"wins":256,"games":495,"winRate":0.5171717171717172,"ci95":[0.47318737173980896,0.5608915823810983]},"Builder":{"wins":117,"games":500,"winRate":0.234,"ci95":[0.19900409539602293,0.27305220166241767]},"Collector":{"wins":3,"games":504,"winRate":0.005952380952380952,"ci95":[0.002026332296815878,0.017352938719973607]},"Tactician":{"wins":79,"games":478,"winRate":0.16527196652719664,"ci95":[0.13466877209269926,0.201212563184288]}}).map(([name, d]) => ({ name, rate: d.winRate, wins: d.wins, games: d.games })).sort((a,b) => b.rate - a.rate);
+new Chart(document.getElementById('chartAiWinRates'), {
+  type: 'bar',
+  data: {
+    labels: aiData.map(a => a.name),
+    datasets: [{ label: 'Win Rate', data: aiData.map(a => +(a.rate*100).toFixed(1)), backgroundColor: '#f0c040', borderRadius: 3 }]
+  },
+  options: { indexAxis: 'y', scales: { x: { max: 60 } }, plugins: { legend: { display: false } } }
+});
+
+// Sortable table
+let sortDir = {};
+function sortTable(col) {
+  const table = document.getElementById('fullTable');
+  const rows = Array.from(table.rows).slice(1);
+  const dir = sortDir[col] = !(sortDir[col] || false);
+  rows.sort((a, b) => {
+    let va = a.cells[col].textContent.replace('%','').replace('-','0');
+    let vb = b.cells[col].textContent.replace('%','').replace('-','0');
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) return dir ? na - nb : nb - na;
+    return dir ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  rows.forEach(r => table.appendChild(r));
+}
+</script>
+</body>
+</html>
