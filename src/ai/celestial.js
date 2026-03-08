@@ -7,6 +7,7 @@
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
+import { estimateCardValue } from './card-value.js';
 
 export class CelestialAI extends RandomAI {
   constructor() {
@@ -23,10 +24,12 @@ export class CelestialAI extends RandomAI {
     );
     if (celestialTome.length > 0) return celestialTome[0];
 
-    // Priority 2: Chariot to steal Celestials
-    const chariotActions = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card?.number === 7
-    );
+    // Priority 2: Chariot to steal Celestials (config-aware: any MOVE_CELESTIAL_TO_TOME action)
+    const chariotActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      return eff?.effect?.action === 'MOVE_CELESTIAL_TO_TOME';
+    });
     if (chariotActions.length > 0) return chariotActions[0];
 
     // Priority 3: Buy Celestials from display
@@ -100,16 +103,15 @@ export class CelestialAI extends RandomAI {
     return state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Always keep Celestials
-    for (let i = 0; i < majorCards.length; i++) {
-      if (isCelestial(majorCards[i])) return i;
-    }
-    // Prefer Chariot (7)
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].number === 7) return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => {
+      let val = estimateCardValue(state, 0, card, 'keep');
+      if (isCelestial(card)) val *= 3; // Celestial personality: massive celestial preference
+      return { i, score: val };
+    });
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseTomeDiscard(state, playerIndex) {

@@ -3,6 +3,7 @@
  */
 
 import { isCelestial } from '../cards.js';
+import { getCardEffect } from '../effect-resolver.js';
 
 /**
  * Check if any opponent is close to a Celestial win.
@@ -40,26 +41,32 @@ export function checkCelestialThreat(state, playerIndex) {
  * @returns {object|null} Best disruption action, or null
  */
 export function findCelestialDisruption(state, playerIndex, legalActions, threatPlayer) {
-  // Priority 1: Hanged Man targeting a Celestial in threat player's Tome
-  const hangedManActions = legalActions.filter(a =>
-    a.type === 'PLAY_MAJOR_ACTION' &&
-    a.card?.number === 12 &&
-    a.targets?.playerIndex === threatPlayer &&
-    state.players[threatPlayer].tome[a.targets.cardIndex] &&
-    isCelestial(state.players[threatPlayer].tome[a.targets.cardIndex])
-  );
-  if (hangedManActions.length > 0) return hangedManActions[0];
+  // Helper to get action effect type
+  function getActionType(card) {
+    const eff = getCardEffect(state, card);
+    return eff?.action || null;
+  }
+
+  // Priority 1: Steal from Tome targeting a Celestial in threat player's Tome
+  const stealActions = legalActions.filter(a => {
+    if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+    if (getActionType(a.card) !== 'STEAL_FROM_TOME') return false;
+    return a.targets?.playerIndex === threatPlayer &&
+      state.players[threatPlayer].tome[a.targets.cardIndex] &&
+      isCelestial(state.players[threatPlayer].tome[a.targets.cardIndex]);
+  });
+  if (stealActions.length > 0) return stealActions[0];
 
   // Priority 2: Tower (destroys cards in larger Tomes)
   const towerActions = legalActions.filter(a =>
-    a.type === 'PLAY_MAJOR_ACTION' && a.card?.number === 16
+    a.type === 'PLAY_MAJOR_ACTION' && a.card && getActionType(a.card) === 'TOWER_DESTROY'
   );
   if (towerActions.length > 0) return towerActions[0];
 
-  // Priority 3: Strength targeting a Celestial in threat player's Realm or Tome
+  // Priority 3: Move Major to Realm targeting threat player
   const strengthActions = legalActions.filter(a =>
-    a.type === 'PLAY_MAJOR_ACTION' &&
-    a.card?.number === 8 &&
+    a.type === 'PLAY_MAJOR_ACTION' && a.card &&
+    getActionType(a.card) === 'MOVE_MAJOR_TO_REALM' &&
     a.targets?.playerIndex === threatPlayer
   );
   if (strengthActions.length > 0) return strengthActions[0];
@@ -76,7 +83,7 @@ export function findCelestialDisruption(state, playerIndex, legalActions, threat
 
   // Priority 5: Chariot to steal a Celestial for ourselves
   const chariotActions = legalActions.filter(a =>
-    a.type === 'PLAY_MAJOR_ACTION' && a.card?.number === 7
+    a.type === 'PLAY_MAJOR_ACTION' && a.card && getActionType(a.card) === 'MOVE_CELESTIAL_TO_TOME'
   );
   if (chariotActions.length > 0) return chariotActions[0];
 

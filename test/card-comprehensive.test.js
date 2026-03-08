@@ -1009,3 +1009,74 @@ describe('Variant config flags', () => {
     expect(state.config.gameRules.vaultEnabled).toBe(false);
   });
 });
+
+// ────────────────────────────────
+// Phase 3C: Config-Aware AI Tests
+// ────────────────────────────────
+import { estimateCardValue } from '../src/ai/card-value.js';
+
+describe('Config-Aware AI Card Valuation', () => {
+  it('custom card with vp=50 is valued higher than default vp=1', () => {
+    const defaultState = makeState(4, 42);
+    defaultState.players[0].realm = [mc('WANDS', '3'), mc('WANDS', '5')];
+
+    // Default: High Priestess has vp=1
+    const defaultVal = estimateCardValue(defaultState, 0, major(2), 'tome');
+
+    // Custom: High Priestess has vp=50
+    const customConfig = mergeConfig({
+      majorArcana: [{ number: 2, effect: { type: 'bonus', bonus: { bonusType: 'suitHighest', suit: 'WANDS', countWilds: false, allowTie: true, vp: 50 } } }],
+    });
+    const customState = makeState(4, 42, customConfig);
+    customState.players[0].realm = [mc('WANDS', '3'), mc('WANDS', '5')];
+    const customVal = estimateCardValue(customState, 0, major(2), 'tome');
+
+    expect(customVal).toBeGreaterThan(defaultVal * 5);
+  });
+
+  it('Lovers with vpPerPair=500 is valued much higher than default', () => {
+    const defaultState = makeState(4, 42);
+    defaultState.players[0].realm = [mc('WANDS', '3'), mc('CUPS', '3')]; // one pair
+    const defaultVal = estimateCardValue(defaultState, 0, major(6), 'tome');
+
+    const customConfig = mergeConfig({
+      majorArcana: [{ number: 6, effect: { type: 'bonus', bonus: { bonusType: 'pairCounting', vpPerPair: 500 } } }],
+    });
+    const customState = makeState(4, 42, customConfig);
+    customState.players[0].realm = [mc('WANDS', '3'), mc('CUPS', '3')];
+    const customVal = estimateCardValue(customState, 0, major(6), 'tome');
+
+    expect(customVal).toBeGreaterThan(defaultVal * 10);
+  });
+
+  it('third celestial valued enormously higher than first', () => {
+    const state = makeState(4, 42);
+    // No celestials yet
+    const firstVal = estimateCardValue(state, 0, major(17), 'tome');
+
+    // Already have 2 celestials
+    state.players[0].tome = [major(18), major(19)];
+    const thirdVal = estimateCardValue(state, 0, major(17), 'tome');
+
+    expect(thirdVal).toBeGreaterThan(firstVal * 3);
+  });
+
+  it('CelestialAI personality still prefers celestials', async () => {
+    const { CelestialAI } = await import('../src/ai/celestial.js');
+    const ai = new CelestialAI();
+    const state = makeState(4, 42);
+    state.display = [major(17), major(6), major(14)]; // Star, Lovers, Temperance
+
+    // Celestial should keep the Star (celestial) over bonus cards
+    const choice = ai.chooseMajorKeep([major(17), major(6)], state);
+    expect(choice).toBe(0); // Star is index 0
+  });
+
+  it('buy context discounts value compared to tome context', () => {
+    const state = makeState(4, 42);
+    const card = major(17); // Star
+    const tomeVal = estimateCardValue(state, 0, card, 'tome');
+    const buyVal = estimateCardValue(state, 0, card, 'buy');
+    expect(buyVal).toBeLessThan(tomeVal);
+  });
+});

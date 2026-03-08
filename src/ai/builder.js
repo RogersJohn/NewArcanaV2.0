@@ -10,6 +10,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { estimateCardValue } from './card-value.js';
 
 export class BuilderAI extends RandomAI {
   constructor() {
@@ -139,12 +140,16 @@ export class BuilderAI extends RandomAI {
     return state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Prefer bonus/tome cards over action cards
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'bonus-round' || majorCards[i].category === 'tome') return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    // Use config-aware valuation, prefer bonus/tome (builder personality)
+    const values = majorCards.map((card, i) => {
+      let val = estimateCardValue(state, 0, card, 'keep');
+      if (card.category === 'bonus-round' || card.category === 'tome') val *= 1.3;
+      return { i, score: val };
+    });
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseMagicianSuit(state, playerIndex) {

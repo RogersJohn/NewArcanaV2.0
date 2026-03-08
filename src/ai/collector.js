@@ -6,11 +6,10 @@
  */
 
 import { evaluateHand } from '../poker.js';
-import { isCelestial, MAJOR_ARCANA_DEFS } from '../cards.js';
+import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
-
-const BONUS_CARDS = new Set([0, 1, 2, 3, 4, 6, 9, 11, 14, 22, 23, 25]);
+import { estimateCardValue } from './card-value.js';
 
 export class CollectorAI extends RandomAI {
   constructor() {
@@ -28,10 +27,12 @@ export class CollectorAI extends RandomAI {
       if (disruption) return disruption;
     }
 
-    // Priority 1: Wheel of Fortune — top action priority
-    const wheelActions = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card?.number === 10
-    );
+    // Priority 1: Wheel of Fortune — top action priority (config-aware)
+    const wheelActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
+    });
     if (wheelActions.length > 0) return wheelActions[0];
 
     // Priority 2: Play Celestials and bonus cards to Tome
@@ -40,8 +41,12 @@ export class CollectorAI extends RandomAI {
       const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
       if (celestialTome.length > 0) return celestialTome[0];
 
-      // Prefer bonus cards that synergize with our realm
-      const bonusTome = tomeActions.filter(a => a.card && BONUS_CARDS.has(a.card.number));
+      // Prefer bonus cards that synergize with our realm (config-aware)
+      const bonusTome = tomeActions.filter(a => {
+        if (!a.card) return false;
+        const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+        return eff?.effect?.bonus || eff?.effect?.type === 'bonus';
+      });
       if (bonusTome.length > 0) {
         const best = this.pickBestBonusTome(bonusTome, state, playerIndex);
         if (best) return best;
@@ -57,20 +62,24 @@ export class CollectorAI extends RandomAI {
       if (bestBuy) return bestBuy;
     }
 
-    // Priority 4: Other action cards
-    const actionCards = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card &&
-      [7, 8, 12, 16, 20, 26].includes(a.card.number)
-    );
+    // Priority 4: Other action cards (config-aware)
+    const actionCards = legalActions.filter(a => a.type === 'PLAY_MAJOR_ACTION' && a.card);
     if (actionCards.length > 0) {
-      // Prefer Judgement when we'd win pot, then Chariot for celestials
-      const judgement = actionCards.filter(a => a.card.number === 20);
+      // Prefer Judgement-like when we'd win pot
+      const judgement = actionCards.filter(a => {
+        const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+        return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
+      });
       if (judgement.length > 0 && this.wouldWinPot(state, playerIndex)) {
         return judgement[0];
       }
-      const chariot = actionCards.filter(a => a.card.number === 7);
-      if (chariot.length > 0) return chariot[0];
-      return actionCards[0];
+      // Score remaining by config value
+      const scored = actionCards.map(a => ({
+        action: a,
+        score: estimateCardValue(state, playerIndex, a.card, 'tome'),
+      }));
+      scored.sort((a, b) => b.score - a.score);
+      if (scored[0].score > 8) return scored[0].action;
     }
 
     // Priority 5: Build realm
@@ -114,29 +123,11 @@ export class CollectorAI extends RandomAI {
   }
 
   pickBestBonusTome(bonusTomeActions, state, playerIndex) {
-    const realm = state.players[playerIndex].realm;
-    const suitCounts = {};
-    for (const c of realm) {
-      if (c.type === 'minor') suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1;
-    }
-
     let bestAction = null;
     let bestScore = -1;
 
     for (const action of bonusTomeActions) {
-      const card = action.card;
-      let score = 5; // base value
-
-      // Suit-specific bonuses score higher if we have those suits
-      if (card.number === 2 && suitCounts['WANDS'] >= 2) score += 10; // High Priestess
-      if (card.number === 3 && suitCounts['CUPS'] >= 2) score += 10; // Empress
-      if (card.number === 4 && suitCounts['COINS'] >= 2) score += 10; // Emperor
-      if (card.number === 11 && suitCounts['SWORDS'] >= 2) score += 10; // Justice
-      if (card.number === 14) score += 8; // Temperance (protection + bonus)
-      if (card.number === 6) score += 7; // Lovers (pair bonus)
-      if (card.number === 9) score += 6; // Hermit (always scores)
-      if (card.number === 1) score += 5; // Magician
-
+      const score = estimateCardValue(state, playerIndex, action.card, 'tome');
       if (score > bestScore) { bestScore = score; bestAction = action; }
     }
 
@@ -144,26 +135,20 @@ export class CollectorAI extends RandomAI {
   }
 
   pickCollectorBuy(buyActions, state, playerIndex) {
-    // Score each buy option
     let bestAction = null;
     let bestScore = -Infinity;
 
     for (const action of buyActions) {
       const paymentTotal = action.payment.reduce((s, c) => s + c.purchaseValue, 0);
       const hasAce = action.payment.some(c => c.rank === 'ACE');
-      if (hasAce) continue; // Never spend aces
+      if (hasAce) continue;
 
-      let cardValue = 15; // base value for any Major Arcana (collector loves them all)
-
+      let cardValue = 15; // collector base: loves all Major Arcana
       if (action.source.startsWith('display')) {
         const slot = parseInt(action.source.slice(-1));
         const card = state.display[slot];
         if (card) {
-          if (isCelestial(card)) cardValue = 40;
-          else if (card.number === 10) cardValue = 35; // Wheel
-          else if (card.category === 'tome') cardValue = 30;
-          else if (BONUS_CARDS.has(card.number)) cardValue = 28;
-          else if (card.category === 'action') cardValue = 25;
+          cardValue = estimateCardValue(state, playerIndex, card, 'buy') * 1.3; // Collector bonus
         }
       }
 
@@ -218,20 +203,18 @@ export class CollectorAI extends RandomAI {
       state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Prefer Wheel of Fortune
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].number === 10) return i;
-    }
-    // Prefer celestials
-    for (let i = 0; i < majorCards.length; i++) {
-      if (isCelestial(majorCards[i])) return i;
-    }
-    // Prefer bonus/tome
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'bonus-round' || majorCards[i].category === 'tome') return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => {
+      let val = estimateCardValue(state, 0, card, 'keep');
+      // Collector personality: boost Wheel-like and celestials
+      const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+      if (eff?.effect?.action === 'WHEEL_OF_FORTUNE') val *= 1.8;
+      if (isCelestial(card)) val *= 1.3;
+      return { i, score: val };
+    });
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseMagicianSuit(state, playerIndex) {

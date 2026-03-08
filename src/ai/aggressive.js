@@ -9,6 +9,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { estimateCardValue } from './card-value.js';
 
 export class AggressorAI extends RandomAI {
   constructor() {
@@ -33,13 +34,15 @@ export class AggressorAI extends RandomAI {
       if (target) return target;
     }
 
-    // Priority 2: Major Arcana attack actions
-    const majorActions = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card &&
-      [7, 8, 12, 16, 26].includes(a.card.number)
-    );
+    // Priority 2: Major Arcana attack actions (config-aware)
+    const majorActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_ACTION' && a.card);
     if (majorActions.length > 0) {
-      return majorActions[0];
+      const scored = majorActions.map(a => ({
+        action: a,
+        score: estimateCardValue(state, playerIndex, a.card, 'tome'),
+      }));
+      scored.sort((a, b) => b.score - a.score);
+      if (scored[0].score > 8) return scored[0].action;
     }
 
     // Priority 3: Play sets to realm
@@ -140,12 +143,15 @@ export class AggressorAI extends RandomAI {
     return state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Prefer action cards
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'action') return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => {
+      let val = estimateCardValue(state, 0, card, 'keep');
+      if (card.category === 'action') val *= 1.5; // Aggressor personality
+      return { i, score: val };
+    });
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseMagicianSuit(state, playerIndex) {

@@ -9,6 +9,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { estimateCardValue } from './card-value.js';
 
 export class TacticianAI extends RandomAI {
   constructor() {
@@ -26,10 +27,12 @@ export class TacticianAI extends RandomAI {
       if (disruption) return disruption;
     }
 
-    // Priority 1: Strategic Judgement — play only when we would win the pot
-    const judgementActions = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card?.number === 20
-    );
+    // Priority 1: Strategic Judgement — play only when we would win the pot (config-aware)
+    const judgementActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
+    });
     if (judgementActions.length > 0 && this.wouldWinPot(state, playerIndex)) {
       return judgementActions[0];
     }
@@ -42,18 +45,22 @@ export class TacticianAI extends RandomAI {
       );
       if (markerAttacks.length > 0) return markerAttacks[0];
 
-      // Use action cards against marker holder
-      const markerActions = legalActions.filter(a =>
-        a.type === 'PLAY_MAJOR_ACTION' && a.card &&
-        [12, 16].includes(a.card.number)
-      );
+      // Use disruptive action cards against marker holder (config-aware)
+      const markerActions = legalActions.filter(a => {
+        if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+        const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+        const act = eff?.effect?.action;
+        return act === 'STEAL_FROM_TOME' || act === 'TOWER_DESTROY';
+      });
       if (markerActions.length > 0) return markerActions[0];
     }
 
-    // Priority 3: Wheel of Fortune when ahead or even
-    const wheelActions = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card?.number === 10
-    );
+    // Priority 3: Wheel of Fortune when ahead or even (config-aware)
+    const wheelActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
+    });
     if (wheelActions.length > 0) {
       const myVp = player.vp;
       const avgOpVp = state.players
@@ -85,12 +92,16 @@ export class TacticianAI extends RandomAI {
       if (goodBuy) return goodBuy;
     }
 
-    // Priority 7: Other action cards (Chariot, Strength, Hanged Man)
-    const otherActions = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_ACTION' && a.card &&
-      [7, 8, 12].includes(a.card.number)
-    );
-    if (otherActions.length > 0) return otherActions[0];
+    // Priority 7: Other action cards (config-aware scoring)
+    const otherActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_ACTION' && a.card);
+    if (otherActions.length > 0) {
+      const scored = otherActions.map(a => ({
+        action: a,
+        score: estimateCardValue(state, playerIndex, a.card, 'tome'),
+      }));
+      scored.sort((a, b) => b.score - a.score);
+      if (scored[0].score > 8) return scored[0].action;
+    }
 
     // Priority 8: Play wild if it improves hand
     const wildActions = legalActions.filter(a => a.type === 'PLAY_WILD');
@@ -148,30 +159,23 @@ export class TacticianAI extends RandomAI {
   }
 
   pickTacticalBuy(buyActions, state, playerIndex) {
-    // Prefer Judgement if we don't have one
-    for (const action of buyActions) {
+    const noAce = buyActions.filter(a => !a.payment.some(c => c.rank === 'ACE'));
+    let bestAction = null;
+    let bestScore = 0;
+    for (const action of noAce) {
       if (action.source.startsWith('display')) {
         const slot = parseInt(action.source.slice(-1));
         const card = state.display[slot];
-        if (card && card.number === 20 && !action.payment.some(c => c.rank === 'ACE')) {
-          return action;
+        if (card) {
+          let val = estimateCardValue(state, playerIndex, card, 'buy');
+          // Tactician personality: boost Judgement-like cards
+          const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+          if (eff?.effect?.action === 'CLAIM_ROUND_END_MARKER') val *= 1.8;
+          if (val > bestScore) { bestScore = val; bestAction = action; }
         }
       }
     }
-
-    // Prefer celestials and action cards
-    const sorted = buyActions.filter(a => !a.payment.some(c => c.rank === 'ACE'));
-    for (const action of sorted) {
-      if (action.source.startsWith('display')) {
-        const slot = parseInt(action.source.slice(-1));
-        const card = state.display[slot];
-        if (card && (isCelestial(card) || card.category === 'action' || card.category === 'tome')) {
-          return action;
-        }
-      }
-    }
-
-    return sorted.length > 0 ? sorted[0] : null;
+    return bestAction || (noAce.length > 0 ? noAce[0] : null);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
@@ -218,19 +222,18 @@ export class TacticianAI extends RandomAI {
     return realmSize >= 3 && state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Prefer Judgement
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].number === 20) return i;
-    }
-    // Prefer action/celestial
-    for (let i = 0; i < majorCards.length; i++) {
-      if (isCelestial(majorCards[i])) return i;
-    }
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'action') return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => {
+      let val = estimateCardValue(state, 0, card, 'keep');
+      // Tactician personality: boost Judgement-like and celestial cards
+      const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+      if (eff?.effect?.action === 'CLAIM_ROUND_END_MARKER') val *= 2;
+      if (isCelestial(card)) val *= 1.3;
+      return { i, score: val };
+    });
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseMagicianSuit(state, playerIndex) {

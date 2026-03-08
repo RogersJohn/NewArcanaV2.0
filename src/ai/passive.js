@@ -5,6 +5,7 @@
 
 import { evaluateHand } from '../poker.js';
 import { RandomAI } from './base.js';
+import { estimateCardValue } from './card-value.js';
 
 export class PassiveAI extends RandomAI {
   constructor() {
@@ -45,20 +46,13 @@ export class PassiveAI extends RandomAI {
       if (bestWild) return bestWild;
     }
 
-    // Priority 3: Play tome cards (bonus/protection/celestial)
+    // Priority 3: Play tome cards (config-aware)
     const tomeActions = peaceful.filter(a => a.type === 'PLAY_MAJOR_TOME');
     if (tomeActions.length > 0) {
-      // Prefer bonus cards, then protection, then celestials
-      const scored = tomeActions.map(a => {
-        let score = 0;
-        if (!a.card) return { action: a, score: 0 };
-        if (a.card.category === 'bonus-round') score = 10;
-        else if ([14, 22, 23, 25].includes(a.card.number)) score = 8; // protection
-        else if (a.card.category === 'celestial') score = 7;
-        else if (a.card.number === 15) score = 9; // Devil
-        else score = 5;
-        return { action: a, score };
-      });
+      const scored = tomeActions.map(a => ({
+        action: a,
+        score: a.card ? estimateCardValue(state, playerIndex, a.card, 'tome') : 0,
+      }));
       scored.sort((a, b) => b.score - a.score);
       return scored[0].action;
     }
@@ -148,18 +142,13 @@ export class PassiveAI extends RandomAI {
   shouldBlockWithAce() { return false; }
   shouldBlockWithKing() { return false; }
 
-  chooseMajorKeep(majorCards) {
-    // Prefer bonus/tome cards, then celestials
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'bonus-round') return i;
-    }
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'celestial') return i;
-    }
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'tome') return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => ({
+      i, score: estimateCardValue(state, 0, card, 'keep'),
+    }));
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseMagicianSuit(state, playerIndex) {

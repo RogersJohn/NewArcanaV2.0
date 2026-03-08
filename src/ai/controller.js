@@ -11,6 +11,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { estimateCardValue } from './card-value.js';
 
 export class ControllerAI extends RandomAI {
   constructor() {
@@ -28,22 +29,20 @@ export class ControllerAI extends RandomAI {
       if (disruption) return disruption;
     }
 
-    // Priority 1: Play protection cards to Tome
-    const protectionTome = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_TOME' && a.card &&
-      [14, 22, 23, 25].includes(a.card.number)
-    );
-    if (protectionTome.length > 0) return protectionTome[0];
-
-    // Priority 2: Play Devil to Tome for hand size
-    const devilTome = legalActions.filter(a =>
-      a.type === 'PLAY_MAJOR_TOME' && a.card?.number === 15
-    );
-    if (devilTome.length > 0) return devilTome[0];
-
-    // Priority 3: Play other Tome cards
+    // Priority 1-3: Play Tome cards (config-aware, protection preference)
     const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0) return tomeActions[0];
+    if (tomeActions.length > 0) {
+      const scored = tomeActions.map(a => {
+        let val = estimateCardValue(state, playerIndex, a.card, 'tome');
+        // Controller personality: boost protection and hand-size cards
+        const eff = state.config?.majorArcana?.find(m => m.number === a.card?.number);
+        if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 1.8;
+        if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
+        return { action: a, score: val };
+      });
+      scored.sort((a, b) => b.score - a.score);
+      return scored[0].action;
+    }
 
     // Priority 4: Build consistent sets (prefer pairs/trips)
     const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
@@ -55,7 +54,7 @@ export class ControllerAI extends RandomAI {
     // Priority 5: Buy protection/Devil cards
     const buyActions = legalActions.filter(a => a.type === 'BUY');
     if (buyActions.length > 0) {
-      const protectionBuy = this.pickProtectionBuy(buyActions, state);
+      const protectionBuy = this.pickProtectionBuy(buyActions, state, playerIndex);
       if (protectionBuy) return protectionBuy;
     }
 
@@ -101,20 +100,25 @@ export class ControllerAI extends RandomAI {
     return null;
   }
 
-  pickProtectionBuy(buyActions, state) {
+  pickProtectionBuy(buyActions, state, playerIndex) {
+    let bestAction = null;
+    let bestScore = 0;
     for (const action of buyActions) {
+      if (action.payment.some(c => c.rank === 'ACE')) continue;
       if (action.source.startsWith('display')) {
         const slot = parseInt(action.source.slice(-1));
         const card = state.display[slot];
-        if (card && [14, 15, 22, 23, 25].includes(card.number)) {
-          // Don't spend Aces on buying
-          if (!action.payment.some(c => c.rank === 'ACE')) {
-            return action;
-          }
+        if (card) {
+          let val = estimateCardValue(state, playerIndex, card, 'buy');
+          // Controller personality: boost protection/Devil
+          const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+          if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 2;
+          if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
+          if (val > bestScore) { bestScore = val; bestAction = action; }
         }
       }
     }
-    return null;
+    return bestScore > 5 ? bestAction : null;
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
@@ -164,16 +168,18 @@ export class ControllerAI extends RandomAI {
     return state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Prefer protection/Devil
-    for (let i = 0; i < majorCards.length; i++) {
-      if ([14, 15, 22, 23, 25].includes(majorCards[i].number)) return i;
-    }
-    // Prefer bonus cards
-    for (let i = 0; i < majorCards.length; i++) {
-      if (majorCards[i].category === 'bonus-round') return i;
-    }
-    return 0;
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => {
+      let val = estimateCardValue(state, 0, card, 'keep');
+      // Controller personality: boost protection/Devil
+      const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+      if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 2;
+      if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
+      return { i, score: val };
+    });
+    values.sort((a, b) => b.score - a.score);
+    return values[0].i;
   }
 
   chooseMagicianSuit(state, playerIndex) {

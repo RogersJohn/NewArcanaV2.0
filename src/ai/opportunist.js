@@ -9,6 +9,7 @@ import { isCelestial } from '../cards.js';
 import { getHandSize, getEffectiveHandLimit } from '../state.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat } from './awareness.js';
+import { estimateCardValue } from './card-value.js';
 
 export class OpportunistAI extends RandomAI {
   constructor() {
@@ -70,20 +71,13 @@ export class OpportunistAI extends RandomAI {
       }
 
       case 'PLAY_MAJOR_TOME': {
-        if (isCelestial(action.card)) return 35;
-        if (action.card.category === 'tome') return 20;
-        if (action.card.category === 'bonus-round') return 15;
-        return 10;
+        return estimateCardValue(state, playerIndex, action.card, 'tome');
       }
 
       case 'PLAY_MAJOR_ACTION': {
-        if (action.card?.number === 7) return 30; // Chariot for celestials
-        if (action.card?.number === 20) return 25; // Judgement
-        if (action.card?.number === 10) return 20; // Wheel of Fortune
-        if (action.card?.number === 16) return behind > 3 ? 22 : 12; // Tower
-        if (action.card?.number === 12) return 18; // Hanged Man
-        if (action.card?.number === 8) return 15; // Strength
-        return 10;
+        let val = estimateCardValue(state, playerIndex, action.card, 'tome');
+        if (behind > 3) val *= 1.2; // More aggressive when behind
+        return val;
       }
 
       case 'PLAY_WILD': {
@@ -104,12 +98,7 @@ export class OpportunistAI extends RandomAI {
         if (action.source.startsWith('display')) {
           const slot = parseInt(action.source.slice(-1));
           const card = state.display[slot];
-          if (card) {
-            if (isCelestial(card)) cardValue = 30;
-            else if (card.category === 'tome') cardValue = 20;
-            else if (card.category === 'bonus-round') cardValue = 18;
-            else if (card.category === 'action') cardValue = 15;
-          }
+          if (card) cardValue = estimateCardValue(state, playerIndex, card, 'buy');
         }
         return cardValue - paymentCost;
       }
@@ -142,11 +131,13 @@ export class OpportunistAI extends RandomAI {
   }
 
   targetsThreatCelestials(action, state, threatPlayer) {
-    if (action.type === 'PLAY_MAJOR_ACTION') {
-      if (action.card?.number === 12 && action.targets?.playerIndex === threatPlayer) return true; // Hanged Man
-      if (action.card?.number === 16) return true; // Tower
-      if (action.card?.number === 8 && action.targets?.playerIndex === threatPlayer) return true; // Strength
-      if (action.card?.number === 7) return true; // Chariot
+    if (action.type === 'PLAY_MAJOR_ACTION' && action.card) {
+      const eff = state.config?.majorArcana?.find(m => m.number === action.card.number);
+      const act = eff?.effect?.action;
+      if (act === 'STEAL_FROM_TOME' && action.targets?.playerIndex === threatPlayer) return true;
+      if (act === 'TOWER_DESTROY') return true;
+      if (act === 'MOVE_MAJOR_TO_REALM' && action.targets?.playerIndex === threatPlayer) return true;
+      if (act === 'MOVE_CELESTIAL_TO_TOME') return true;
     }
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === threatPlayer) {
       const targetCard = state.players[threatPlayer].realm[action.target.realmIndex];
@@ -175,16 +166,11 @@ export class OpportunistAI extends RandomAI {
     return realmSize >= 3 && state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
   }
 
-  chooseMajorKeep(majorCards) {
-    // Evaluate each card's general value
-    const values = majorCards.map((card, i) => {
-      if (isCelestial(card)) return { i, score: 50 };
-      if (card.number === 15) return { i, score: 40 }; // Devil
-      if (card.category === 'tome') return { i, score: 35 };
-      if (card.category === 'bonus-round') return { i, score: 30 };
-      if (card.category === 'action') return { i, score: 25 };
-      return { i, score: 10 };
-    });
+  chooseMajorKeep(majorCards, state) {
+    if (!state) return 0;
+    const values = majorCards.map((card, i) => ({
+      i, score: estimateCardValue(state, 0, card, 'keep'),
+    }));
     values.sort((a, b) => b.score - a.score);
     return values[0].i;
   }
