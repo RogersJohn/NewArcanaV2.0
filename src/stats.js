@@ -293,11 +293,9 @@ export function computeCardAnalytics(results) {
     // Count cards in winner's tome
     const winnerPi = game.winner.playerIndex;
     const winnerTome = game.players[winnerPi]?.tomeCards || [];
-    for (const name of winnerTome) {
-      if (name === 'minor') continue;
-      // Find matching card number
-      const entry = Object.values(cards).find(c => c.name === name);
-      if (entry) entry.inWinnerTome++;
+    for (const cardNum of winnerTome) {
+      if (cardNum < 0) continue; // skip minor cards
+      if (cards[cardNum]) cards[cardNum].inWinnerTome++;
     }
   }
 

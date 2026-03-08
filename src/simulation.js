@@ -107,7 +107,7 @@ function extractGameResult(state, ais) {
     aiType: ais[i].name,
     vp: p.vp,
     position: i,
-    tomeCards: p.tome.map(c => c.type === 'major' ? c.name : 'minor'),
+    tomeCards: p.tome.map(c => c.type === 'major' ? c.number : -1),
     realmSize: p.realm.length,
     majorHoldings: [...p.tome, ...p.realm, ...p.vault]
       .filter(c => c.type === 'major')
