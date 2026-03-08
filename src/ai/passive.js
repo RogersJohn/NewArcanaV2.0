@@ -24,7 +24,7 @@ export class PassiveAI extends RandomAI {
     // Priority 1: Play best set to realm
     const setActions = peaceful.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
-      const best = this.pickBestSet(setActions, player);
+      const best = this.pickBestSet(setActions, player, state);
       if (best) return best;
     }
 
@@ -36,7 +36,7 @@ export class PassiveAI extends RandomAI {
       let bestRank = -1;
       for (const action of wildActions) {
         const newRealm = [...player.realm, action.card, ...action.withCards];
-        const eval_ = evaluateHand(newRealm);
+        const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         if (eval_.rank > bestRank) {
           bestRank = eval_.rank;
           bestWild = action;
@@ -78,20 +78,20 @@ export class PassiveAI extends RandomAI {
     return peaceful.find(a => a.type === 'PASS') || legalActions.find(a => a.type === 'PASS') || legalActions[0];
   }
 
-  pickBestSet(setActions, player) {
+  pickBestSet(setActions, player, state) {
     let bestAction = null;
     let bestRank = -1;
 
     for (const action of setActions) {
       const newRealm = [...player.realm, ...action.cards];
-      const eval_ = evaluateHand(newRealm);
+      const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
       if (eval_.rank > bestRank) {
         bestRank = eval_.rank;
         bestAction = action;
       }
     }
 
-    const currentEval = evaluateHand(player.realm);
+    const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
     if (bestRank > currentEval.rank) return bestAction;
 
     // Play multi-card sets even if rank doesn't improve

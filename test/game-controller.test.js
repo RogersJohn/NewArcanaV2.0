@@ -30,6 +30,12 @@ function autoResolveDecision(decision) {
       return ai.chooseWheelKeep(decision.cards, decision.state);
     case DECISION_TYPES.MAGICIAN_SUIT:
       return ai.chooseMagicianSuit(decision.state, decision.playerIndex);
+    case DECISION_TYPES.HERMIT_CHOOSE:
+      return ai.chooseHermitCards(decision.state, decision.playerIndex, decision.eligibleIndices);
+    case DECISION_TYPES.TOWER_CHOOSE:
+      return ai.chooseTowerTarget(decision.state, decision.playerIndex, decision.targetPlayerIndex);
+    case DECISION_TYPES.CHARITY_CHOOSE:
+      return ai.chooseCharityCard(decision.state, decision.playerIndex);
     default:
       throw new Error(`Unknown decision type: ${decision.type}`);
   }

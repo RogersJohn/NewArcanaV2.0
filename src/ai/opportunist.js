@@ -50,9 +50,9 @@ export class OpportunistAI extends RandomAI {
         return 0;
 
       case 'PLAY_SET': {
-        const currentEval = evaluateHand(player.realm);
+        const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const newRealm = [...player.realm, ...action.cards];
-        const newEval = evaluateHand(newRealm);
+        const newEval = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const improvement = (newEval.rank - currentEval.rank) * 10;
         const sizeBonus = action.cards.length * 3;
         const closeTo5 = newRealm.length >= 4 ? 15 : 0;
@@ -88,8 +88,8 @@ export class OpportunistAI extends RandomAI {
 
       case 'PLAY_WILD': {
         const newRealm = [...player.realm, action.card, ...action.withCards];
-        const newEval = evaluateHand(newRealm);
-        const currentEval = evaluateHand(player.realm);
+        const newEval = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
+        const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const improvement = (newEval.rank - currentEval.rank) * 8;
         return improvement + action.withCards.length * 2 + 5;
       }

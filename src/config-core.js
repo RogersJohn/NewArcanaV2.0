@@ -19,6 +19,11 @@ export function getDefaultConfig() {
       maxRounds: 20,
       initialDealCount: 5,
       roundDealCount: 6,
+      aceHigh: true,
+      charityEnabled: true,
+      twoPlayerVariant: false,
+      extendedArcana: false,
+      vaultEnabled: false,
     },
     buyPrices: {
       draw: 6,

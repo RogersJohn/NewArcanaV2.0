@@ -1066,8 +1066,14 @@ function checkMarkerPassAfterAttack(state) {
 function* handleRoundEndGen(state) {
   log(state, `--- Round ${state.roundNumber} End ---`);
 
+  // Snapshot VP before scoring for Charity variant
+  const vpBefore = state.players.map(p => p.vp);
+
   // Score round
   yield* scoreRoundEndGen(state);
+
+  // Track which players scored 0 VP this round (for Charity)
+  const charityEligible = state.players.map((p, i) => p.vp === vpBefore[i]);
 
   // Check celestial win
   const celestialWinner = checkCelestialWin(state);
@@ -1082,6 +1088,25 @@ function* handleRoundEndGen(state) {
   // Age display: slot 2 -> major discard, slide right, new card to slot 0
   ageDisplay(state);
   if (state.gameEnded) return;
+
+  // Charity: players who scored 0 may keep one hand card
+  const charityEnabled = state.config?.gameRules?.charityEnabled ?? false;
+  if (charityEnabled) {
+    for (let pi = 0; pi < state.players.length; pi++) {
+      if (charityEligible[pi] && state.players[pi].hand.length > 0) {
+        const cardIdx = yield {
+          type: DECISION_TYPES.CHARITY_CHOOSE,
+          playerIndex: pi,
+          state,
+        };
+        recordDecision(state, DECISION_TYPES.CHARITY_CHOOSE, pi, cardIdx);
+        if (cardIdx >= 0 && cardIdx < state.players[pi].hand.length) {
+          state._charityKept = state._charityKept || {};
+          state._charityKept[pi] = state.players[pi].hand[cardIdx];
+        }
+      }
+    }
+  }
 
   // Reset for next round
   resetForNextRound(state);
@@ -1136,22 +1161,31 @@ function checkDeathInDisplay(state) {
  * (No decision points — stays synchronous.)
  */
 function resetForNextRound(state) {
+  const charityKept = state._charityKept || {};
+
   // Gather realm cards, minor deck, discard, pit -> shuffle for new deck
-  for (const p of state.players) {
+  for (let pi = 0; pi < state.players.length; pi++) {
+    const p = state.players[pi];
     // Gather realm cards
     for (const card of p.realm) {
       state.minorDiscard.push(card);
     }
     p.realm = [];
 
-    // Gather hand cards (hands do not persist between rounds)
+    // Charity: keep the chosen card, gather the rest
+    const kept = charityKept[pi] || null;
     for (const card of p.hand) {
+      if (kept && card.id === kept.id) continue; // Keep this one
       state.minorDiscard.push(card);
     }
-    p.hand = [];
+    p.hand = kept ? [kept] : [];
+    if (kept) {
+      log(state, `${p.name} keeps a card via Charity (scored 0 this round)`);
+    }
 
     // Tome persists
   }
+  delete state._charityKept;
 
   // Combine pit + discard + remaining deck
   state.minorDeck.push(...state.minorDiscard);

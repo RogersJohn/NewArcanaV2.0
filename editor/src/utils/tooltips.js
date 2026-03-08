@@ -64,9 +64,9 @@ export const GAME_RULES = {
 
 export const BUY_PRICES = {
   draw: 'Minimum purchase value of minor cards in hand needed to buy the top card from the draw pile. Default: 6.',
-  display0: 'Minimum purchase value needed to buy from display slot 1 (newest, cheapest). Default: 7.',
-  display1: 'Minimum purchase value needed to buy from display slot 2. Default: 8.',
-  display2: 'Minimum purchase value needed to buy from display slot 3 (oldest, most expensive). Default: 9.',
+  display0: 'Minimum purchase value needed to buy from display slot 1 (newest, most expensive). Default: 9.',
+  display1: 'Minimum purchase value needed to buy from display slot 2 (middle). Default: 8.',
+  display2: 'Minimum purchase value needed to buy from display slot 3 (oldest, cheapest). Default: 7.',
   discard: 'Minimum purchase value needed to buy from the discard pile. Default: 10.',
 };
 
@@ -77,4 +77,12 @@ export const SCORING = {
   potInitialPerPlayer: 'VP added to the pot at game start per player. Default: 1.',
   potGrowth: 'VP added to the pot at the start of each new round. Default: 1.',
   maxPaymentCards: 'Maximum number of minor cards that can be used as payment in a single buy action. Default: 3.',
+};
+
+export const VARIANTS = {
+  aceHigh: 'Aces rank above Kings in poker evaluation. Purchase value stays at 1. Default: on.',
+  charityEnabled: 'Players scoring 0 points in a round carry one card to the next round. Default: on.',
+  twoPlayerVariant: 'Removes cards 2-6, modifies hand rankings. Not yet implemented in simulation. Default: off.',
+  extendedArcana: 'Cards 22-26 added, 5 random removed. Not yet implemented in simulation. Default: off.',
+  vaultEnabled: 'Winners keep Realm as Vault. Not yet implemented in simulation. Default: off.',
 };

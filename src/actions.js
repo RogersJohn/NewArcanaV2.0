@@ -505,7 +505,7 @@ function addWildActions(state, playerIndex, actions) {
     // Score all valid combos and keep the top 3
     const scored = validCombos.map(({ combo, desc }) => {
       const testRealm = [...player.realm, ...combo, { type: 'major' }];
-      const score = evaluateHand(testRealm);
+      const score = evaluateHand(testRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
       return { combo, desc, score };
     });
     scored.sort((a, b) => compareHands(b.score, a.score));

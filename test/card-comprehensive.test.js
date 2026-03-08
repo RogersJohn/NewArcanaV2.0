@@ -10,6 +10,8 @@ import { resolveRoyalAttack, resolveChariot, resolveStrength, resolveHangedMan,
          resolveTower, resolveJudgement, resolvePlague, applyTomeEffect,
          checkDeathRevealed, resolveWheelOfFortune } from '../src/effects.js';
 import { setup, playGame, executeAction } from '../src/engine.js';
+import { getLegalActions } from '../src/actions.js';
+import { evaluateHand, compareHands } from '../src/poker.js';
 import { createAIs } from '../src/ai/index.js';
 import { runSimulation } from '../src/simulation.js';
 import { RandomAI } from '../src/ai/base.js';
@@ -125,6 +127,17 @@ describe('Bonus cards', () => {
       state.players[1].realm.push(mc('CUPS', 3));
       const vp = resolveBonus(state, 0, state.players[0].tome[0], makeAIs(2));
       expect(vp).toBe(0);
+    });
+
+    it('duplicating Lovers: evaluates pairs in owner Realm', () => {
+      const state = makeState(2);
+      state.players[0].tome.push(major(0)); // Fool
+      // Owner has 2 pairs in realm
+      state.players[0].realm.push(mc('WANDS', 5), mc('CUPS', 5), mc('SWORDS', 3), mc('COINS', 3));
+      state.players[1].tome.push(major(6)); // Lovers (pairCounting)
+      state.players[1].realm.push(mc('WANDS', 7)); // Opponent has no pairs
+      const vp = resolveBonus(state, 0, state.players[0].tome[0], makeAIs(2));
+      expect(vp).toBe(2); // Owner has 2 pairs
     });
   });
 
@@ -876,5 +889,123 @@ describe('Config round-trip: editor → simulation', () => {
     state.players[0].realm.push(mc('WANDS', 5));
 
     expect(resolveBonus(state, 0, state.players[0].tome[0], makeAIs(2))).toBe(7);
+  });
+});
+
+// ============================================================
+// 3. Phase 5 Feature Tests
+// ============================================================
+
+describe('Major Arcana as payment', () => {
+  it('The World (21) can buy any card as single payment', () => {
+    const world = major(21);
+    expect(world.purchaseValue).toBe(21); // Enough for anything
+  });
+
+  it('The Fool (0) is worthless as payment', () => {
+    const fool = major(0);
+    expect(fool.purchaseValue).toBe(0);
+  });
+
+  it('Royal cards have correct purchase values', () => {
+    expect(mc('WANDS', 'PAGE').purchaseValue).toBe(11);
+    expect(mc('WANDS', 'KNIGHT').purchaseValue).toBe(12);
+    expect(mc('WANDS', 'QUEEN').purchaseValue).toBe(13);
+    expect(mc('WANDS', 'KING').purchaseValue).toBe(14);
+  });
+
+  it('payment cards go to Minor Arcana discard pile', () => {
+    const state = makeState(2);
+    const world = major(21);
+    state.players[0].hand.push(world);
+    state.majorDeck.push(major(17)); // Star to buy
+    executeAction(state, makeAIs(2), 0, {
+      type: 'BUY', source: 'draw', payment: [world],
+    });
+    // World should be in minorDiscard (not Pit)
+    expect(state.minorDiscard.some(c => c.number === 21)).toBe(true);
+    expect(state.pit.some(c => c.number === 21)).toBe(false);
+  });
+
+  it('getLegalActions includes buy actions using Major Arcana from hand', () => {
+    const state = makeState(2);
+    state.players[0].hand.push(major(21)); // The World (purchaseValue=21)
+    state.majorDeck.push(major(17)); // Something to buy from draw
+    const actions = getLegalActions(state, 0);
+    const buyActions = actions.filter(a => a.type === 'BUY');
+    expect(buyActions.length).toBeGreaterThan(0);
+    // At least one buy should use The World as payment
+    const worldBuy = buyActions.find(a => a.payment.some(c => c.number === 21));
+    expect(worldBuy).toBeDefined();
+  });
+});
+
+describe('Ace High variant', () => {
+  it('aceHigh=true: pair of Aces beats pair of Kings', () => {
+    const hand1 = [mc('WANDS', 'ACE'), mc('CUPS', 'ACE')];
+    const hand2 = [mc('WANDS', 'KING'), mc('CUPS', 'KING')];
+    const e1 = evaluateHand(hand1, { aceHigh: true });
+    const e2 = evaluateHand(hand2, { aceHigh: true });
+    expect(compareHands(e1, e2)).toBeGreaterThan(0);
+  });
+
+  it('aceHigh=true: highest straight is P,Kn,Q,K,A', () => {
+    const hand = [mc('WANDS', 'PAGE'), mc('CUPS', 'KNIGHT'), mc('SWORDS', 'QUEEN'), mc('COINS', 'KING'), mc('WANDS', 'ACE')];
+    const e = evaluateHand(hand, { aceHigh: true });
+    expect(e.rank).toBe(4); // Straight
+    expect(e.tiebreakers[0]).toBe(15); // Ace high
+  });
+
+  it('aceHigh=true: A,2,3,4,5 is NOT a straight', () => {
+    const hand = [mc('WANDS', 'ACE'), mc('CUPS', 2), mc('SWORDS', 3), mc('COINS', 4), mc('WANDS', 5)];
+    const e = evaluateHand(hand, { aceHigh: true });
+    expect(e.rank).not.toBe(4); // Not a straight
+  });
+
+  it('aceHigh=false (default): pair of Kings beats pair of Aces', () => {
+    const hand1 = [mc('WANDS', 'KING'), mc('CUPS', 'KING')];
+    const hand2 = [mc('WANDS', 'ACE'), mc('CUPS', 'ACE')];
+    const e1 = evaluateHand(hand1, { aceHigh: false });
+    const e2 = evaluateHand(hand2, { aceHigh: false });
+    expect(compareHands(e1, e2)).toBeGreaterThan(0);
+  });
+
+  it('aceHigh=true: Ace purchase value remains 1', () => {
+    const ace = mc('WANDS', 'ACE');
+    expect(ace.purchaseValue).toBe(1);
+  });
+
+  it('existing poker logic works with default (no options)', () => {
+    // A,2,3,4,5 is a straight with default (aceHigh=false)
+    const hand = [mc('WANDS', 'ACE'), mc('CUPS', 2), mc('SWORDS', 3), mc('COINS', 4), mc('WANDS', 5)];
+    const e = evaluateHand(hand);
+    expect(e.rank).toBe(4); // Straight
+  });
+});
+
+describe('Variant config flags', () => {
+  it('aceHigh defaults to true', () => {
+    const state = makeState(4);
+    expect(state.config.gameRules.aceHigh).toBe(true);
+  });
+
+  it('charityEnabled defaults to true', () => {
+    const state = makeState(4);
+    expect(state.config.gameRules.charityEnabled).toBe(true);
+  });
+
+  it('twoPlayerVariant defaults to false', () => {
+    const state = makeState(4);
+    expect(state.config.gameRules.twoPlayerVariant).toBe(false);
+  });
+
+  it('extendedArcana defaults to false', () => {
+    const state = makeState(4);
+    expect(state.config.gameRules.extendedArcana).toBe(false);
+  });
+
+  it('vaultEnabled defaults to false', () => {
+    const state = makeState(4);
+    expect(state.config.gameRules.vaultEnabled).toBe(false);
   });
 });

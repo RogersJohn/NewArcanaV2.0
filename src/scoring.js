@@ -4,6 +4,11 @@
  */
 
 import { evaluateHand, compareHands } from './poker.js';
+
+/** Extract poker evaluation options from game state config. */
+function pokerOpts(state) {
+  return { aceHigh: state.config?.gameRules?.aceHigh ?? false };
+}
 import { isCelestial, cardName, SUITS } from './cards.js';
 import { log, recordEvent } from './state.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
@@ -123,7 +128,7 @@ function awardPot(state) {
 
   for (let pi = 0; pi < state.players.length; pi++) {
     if (state.players[pi].realm.length === 0) continue;
-    const eval_ = evaluateHand(state.players[pi].realm);
+    const eval_ = evaluateHand(state.players[pi].realm, pokerOpts(state));
     if (!bestEval || compareHands(eval_, bestEval) > 0) {
       bestEval = eval_;
       bestPi = pi;
@@ -332,7 +337,7 @@ function resolveLovers(state, playerIndex, vpPerPair) {
   if (player.realm.some(c => c.type === 'major')) {
     // With a wild, the hand would be evaluated as the strongest possible
     // Can't "downgrade" to count pairs. Evaluate naturally.
-    const eval_ = evaluateHand(player.realm);
+    const eval_ = evaluateHand(player.realm, pokerOpts(state));
     if (eval_.type === 'One Pair') return pairVp;
     if (eval_.type === 'Two Pair') return pairVp * 2;
     return 0;
@@ -387,7 +392,7 @@ export function scoreGameEnd(state) {
       let bestVaultEval = null;
       for (let vpi = 0; vpi < state.players.length; vpi++) {
         if (state.players[vpi].vault.length === 0) continue;
-        const eval_ = evaluateHand(state.players[vpi].vault);
+        const eval_ = evaluateHand(state.players[vpi].vault, pokerOpts(state));
         if (!bestVaultEval || compareHands(eval_, bestVaultEval) > 0) {
           bestVaultEval = eval_;
           bestVaultPi = vpi;
@@ -454,6 +459,8 @@ export function resolveWithAI(ai, request) {
       return ai.chooseHermitCards(request.state, request.playerIndex, request.eligibleIndices);
     case DECISION_TYPES.TOWER_CHOOSE:
       return ai.chooseTowerTarget(request.state, request.playerIndex, request.targetPlayerIndex);
+    case DECISION_TYPES.CHARITY_CHOOSE:
+      return ai.chooseCharityCard(request.state, request.playerIndex);
     default:
       throw new Error(`Unknown decision type: ${request.type}`);
   }

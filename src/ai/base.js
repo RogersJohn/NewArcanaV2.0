@@ -180,4 +180,16 @@ export class RandomAI {
     // Default: destroy last card
     return state.players[targetPlayerIndex].tome.length - 1;
   }
+
+  /**
+   * Choose a card from hand to keep via Charity (scored 0 this round).
+   * @param {object} state
+   * @param {number} playerIndex
+   * @returns {number} Index into hand, or -1 to keep nothing
+   */
+  chooseCharityCard(state, playerIndex) {
+    const hand = state.players[playerIndex].hand;
+    if (hand.length === 0) return -1;
+    return state.rng.nextInt(hand.length);
+  }
 }

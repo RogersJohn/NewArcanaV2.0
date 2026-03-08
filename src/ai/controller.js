@@ -48,7 +48,7 @@ export class ControllerAI extends RandomAI {
     // Priority 4: Build consistent sets (prefer pairs/trips)
     const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
-      const best = this.pickConsistentSet(setActions, player);
+      const best = this.pickConsistentSet(setActions, player, state);
       if (best) return best;
     }
 
@@ -71,7 +71,7 @@ export class ControllerAI extends RandomAI {
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];
   }
 
-  pickConsistentSet(setActions, player) {
+  pickConsistentSet(setActions, player, state) {
     // Prefer multi-card sets
     const multiSets = setActions.filter(a => a.cards.length >= 2);
     if (multiSets.length > 0) {
@@ -80,7 +80,7 @@ export class ControllerAI extends RandomAI {
       let bestRank = -1;
       for (const action of multiSets) {
         const newRealm = [...player.realm, ...action.cards];
-        const eval_ = evaluateHand(newRealm);
+        const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         if (eval_.rank > bestRank) {
           bestRank = eval_.rank;
           best = action;

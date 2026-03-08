@@ -32,20 +32,28 @@ const HAND_TYPES = [
  * @param {object[]} cards - Array of cards (minor and/or major wilds)
  * @returns {{rank: number, type: string, description: string, tiebreakers: number[]}}
  */
-export function evaluateHand(cards) {
+export function evaluateHand(cards, options = {}) {
   if (!cards || cards.length === 0) {
     return { rank: -1, type: 'Empty', description: 'No cards', tiebreakers: [] };
   }
 
   const wilds = cards.filter(c => c.type === 'major');
-  const normals = cards.filter(c => c.type === 'minor');
+  let normals = cards.filter(c => c.type === 'minor');
+
+  // Ace High: remap Ace (rank 1) to rank 15
+  if (options.aceHigh) {
+    normals = normals.map(c => c.numericRank === 1
+      ? { ...c, numericRank: 15 }
+      : c
+    );
+  }
 
   if (wilds.length === 0) {
     return evaluateNormalHand(normals);
   }
 
   // With wild cards, try all possible assignments and pick the best
-  return evaluateWithWilds(normals, wilds.length);
+  return evaluateWithWilds(normals, wilds.length, options);
 }
 
 /**
@@ -56,8 +64,8 @@ export function evaluateHand(cards) {
  * @param {number} numWilds - Number of wild cards
  * @returns {object} Best hand evaluation
  */
-function evaluateWithWilds(normals, numWilds) {
-  const candidates = generateCandidates(normals);
+function evaluateWithWilds(normals, numWilds, options = {}) {
+  const candidates = generateCandidates(normals, options);
 
   // For each wild, try each candidate; take cartesian product for multiple wilds
   let assignments = candidates.map(c => [c]);
@@ -99,9 +107,12 @@ function evaluateWithWilds(normals, numWilds) {
  * try ranks in the dominant suit. For straights, fill gaps.
  * Typical output: 8-15 candidates instead of 56.
  */
-function generateCandidates(normals) {
+function generateCandidates(normals, options = {}) {
   const seen = new Set();
   const result = [];
+  const maxRank = options.aceHigh ? 15 : 14;
+  const minStraightStart = options.aceHigh ? 2 : 1;
+  const maxStraightStart = maxRank - 4;
 
   function add(rank, suit) {
     const key = rank * 5 + SUIT_IDX[suit];
@@ -111,8 +122,8 @@ function generateCandidates(normals) {
   }
 
   if (normals.length === 0) {
-    // With no normals, King is the best single card
-    add(14, 'WANDS');
+    // With no normals, highest rank is best single card
+    add(maxRank, 'WANDS');
     return result;
   }
 
@@ -139,12 +150,12 @@ function generateCandidates(normals) {
     add(r, neutSuit);
   }
 
-  // 2. High card: King in neutral suit
-  add(14, neutSuit);
+  // 2. High card: highest rank in neutral suit
+  add(maxRank, neutSuit);
 
   // 3. Straight gap fills
   const uniqueSet = new Set(presentRanks);
-  for (let low = 1; low <= 10; low++) {
+  for (let low = minStraightStart; low <= maxStraightStart; low++) {
     let present = 0;
     for (let r = low; r <= low + 4; r++) {
       if (uniqueSet.has(r)) present++;
@@ -165,7 +176,7 @@ function generateCandidates(normals) {
     for (const c of normals) {
       if (c.suit === domSuit) domRankSet.add(c.numericRank);
     }
-    for (let low = 1; low <= 10; low++) {
+    for (let low = minStraightStart; low <= maxStraightStart; low++) {
       let present = 0;
       for (let r = low; r <= low + 4; r++) {
         if (domRankSet.has(r)) present++;
@@ -177,9 +188,9 @@ function generateCandidates(normals) {
       }
     }
     // For plain flush: add top ranks in dominant suit
-    add(14, domSuit);
-    add(13, domSuit);
-    add(12, domSuit);
+    add(maxRank, domSuit);
+    add(maxRank - 1, domSuit);
+    add(maxRank - 2, domSuit);
     // Also add existing ranks in dominant suit (for grouping + flush combo)
     for (const r of presentRanks) {
       add(r, domSuit);

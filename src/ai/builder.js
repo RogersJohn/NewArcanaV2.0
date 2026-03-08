@@ -30,7 +30,7 @@ export class BuilderAI extends RandomAI {
     // Priority 1: Play best set to realm
     const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
-      const best = this.pickBestSet(setActions, player);
+      const best = this.pickBestSet(setActions, player, state);
       if (best) return best;
     }
 
@@ -56,14 +56,14 @@ export class BuilderAI extends RandomAI {
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];
   }
 
-  pickBestSet(setActions, player) {
+  pickBestSet(setActions, player, state) {
     let bestAction = null;
     let bestRank = -1;
 
     for (const action of setActions) {
       // Evaluate what realm would look like after playing this set
       const newRealm = [...player.realm, ...action.cards];
-      const eval_ = evaluateHand(newRealm);
+      const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
       if (eval_.rank > bestRank) {
         bestRank = eval_.rank;
         bestAction = action;
@@ -71,7 +71,7 @@ export class BuilderAI extends RandomAI {
     }
 
     // Only play if it improves from current
-    const currentEval = evaluateHand(player.realm);
+    const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
     if (bestRank > currentEval.rank) return bestAction;
 
     // Play multi-card sets even if rank doesn't improve

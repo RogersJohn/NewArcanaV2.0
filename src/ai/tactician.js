@@ -104,13 +104,13 @@ export class TacticianAI extends RandomAI {
   wouldWinPot(state, playerIndex) {
     const myRealm = state.players[playerIndex].realm;
     if (myRealm.length === 0) return false;
-    const myEval = evaluateHand(myRealm);
+    const myEval = evaluateHand(myRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
 
     for (let pi = 0; pi < state.players.length; pi++) {
       if (pi === playerIndex) continue;
       const opRealm = state.players[pi].realm;
       if (opRealm.length === 0) continue;
-      const opEval = evaluateHand(opRealm);
+      const opEval = evaluateHand(opRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
       if (opEval.rank >= myEval.rank) return false;
     }
     return true;
@@ -127,7 +127,7 @@ export class TacticianAI extends RandomAI {
       let bestRank = -1;
       for (const action of setActions) {
         const newRealm = [...player.realm, ...action.cards];
-        const eval_ = evaluateHand(newRealm);
+        const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         if (eval_.rank > bestRank) {
           bestRank = eval_.rank;
           bestAction = action;

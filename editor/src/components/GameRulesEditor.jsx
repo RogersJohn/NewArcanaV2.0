@@ -1,5 +1,5 @@
 import React from 'react';
-import { GAME_RULES, BUY_PRICES, SCORING } from '../utils/tooltips.js';
+import { GAME_RULES, BUY_PRICES, SCORING, VARIANTS } from '../utils/tooltips.js';
 import Tooltip from './Tooltip.jsx';
 
 const GAME_RULES_FIELDS = [
@@ -20,6 +20,14 @@ const BUY_PRICES_FIELDS = [
   { key: 'display1', label: 'Display Slot 2' },
   { key: 'display2', label: 'Display Slot 3' },
   { key: 'discard', label: 'Discard Top' },
+];
+
+const VARIANT_FIELDS = [
+  { key: 'aceHigh', label: 'Ace High' },
+  { key: 'charityEnabled', label: 'Charity' },
+  { key: 'twoPlayerVariant', label: 'Two-Player Variant' },
+  { key: 'extendedArcana', label: 'Extended Arcana' },
+  { key: 'vaultEnabled', label: 'Vault' },
 ];
 
 const SCORING_FIELDS = [
@@ -69,6 +77,18 @@ export default function GameRulesEditor({ config, onUpdateSection, onUpdateScala
         ))}
       </Section>
 
+      <Section title="Variants">
+        {VARIANT_FIELDS.map(f => (
+          <CheckboxField
+            key={f.key}
+            label={f.label}
+            tooltip={VARIANTS[f.key]}
+            value={config.gameRules?.[f.key]}
+            onChange={v => onUpdateSection('gameRules', f.key, v)}
+          />
+        ))}
+      </Section>
+
       <Section title="Other">
         <NumberField
           label="Max Payment Cards"
@@ -105,6 +125,23 @@ function NumberField({ label, tooltip, value, onChange }) {
         onChange={e => onChange(Number(e.target.value))}
         className="input"
       />
+    </label>
+  );
+}
+
+function CheckboxField({ label, tooltip, value, onChange }) {
+  return (
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={value ?? false}
+        onChange={e => onChange(e.target.checked)}
+        className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-amber-500 focus:ring-amber-500"
+      />
+      <span className="text-sm text-gray-400 inline-flex items-center gap-1">
+        {label}
+        <Tooltip text={tooltip} />
+      </span>
     </label>
   );
 }
