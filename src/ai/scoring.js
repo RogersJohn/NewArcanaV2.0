@@ -6,7 +6,7 @@
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat } from './awareness.js';
+import { potUrgency, aceBlockValue, checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -45,6 +45,7 @@ export class ScoringAI extends RandomAI {
    */
   simulateAction(state, playerIndex, action) {
     const player = state.players[playerIndex];
+    const urgency = potUrgency(state);
 
     switch (action.type) {
       case 'PASS':
@@ -57,7 +58,7 @@ export class ScoringAI extends RandomAI {
         const setsBonus = setSize >= 3 ? 25 : setSize === 2 ? 15 : 5;
         const sizeBonus = newSize * 3;
         const realmTrigger = newSize >= 5 ? 20 : 0;
-        return setsBonus + sizeBonus + realmTrigger + 5;
+        return (setsBonus + sizeBonus + realmTrigger + 5) * urgency;
       }
 
       case 'PLAY_ROYAL': {
@@ -100,13 +101,15 @@ export class ScoringAI extends RandomAI {
         const hasKing = action.payment.some(c => c.rank === 'KING');
         if (hasKing) return -5; // Avoid spending kings
 
-        let cardValue = 12; // base value for unknown draw
+        let cardValue = 5;
         if (action.source.startsWith('display')) {
           const slot = parseInt(action.source.slice(-1));
           const card = state.display[slot];
           if (card) cardValue = estimateCardValue(state, playerIndex, card, 'buy');
         }
-        return cardValue - paymentTotal * 0.6;
+        // Reduce buy value when pot is high (should be building realm instead)
+        const paymentCost = paymentTotal * 0.6;
+        return (cardValue - paymentCost) * (1 / Math.max(urgency, 0.5));
       }
 
       default:
@@ -203,19 +206,12 @@ export class ScoringAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
-    // Always block Celestials to Tome
     if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
-      return true;
+      const threat = checkCelestialThreat(state, playerIndex);
+      if (threat.threatening) return true;
     }
-    // Block attacks on our realm if we have >= 3 cards
-    if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
-      return state.players[playerIndex].realm.length >= 3;
-    }
-    // Block wild plays 30% of the time
-    if (action.type === 'PLAY_WILD') {
-      return state.rng.next() < 0.3;
-    }
-    return false;
+    const threat = aceBlockValue(state, playerIndex, action);
+    return threat >= 30;
   }
 
   shouldBlockWithKing(state, playerIndex) {
