@@ -5,7 +5,7 @@
 
 import { cardName, PROTECTION_MAP as DEFAULT_PROTECTION_MAP, isCelestial } from './cards.js';
 import { drawMinorCard, drawMajorCard, refillDisplay, getHandSize, log } from './state.js';
-import { isDeathCard, isPlagueCard, getActionHandler, resolveTomeOnPlayGen } from './effect-resolver.js';
+import { isDeathCard, isPlagueCard, resolveTomeOnPlayGen } from './effect-resolver.js';
 
 /** Get the protection suit for a card number, using config if available. */
 function getProtection(state, cardNumber) {
@@ -50,7 +50,8 @@ export function resolveRoyalAttack(state, attackerIndex, card, targetPlayerIndex
 
   // Check King blocking (defender only)
   if (targetPlayerIndex !== attackerIndex) {
-    if (shouldBlockWithKing(state, ais, targetPlayerIndex, card)) {
+    const hasKing = defender.hand.some(c => c.type === 'minor' && c.rank === 'KING');
+    if (hasKing && ais[targetPlayerIndex].shouldBlockWithKing(state, targetPlayerIndex, card)) {
       const kingIdx = defender.hand.findIndex(c => c.type === 'minor' && c.rank === 'KING');
       if (kingIdx !== -1) {
         const kingCard = defender.hand[kingIdx];
@@ -145,43 +146,6 @@ export function checkAceBlock(state, ais, actorIndex, action) {
     }
   }
   return false;
-}
-
-/**
- * Ask defender AI if they want to block with a King.
- * @param {object} state
- * @param {object[]} ais
- * @param {number} defenderIndex
- * @param {object} attackCard
- * @returns {boolean}
- */
-export function shouldBlockWithKing(state, ais, defenderIndex, attackCard) {
-  const defender = state.players[defenderIndex];
-  const hasKing = defender.hand.some(c => c.type === 'minor' && c.rank === 'KING');
-  if (!hasKing) return false;
-  return ais[defenderIndex].shouldBlockWithKing(state, defenderIndex, attackCard);
-}
-
-/**
- * Resolve a Major Arcana action card.
- * @param {object} state
- * @param {number} playerIndex
- * @param {object} card
- * @param {object} targets
- * @param {object[]} ais
- */
-export function resolveMajorAction(state, playerIndex, card, targets, ais) {
-  const handler = getActionHandler(state, card);
-  const dispatch = {
-    resolveChariot: () => resolveChariot(state, ais, playerIndex, targets),
-    resolveStrength: () => resolveStrength(state, ais, playerIndex, targets),
-    resolveWheelOfFortune: () => resolveWheelOfFortune(state, ais, playerIndex),
-    resolveHangedMan: () => resolveHangedMan(state, ais, playerIndex, targets),
-    resolveTower: () => resolveTower(state, ais, playerIndex, targets),
-    resolveJudgement: () => resolveJudgement(state, ais, playerIndex),
-    resolvePlague: () => resolvePlague(state, ais, playerIndex, targets),
-  };
-  if (handler && dispatch[handler]) dispatch[handler]();
 }
 
 /**
