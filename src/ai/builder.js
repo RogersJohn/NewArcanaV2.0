@@ -9,7 +9,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { getHandRanking, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class BuilderAI extends RandomAI {
@@ -20,6 +20,7 @@ export class BuilderAI extends RandomAI {
 
   chooseAction(state, legalActions, playerIndex) {
     const player = state.players[playerIndex];
+    const ranking = getHandRanking(state, playerIndex);
 
     // Celestial threat check
     const threat = checkCelestialThreat(state, playerIndex);
@@ -35,20 +36,35 @@ export class BuilderAI extends RandomAI {
       if (best) return best;
     }
 
-    // Priority 2: Play wild if it significantly improves hand
+    // Priority 2: Attack when another player is beating our hand
+    if (!ranking.winning && player.realm.length >= 3) {
+      const royalActions = legalActions.filter(a => a.type === 'PLAY_ROYAL');
+      // Target only players beating us
+      const defensiveAttacks = royalActions.filter(a =>
+        ranking.beatenBy.includes(a.target?.playerIndex)
+      );
+      if (defensiveAttacks.length > 0) {
+        // Prefer Queens (get the card to our realm)
+        const queens = defensiveAttacks.filter(a => a.card.rank === 'QUEEN');
+        if (queens.length > 0) return queens[0];
+        return defensiveAttacks[0];
+      }
+    }
+
+    // Priority 3: Play wild if it significantly improves hand
     const wildActions = legalActions.filter(a => a.type === 'PLAY_WILD');
     if (wildActions.length > 0 && player.realm.length >= 2) {
       return wildActions[0];
     }
 
-    // Priority 3: Buy bonus/tome cards
+    // Priority 4: Buy bonus/tome cards
     const buyActions = legalActions.filter(a => a.type === 'BUY');
     if (buyActions.length > 0) {
       const goodBuy = this.pickBestBuy(buyActions, state, playerIndex);
       if (goodBuy) return goodBuy;
     }
 
-    // Priority 4: Play tome cards
+    // Priority 5: Play tome cards
     const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
     if (tomeActions.length > 0) {
       return tomeActions[0];
@@ -86,20 +102,36 @@ export class BuilderAI extends RandomAI {
   }
 
   pickBestBuy(buyActions, state, playerIndex) {
-    // Prefer cheapest payment options
-    const sorted = buyActions.sort((a, b) =>
-      a.payment.reduce((s, c) => s + c.purchaseValue, 0) -
-      b.payment.reduce((s, c) => s + c.purchaseValue, 0)
-    );
+    let bestAction = null;
+    let bestNetValue = -Infinity;
 
-    // Only buy if we can afford it without losing key cards
-    for (const action of sorted) {
+    for (const action of buyActions) {
       const paymentHasAce = action.payment.some(c => c.rank === 'ACE');
       const paymentHasKing = action.payment.some(c => c.rank === 'KING');
-      if (!paymentHasAce && !paymentHasKing) return action;
+      if (paymentHasAce) continue; // Never spend Aces
+
+      let cardValue = 5; // base value for blind draw
+      if (action.source.startsWith('display')) {
+        const slot = parseInt(action.source.slice(-1));
+        const card = state.display[slot];
+        if (card) {
+          cardValue = estimateCardValue(state, playerIndex, card, 'buy');
+          // Builder boost for bonus cards matching our realm
+          if (card.category === 'bonus-round' || card.category === 'tome') cardValue *= 1.3;
+        }
+      }
+
+      const paymentCost = action.payment.reduce((s, c) => s + c.purchaseValue, 0) * 0.4;
+      const kingPenalty = paymentHasKing ? 3 : 0;
+      const netValue = cardValue - paymentCost - kingPenalty;
+
+      if (netValue > bestNetValue) {
+        bestNetValue = netValue;
+        bestAction = action;
+      }
     }
 
-    return sorted.length > 0 ? sorted[0] : null;
+    return bestNetValue > 2 ? bestAction : null; // Only buy if net-positive
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
