@@ -8,3 +8,10 @@ results/
 archive/
 desktop/build/
 desktop/dist/
+claude-code-*.md
+questions-for-danny*.md
+*.html
+!client/**/*.html
+!editor/**/*.html
+!desktop/**/*.html
+sim-*.json
