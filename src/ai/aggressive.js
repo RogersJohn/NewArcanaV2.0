@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class AggressorAI extends RandomAI {
@@ -39,7 +39,8 @@ export class AggressorAI extends RandomAI {
         return multiSets[0];
       }
       if (setActions.length > 0 && player.realm.length < 2) {
-        return setActions[0]; // Play a single to get started
+        const potential = analyzeHandPotential(player.hand, player.realm);
+        if (!potential.hasPairForming) return setActions[0]; // Play a single to get started
       }
     }
 
@@ -60,7 +61,8 @@ export class AggressorAI extends RandomAI {
       if (player.realm.length < 5) {
         const completions = setActions.filter(a => a.isCompletion);
         if (completions.length > 0) return completions[0];
-        return setActions[0];
+        const potential = analyzeHandPotential(player.hand, player.realm);
+        if (!potential.hasPairForming) return setActions[0];
       }
     }
 

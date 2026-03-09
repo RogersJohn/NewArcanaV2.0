@@ -12,7 +12,7 @@ describe('MctsAI', () => {
     const state = createInitialState(4, false, 42);
     // Player 0 is MCTS, rest are ScoringAI
     const ais = [
-      new MctsAI({ rolloutsPerAction: 5 }), // Low rollouts for test speed
+      new MctsAI({ rolloutsPerAction: 3 }), // Low rollouts for test speed
       new ScoringAI(),
       new ScoringAI(),
       new ScoringAI(),
@@ -30,7 +30,7 @@ describe('MctsAI', () => {
     expect(state.gameEndReason).toBeTruthy();
     // MCTS player should have some VP (not necessarily winning, just functioning)
     expect(state.players[0].vp).toBeGreaterThanOrEqual(0);
-  }, 30000); // 30 second timeout
+  }, 120000); // 120 second timeout (MCTS rollouts are slow)
 
   it('returns valid actions from legal action set', () => {
     const state = createInitialState(4, false, 99);

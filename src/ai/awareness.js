@@ -209,3 +209,66 @@ export function aceBlockValue(state, playerIndex, action) {
 
   return 5; // Default low
 }
+
+/**
+ * Analyze hand for developing multi-card set potential.
+ * Returns a score indicating how much the hand would benefit from waiting.
+ * Higher score = better to hold cards than play singles.
+ *
+ * @param {object[]} hand - Player's hand (minor cards only for analysis)
+ * @param {object[]} realm - Player's current realm
+ * @returns {{ holdScore: number, bestDevelopingSet: number, hasPairForming: boolean }}
+ */
+export function analyzeHandPotential(hand, realm) {
+  const minors = hand.filter(c => c.type === 'minor');
+
+  // Count rank groups
+  const rankGroups = {};
+  for (const c of minors) {
+    rankGroups[c.numericRank] = (rankGroups[c.numericRank] || 0) + 1;
+  }
+  const maxRankGroup = Math.max(0, ...Object.values(rankGroups));
+  const pairsForming = Object.values(rankGroups).filter(c => c >= 2).length;
+
+  // Count suit groups (for flush potential)
+  const suitGroups = {};
+  for (const c of minors) {
+    suitGroups[c.suit] = (suitGroups[c.suit] || 0) + 1;
+  }
+  const maxSuitGroup = Math.max(0, ...Object.values(suitGroups));
+
+  // Count straight potential (3+ sequential cards)
+  const ranks = [...new Set(minors.map(c => c.numericRank))].sort((a, b) => a - b);
+  let maxRun = 1, currentRun = 1;
+  for (let i = 1; i < ranks.length; i++) {
+    if (ranks[i] === ranks[i-1] + 1) { currentRun++; maxRun = Math.max(maxRun, currentRun); }
+    else currentRun = 1;
+  }
+
+  let holdScore = 0;
+
+  // Pair/triple/quad potential
+  if (maxRankGroup >= 3) holdScore += 40;      // Triple forming — very strong hold
+  else if (maxRankGroup >= 2) holdScore += 25;  // Pair forming — solid hold
+
+  // Multiple pairs developing (could become two-pair or full house across turns)
+  if (pairsForming >= 2) holdScore += 15;
+
+  // Flush potential (need 5 of same suit)
+  if (maxSuitGroup >= 4) holdScore += 35;       // One card away from flush
+  else if (maxSuitGroup >= 3) holdScore += 10;  // Building toward flush
+
+  // Straight potential
+  if (maxRun >= 4) holdScore += 30;             // One card away from straight
+  else if (maxRun >= 3) holdScore += 10;        // Building toward straight
+
+  // Reduce hold incentive if realm is already large (need to finish)
+  if (realm.length >= 3) holdScore *= 0.5;      // Urgency to complete realm
+  if (realm.length >= 4) holdScore *= 0.2;      // Very urgent — play anything
+
+  return {
+    holdScore,
+    bestDevelopingSet: maxRankGroup,
+    hasPairForming: maxRankGroup >= 2,
+  };
+}

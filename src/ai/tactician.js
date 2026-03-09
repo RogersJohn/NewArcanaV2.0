@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -113,7 +113,8 @@ export class TacticianAI extends RandomAI {
     if (multiSets.length > 0) return multiSets[multiSets.length - 1];
 
     if (player.realm.length < 3) {
-      return setActions[0];
+      const potential = analyzeHandPotential(player.hand, player.realm);
+      if (!potential.hasPairForming) return setActions[0];
     }
 
     return null;

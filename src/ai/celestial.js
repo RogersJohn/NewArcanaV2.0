@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking } from './awareness.js';
+import { potUrgency, getHandRanking, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -54,11 +54,12 @@ export class CelestialAI extends RandomAI {
         }
         if (best) return best;
       }
-      // Play singles to build up realm
+      // Play singles to build up realm (only if no developing sets)
       if (player.realm.length < 4) {
         const completions = setActions.filter(a => a.isCompletion);
         if (completions.length > 0) return completions[0];
-        if (player.realm.length < 3) return setActions[0];
+        const potential = analyzeHandPotential(player.hand, player.realm);
+        if (player.realm.length < 3 && !potential.hasPairForming) return setActions[0];
       }
     }
 
@@ -97,9 +98,10 @@ export class CelestialAI extends RandomAI {
       if (noAceBuys.length > 0) return noAceBuys[0];
     }
 
-    // Priority 8: Play remaining singles
+    // Priority 8: Play remaining singles (only if no developing sets)
     if (setActions.length > 0 && player.realm.length < 5) {
-      return setActions[0];
+      const potential = analyzeHandPotential(player.hand, player.realm);
+      if (!potential.hasPairForming) return setActions[0];
     }
 
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];

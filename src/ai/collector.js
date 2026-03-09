@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -51,14 +51,17 @@ export class CollectorAI extends RandomAI {
       if (best) return best;
     }
 
-    // Priority 3: Play singles if realm < 4
+    // Priority 3: Play singles if realm < 4 (only if no developing sets)
     if (player.realm.length < 4 && setActions.length > 0) {
-      // Pick singles that match existing realm ranks
-      const completions = setActions.filter(a => a.cards.length === 1 && a.isCompletion);
-      if (completions.length > 0) return completions[0];
-      // Otherwise any single
-      const singles = setActions.filter(a => a.cards.length === 1);
-      if (singles.length > 0) return singles[0];
+      const potential = analyzeHandPotential(player.hand, player.realm);
+      if (!potential.hasPairForming) {
+        // Pick singles that match existing realm ranks
+        const completions = setActions.filter(a => a.cards.length === 1 && a.isCompletion);
+        if (completions.length > 0) return completions[0];
+        // Otherwise any single
+        const singles = setActions.filter(a => a.cards.length === 1);
+        if (singles.length > 0) return singles[0];
+      }
     }
 
     // Priority 4: Wheel of Fortune (config-aware — card advantage)

@@ -6,7 +6,7 @@
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, aceBlockValue, checkCelestialThreat } from './awareness.js';
+import { potUrgency, aceBlockValue, checkCelestialThreat, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -48,17 +48,27 @@ export class ScoringAI extends RandomAI {
     const urgency = potUrgency(state);
 
     switch (action.type) {
-      case 'PASS':
-        return 0;
+      case 'PASS': {
+        const potential = analyzeHandPotential(player.hand, player.realm);
+        return potential.holdScore * Math.max(0.5, urgency);
+      }
 
       case 'PLAY_SET': {
         const newSize = player.realm.length + action.cards.length;
-        // Estimate hand improvement from set size and card matching
         const setSize = action.cards.length;
         const setsBonus = setSize >= 3 ? 25 : setSize === 2 ? 15 : 5;
         const sizeBonus = newSize * 3;
         const realmTrigger = newSize >= 5 ? 20 : 0;
-        return (setsBonus + sizeBonus + realmTrigger + 5) * urgency;
+        let score = (setsBonus + sizeBonus + realmTrigger + 5) * urgency;
+
+        // Single-card penalty
+        if (setSize === 1) {
+          const potential = analyzeHandPotential(player.hand, player.realm);
+          if (potential.hasPairForming) {
+            score -= potential.holdScore * urgency;
+          }
+        }
+        return score;
       }
 
       case 'PLAY_ROYAL': {

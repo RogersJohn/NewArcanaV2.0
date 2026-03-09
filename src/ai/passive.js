@@ -5,7 +5,7 @@
 
 import { evaluateHand } from '../poker.js';
 import { RandomAI } from './base.js';
-import { aceBlockValue } from './awareness.js';
+import { aceBlockValue, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class PassiveAI extends RandomAI {
@@ -23,10 +23,17 @@ export class PassiveAI extends RandomAI {
       a.type !== 'PLAY_MAJOR_ACTION'
     );
 
-    // Priority 1: Play best set to realm
+    // Priority 1: Play best multi-card set to realm
     const setActions = peaceful.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
-      const best = this.pickBestSet(setActions, player, state);
+      const potential = analyzeHandPotential(player.hand, player.realm);
+
+      // Only consider multi-card sets if hand has developing potential
+      const candidateSets = potential.hasPairForming && player.realm.length < 3
+        ? setActions.filter(a => a.cards.length >= 2)
+        : setActions;
+
+      const best = this.pickBestSet(candidateSets.length > 0 ? candidateSets : setActions, player, state);
       if (best) return best;
     }
 
@@ -65,8 +72,9 @@ export class PassiveAI extends RandomAI {
       if (goodBuy) return goodBuy;
     }
 
-    // Priority 5: Play singles to realm if small
-    if (setActions.length > 0 && player.realm.length < 3) {
+    // Priority 5: Play singles to realm only if no hand potential
+    const potential2 = analyzeHandPotential(player.hand, player.realm);
+    if (setActions.length > 0 && player.realm.length < 3 && !potential2.hasPairForming) {
       return setActions[0];
     }
 
@@ -93,8 +101,9 @@ export class PassiveAI extends RandomAI {
     const multiCardSets = setActions.filter(a => a.cards.length >= 2);
     if (multiCardSets.length > 0) return multiCardSets[0];
 
-    // Play singles if realm is small
-    if (player.realm.length < 3) return bestAction;
+    // Play singles only if realm is tiny AND no developing sets in hand
+    const potential = analyzeHandPotential(player.hand, player.realm);
+    if (player.realm.length < 2 && !potential.hasPairForming) return bestAction;
 
     return null;
   }

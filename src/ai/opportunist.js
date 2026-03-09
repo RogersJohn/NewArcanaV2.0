@@ -8,7 +8,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { getHandSize, getEffectiveHandLimit } from '../state.js';
 import { RandomAI } from './base.js';
-import { aceBlockValue, checkCelestialThreat } from './awareness.js';
+import { aceBlockValue, checkCelestialThreat, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -49,12 +49,8 @@ export class OpportunistAI extends RandomAI {
 
     switch (action.type) {
       case 'PASS': {
-        // Passing has value when our hand has developing potential
-        const hand = player.hand.filter(c => c.type === 'minor');
-        const rankCounts = {};
-        for (const c of hand) rankCounts[c.numericRank] = (rankCounts[c.numericRank] || 0) + 1;
-        const hasPairInHand = Object.values(rankCounts).some(c => c >= 2);
-        return hasPairInHand ? 6 : 0;
+        const potential = analyzeHandPotential(player.hand, player.realm);
+        return potential.holdScore;
       }
 
       case 'PLAY_SET': {
@@ -64,7 +60,17 @@ export class OpportunistAI extends RandomAI {
         const improvement = (newEval.rank - currentEval.rank) * 10;
         const sizeBonus = action.cards.length * 2;
         const closeTo5 = newRealm.length >= 4 ? 15 : 0;
-        return improvement + sizeBonus + closeTo5 + 1;
+        let score = improvement + sizeBonus + closeTo5 + 1;
+
+        // PENALTY for single-card plays when hand has multi-card potential
+        if (action.cards.length === 1) {
+          const potential = analyzeHandPotential(player.hand, player.realm);
+          if (potential.hasPairForming) {
+            score -= potential.holdScore;
+          }
+        }
+
+        return score;
       }
 
       case 'PLAY_ROYAL': {

@@ -9,7 +9,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { getHandRanking, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { getHandRanking, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class BuilderAI extends RandomAI {
@@ -95,8 +95,9 @@ export class BuilderAI extends RandomAI {
     const multiCardSets = setActions.filter(a => a.cards.length >= 2);
     if (multiCardSets.length > 0) return multiCardSets[0];
 
-    // Play singles if realm < 3
-    if (player.realm.length < 3) return bestAction;
+    // Play singles only if realm is tiny AND no developing sets in hand
+    const potential = analyzeHandPotential(player.hand, player.realm);
+    if (player.realm.length < 2 && !potential.hasPairForming) return bestAction;
 
     return null;
   }
