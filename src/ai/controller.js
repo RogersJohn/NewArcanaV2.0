@@ -10,7 +10,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -22,6 +22,8 @@ export class ControllerAI extends RandomAI {
 
   chooseAction(state, legalActions, playerIndex) {
     const player = state.players[playerIndex];
+    const urgency = potUrgency(state);
+    const ranking = getHandRanking(state, playerIndex);
 
     // Celestial threat check
     const threat = checkCelestialThreat(state, playerIndex);
@@ -30,37 +32,53 @@ export class ControllerAI extends RandomAI {
       if (disruption) return disruption;
     }
 
-    // Priority 1-3: Play Tome cards (config-aware, protection preference)
-    const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0) {
-      const scored = tomeActions.map(a => {
-        let val = estimateCardValue(state, playerIndex, a.card, 'tome');
-        // Controller personality: boost protection and hand-size cards
-        const eff = getMajorDef(state, a.card?.number);
-        if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 1.8;
-        if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
-        return { action: a, score: val };
-      });
-      scored.sort((a, b) => b.score - a.score);
-      return scored[0].action;
-    }
-
-    // Priority 4: Build consistent sets (prefer pairs/trips)
+    // Priority 1: Build realm with consistent sets (pairs/trips)
     const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
       const best = this.pickConsistentSet(setActions, player, state);
       if (best) return best;
     }
 
-    // Priority 5: Buy protection/Devil cards
-    const buyActions = legalActions.filter(a => a.type === 'BUY');
-    if (buyActions.length > 0) {
-      const protectionBuy = this.pickProtectionBuy(buyActions, state, playerIndex);
-      if (protectionBuy) return protectionBuy;
+    // Priority 2: Play Tome cards (only after realm has 2+ cards)
+    if (player.realm.length >= 2) {
+      const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
+      if (tomeActions.length > 0) {
+        const scored = tomeActions.map(a => {
+          let val = estimateCardValue(state, playerIndex, a.card, 'tome');
+          const eff = getMajorDef(state, a.card?.number);
+          // Only boost protection if we have matching suit cards in realm
+          if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') {
+            const suit = eff.effect.onPlay.suit;
+            const suitCount = player.realm.filter(c => c.type === 'minor' && c.suit === suit).length;
+            if (suitCount >= 2) val *= 2.0;
+            else if (suitCount >= 1) val *= 1.3;
+            else val *= 0.3; // Don't waste protection on empty suit
+          }
+          if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
+          return { action: a, score: val };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        if (scored[0].score > 5) return scored[0].action;
+      }
     }
 
-    // Priority 6: Buy anything affordable
-    if (buyActions.length > 0) {
+    // Priority 3: Buy protection/Devil cards (only if realm >= 2)
+    if (player.realm.length >= 2) {
+      const buyActions = legalActions.filter(a => a.type === 'BUY');
+      if (buyActions.length > 0) {
+        const protectionBuy = this.pickProtectionBuy(buyActions, state, playerIndex);
+        if (protectionBuy) return protectionBuy;
+      }
+    }
+
+    // Priority 4: Play singles to reach realm of 3+
+    if (player.realm.length < 3 && setActions.length > 0) {
+      return setActions[0];
+    }
+
+    // Priority 5: Buy anything affordable (only if realm >= 3 and pot urgency low)
+    if (urgency < 1.2 && player.realm.length >= 3) {
+      const buyActions = legalActions.filter(a => a.type === 'BUY');
       const cheap = buyActions.filter(a =>
         a.payment.reduce((s, c) => s + c.purchaseValue, 0) <= 10 &&
         !a.payment.some(c => c.rank === 'ACE')
@@ -147,22 +165,17 @@ export class ControllerAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
-    // Block Celestials being played to Tome by threat players
     if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
       const threat = checkCelestialThreat(state, playerIndex);
       if (threat.threatening) return true;
     }
-    // Block attacks targeting us
-    if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
-      // Only block if we have 2+ aces (keep one in reserve)
-      const aceCount = state.players[playerIndex].hand.filter(
-        c => c.type === 'minor' && c.rank === 'ACE'
-      ).length;
-      return aceCount >= 2;
-    }
-    // Block wild card plays (they're dangerous)
-    if (action.type === 'PLAY_WILD') return state.rng.next() < 0.3;
-    return false;
+    const threat = aceBlockValue(state, playerIndex, action);
+    const aceCount = state.players[playerIndex].hand.filter(
+      c => c.type === 'minor' && c.rank === 'ACE'
+    ).length;
+    // Controller is conservative: only block high threats, keep reserve
+    if (aceCount >= 2) return threat >= 30;
+    return threat >= 60; // With 1 ace, only block critical threats
   }
 
   shouldBlockWithKing(state, playerIndex) {
