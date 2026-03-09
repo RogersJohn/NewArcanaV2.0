@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class AggressorAI extends RandomAI {
@@ -19,22 +19,58 @@ export class AggressorAI extends RandomAI {
 
   chooseAction(state, legalActions, playerIndex) {
     const player = state.players[playerIndex];
+    const urgency = potUrgency(state);
+    const ranking = getHandRanking(state, playerIndex);
 
-    // Priority 0: Celestial threat disruption (aggressor should be most reactive)
+    // Priority 0: Celestial threat disruption
     const threat = checkCelestialThreat(state, playerIndex);
     if (threat.threatening) {
       const disruption = findCelestialDisruption(state, playerIndex, legalActions, threat.threatPlayer);
       if (disruption) return disruption;
     }
 
-    // Priority 1: Attack! Royal attacks on the leader
+    // Priority 1: Build realm first (need cards to win pots)
+    const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
+    if (player.realm.length < 3) {
+      // Must build realm before attacking
+      const multiSets = setActions.filter(a => a.cards.length >= 2);
+      if (multiSets.length > 0) {
+        multiSets.sort((a, b) => b.cards.length - a.cards.length);
+        return multiSets[0];
+      }
+      if (setActions.length > 0 && player.realm.length < 2) {
+        return setActions[0]; // Play a single to get started
+      }
+    }
+
+    // Priority 2: Attack players who are beating us or close to triggering round-end
     const royalActions = legalActions.filter(a => a.type === 'PLAY_ROYAL');
-    if (royalActions.length > 0) {
-      const target = this.pickBestTarget(royalActions, state, playerIndex);
+    if (royalActions.length > 0 && !ranking.winning) {
+      const target = this.pickSmartTarget(royalActions, state, playerIndex, ranking);
       if (target) return target;
     }
 
-    // Priority 2: Major Arcana attack actions (config-aware)
+    // Priority 3: Continue building realm when we have good sets
+    if (setActions.length > 0) {
+      const multiSets = setActions.filter(a => a.cards.length >= 2);
+      if (multiSets.length > 0) {
+        multiSets.sort((a, b) => b.cards.length - a.cards.length);
+        return multiSets[0];
+      }
+      if (player.realm.length < 5) {
+        const completions = setActions.filter(a => a.isCompletion);
+        if (completions.length > 0) return completions[0];
+        return setActions[0];
+      }
+    }
+
+    // Priority 4: Attack even when winning (if opponent has large realm)
+    if (royalActions.length > 0) {
+      const target = this.pickSmartTarget(royalActions, state, playerIndex, ranking);
+      if (target) return target;
+    }
+
+    // Priority 5: Major Arcana attack actions
     const majorActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_ACTION' && a.card);
     if (majorActions.length > 0) {
       const scored = majorActions.map(a => ({
@@ -45,70 +81,75 @@ export class AggressorAI extends RandomAI {
       if (scored[0].score > 8) return scored[0].action;
     }
 
-    // Priority 3: Play sets to realm
-    const setActions = legalActions.filter(a => a.type === 'PLAY_SET' && a.cards.length >= 2);
-    if (setActions.length > 0) {
-      return setActions[setActions.length - 1]; // Largest set
-    }
-
-    // Priority 4: Buy attack cards
-    const buyActions = legalActions.filter(a => a.type === 'BUY');
-    if (buyActions.length > 0) {
-      return buyActions[state.rng.nextInt(buyActions.length)];
-    }
-
-    // Priority 5: Play singles
-    const singles = legalActions.filter(a => a.type === 'PLAY_SET' && a.cards.length === 1);
-    if (singles.length > 0 && player.realm.length < 5) {
-      return singles[state.rng.nextInt(singles.length)];
-    }
-
     // Priority 6: Play tome cards
     const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
     if (tomeActions.length > 0) return tomeActions[0];
 
-    return legalActions.find(a => a.type === 'PASS') || legalActions[0];
-  }
-
-  pickBestTarget(royalActions, state, playerIndex) {
-    // Target the player with most VP
-    let bestPi = -1;
-    let bestVp = -1;
-    for (let pi = 0; pi < state.players.length; pi++) {
-      if (pi === playerIndex) continue;
-      if (state.players[pi].vp > bestVp && state.players[pi].realm.length > 0) {
-        bestVp = state.players[pi].vp;
-        bestPi = pi;
-      }
-    }
-
-    if (bestPi === -1) {
-      // Target anyone with cards
-      for (let pi = 0; pi < state.players.length; pi++) {
-        if (pi !== playerIndex && state.players[pi].realm.length > 0) {
-          bestPi = pi;
-          break;
+    // Priority 7: Buy attack cards (only if realm is reasonable)
+    if (player.realm.length >= 2) {
+      const buyActions = legalActions.filter(a => a.type === 'BUY');
+      if (buyActions.length > 0) {
+        // Prefer action cards
+        for (const action of buyActions) {
+          if (action.source.startsWith('display')) {
+            const slot = parseInt(action.source.slice(-1));
+            const card = state.display[slot];
+            if (card && card.category === 'action') return action;
+          }
         }
       }
     }
 
-    // If no valid target found, don't waste the card
-    if (bestPi === -1) return null;
+    return legalActions.find(a => a.type === 'PASS') || legalActions[0];
+  }
 
-    // Find attacks targeting the best target
-    const targetAttacks = royalActions.filter(a =>
-      a.target && a.target.playerIndex === bestPi
-    );
-    if (targetAttacks.length > 0) return targetAttacks[0];
+  pickSmartTarget(royalActions, state, playerIndex, ranking) {
+    // Score each attack by strategic value
+    let bestAction = null;
+    let bestScore = -Infinity;
 
-    // Fallback: any attack on a player with cards (avoid wasting on empty/tiny realms)
-    const worthwhileAttacks = royalActions.filter(a => {
-      const tp = state.players[a.target.playerIndex];
-      return a.target.playerIndex !== playerIndex && tp.realm.length >= 2;
-    });
-    if (worthwhileAttacks.length > 0) return worthwhileAttacks[0];
+    for (const action of royalActions) {
+      if (action.target.playerIndex === playerIndex) continue; // Don't attack self
+      const targetPi = action.target.playerIndex;
+      const targetPlayer = state.players[targetPi];
+      if (targetPlayer.realm.length === 0) continue;
 
-    return null;
+      let score = 0;
+
+      // Target players beating us
+      if (ranking.beatenBy.includes(targetPi)) score += 30;
+
+      // Target players close to round-end trigger (4+ realm cards)
+      if (targetPlayer.realm.length >= 4) score += 25;
+
+      // Target the pot leader
+      const maxVp = Math.max(...state.players.map(p => p.vp));
+      if (targetPlayer.vp >= maxVp && maxVp > 0) score += 15;
+
+      // Queen is best (we GET the card), Knight second (to our hand), Page worst
+      if (action.card.rank === 'QUEEN') score += 20;
+      else if (action.card.rank === 'KNIGHT') {
+        // Knight is better if the stolen card matches our realm
+        const targetCard = targetPlayer.realm[action.target.realmIndex];
+        if (targetCard) {
+          const matchesRealm = state.players[playerIndex].realm.some(
+            c => c.type === 'minor' && c.numericRank === targetCard.numericRank
+          );
+          score += matchesRealm ? 18 : 10;
+        } else {
+          score += 10;
+        }
+      } else {
+        score += 5; // Page — destroy both
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestAction = action;
+      }
+    }
+
+    return bestScore > 10 ? bestAction : null; // Don't attack trivial targets
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
@@ -131,11 +172,9 @@ export class AggressorAI extends RandomAI {
       const threat = checkCelestialThreat(state, playerIndex);
       if (threat.threatening) return true;
     }
-    // Block opponent plays that improve their position
-    if (action.type === 'PLAY_WILD') return true;
-    if (action.type === 'PLAY_MAJOR_TOME') return state.rng.next() < 0.5;
-    if (action.type === 'PLAY_MAJOR_ACTION') return state.rng.next() < 0.4;
-    return false;
+    const threat = aceBlockValue(state, playerIndex, action);
+    // Aggressor blocks at moderate threshold — save Aces for defense, not random blocking
+    return threat >= 40;
   }
 
   shouldBlockWithKing(state, playerIndex, attackCard) {
