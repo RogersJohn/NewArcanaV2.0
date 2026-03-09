@@ -8,7 +8,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { getHandSize, getEffectiveHandLimit } from '../state.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat } from './awareness.js';
+import { aceBlockValue, checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -48,17 +48,23 @@ export class OpportunistAI extends RandomAI {
     const player = state.players[playerIndex];
 
     switch (action.type) {
-      case 'PASS':
-        return 0;
+      case 'PASS': {
+        // Passing has value when our hand has developing potential
+        const hand = player.hand.filter(c => c.type === 'minor');
+        const rankCounts = {};
+        for (const c of hand) rankCounts[c.numericRank] = (rankCounts[c.numericRank] || 0) + 1;
+        const hasPairInHand = Object.values(rankCounts).some(c => c >= 2);
+        return hasPairInHand ? 6 : 0;
+      }
 
       case 'PLAY_SET': {
         const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const newRealm = [...player.realm, ...action.cards];
         const newEval = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const improvement = (newEval.rank - currentEval.rank) * 10;
-        const sizeBonus = action.cards.length * 3;
+        const sizeBonus = action.cards.length * 2;
         const closeTo5 = newRealm.length >= 4 ? 15 : 0;
-        return improvement + sizeBonus + closeTo5 + 5;
+        return improvement + sizeBonus + closeTo5 + 1;
       }
 
       case 'PLAY_ROYAL': {
@@ -91,7 +97,7 @@ export class OpportunistAI extends RandomAI {
 
       case 'BUY': {
         const paymentTotal = action.payment.reduce((s, c) => s + c.purchaseValue, 0);
-        const paymentCost = paymentTotal * 0.5; // Opportunity cost
+        const paymentCost = paymentTotal * 0.7; // Opportunity cost
         const hasAcePayment = action.payment.some(c => c.rank === 'ACE');
         if (hasAcePayment) return -10; // Don't spend aces
 
@@ -148,18 +154,12 @@ export class OpportunistAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
-    // Block Celestials being played to Tome by threat players
     if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
       const threat = checkCelestialThreat(state, playerIndex);
       if (threat.threatening) return true;
     }
-    // Block based on threat level
-    if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
-      const realmSize = state.players[playerIndex].realm.length;
-      return realmSize >= 3; // Only block if we have a significant realm
-    }
-    if (action.type === 'PLAY_WILD') return state.rng.next() < 0.3;
-    return false;
+    const threat = aceBlockValue(state, playerIndex, action);
+    return threat >= 35;
   }
 
   shouldBlockWithKing(state, playerIndex) {
