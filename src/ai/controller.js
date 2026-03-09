@@ -12,6 +12,7 @@ import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
+import { getMajorDef } from '../effect-resolver.js';
 
 export class ControllerAI extends RandomAI {
   constructor() {
@@ -35,7 +36,7 @@ export class ControllerAI extends RandomAI {
       const scored = tomeActions.map(a => {
         let val = estimateCardValue(state, playerIndex, a.card, 'tome');
         // Controller personality: boost protection and hand-size cards
-        const eff = state.config?.majorArcana?.find(m => m.number === a.card?.number);
+        const eff = getMajorDef(state, a.card?.number);
         if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 1.8;
         if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
         return { action: a, score: val };
@@ -111,7 +112,7 @@ export class ControllerAI extends RandomAI {
         if (card) {
           let val = estimateCardValue(state, playerIndex, card, 'buy');
           // Controller personality: boost protection/Devil
-          const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+          const eff = getMajorDef(state, card.number);
           if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 2;
           if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
           if (val > bestScore) { bestScore = val; bestAction = action; }
@@ -173,7 +174,7 @@ export class ControllerAI extends RandomAI {
     const values = majorCards.map((card, i) => {
       let val = estimateCardValue(state, 0, card, 'keep');
       // Controller personality: boost protection/Devil
-      const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+      const eff = getMajorDef(state, card.number);
       if (eff?.effect?.onPlay?.action === 'PROTECT_SUIT') val *= 2;
       if (eff?.effect?.onPlay?.action === 'DRAW_TO_LIMIT') val *= 1.5;
       return { i, score: val };

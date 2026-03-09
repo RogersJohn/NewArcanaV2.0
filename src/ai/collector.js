@@ -10,6 +10,7 @@ import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
+import { getMajorDef } from '../effect-resolver.js';
 
 export class CollectorAI extends RandomAI {
   constructor() {
@@ -30,7 +31,7 @@ export class CollectorAI extends RandomAI {
     // Priority 1: Wheel of Fortune — top action priority (config-aware)
     const wheelActions = legalActions.filter(a => {
       if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      const eff = getMajorDef(state, a.card.number);
       return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
     });
     if (wheelActions.length > 0) return wheelActions[0];
@@ -44,7 +45,7 @@ export class CollectorAI extends RandomAI {
       // Prefer bonus cards that synergize with our realm (config-aware)
       const bonusTome = tomeActions.filter(a => {
         if (!a.card) return false;
-        const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+        const eff = getMajorDef(state, a.card.number);
         return eff?.effect?.bonus || eff?.effect?.type === 'bonus';
       });
       if (bonusTome.length > 0) {
@@ -67,7 +68,7 @@ export class CollectorAI extends RandomAI {
     if (actionCards.length > 0) {
       // Prefer Judgement-like when we'd win pot
       const judgement = actionCards.filter(a => {
-        const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+        const eff = getMajorDef(state, a.card.number);
         return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
       });
       if (judgement.length > 0 && this.wouldWinPot(state, playerIndex)) {
@@ -208,7 +209,7 @@ export class CollectorAI extends RandomAI {
     const values = majorCards.map((card, i) => {
       let val = estimateCardValue(state, 0, card, 'keep');
       // Collector personality: boost Wheel-like and celestials
-      const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+      const eff = getMajorDef(state, card.number);
       if (eff?.effect?.action === 'WHEEL_OF_FORTUNE') val *= 1.8;
       if (isCelestial(card)) val *= 1.3;
       return { i, score: val };

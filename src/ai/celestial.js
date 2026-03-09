@@ -8,6 +8,7 @@
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { estimateCardValue } from './card-value.js';
+import { getMajorDef } from '../effect-resolver.js';
 
 export class CelestialAI extends RandomAI {
   constructor() {
@@ -27,7 +28,7 @@ export class CelestialAI extends RandomAI {
     // Priority 2: Chariot to steal Celestials (config-aware: any MOVE_CELESTIAL_TO_TOME action)
     const chariotActions = legalActions.filter(a => {
       if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      const eff = getMajorDef(state, a.card.number);
       return eff?.effect?.action === 'MOVE_CELESTIAL_TO_TOME';
     });
     if (chariotActions.length > 0) return chariotActions[0];

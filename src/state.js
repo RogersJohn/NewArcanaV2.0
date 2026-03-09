@@ -21,6 +21,12 @@ export function createInitialState(numPlayers, extended = false, seed, cardConfi
   // Derive protection map from card effect data (any card with PROTECT_SUIT)
   config.protectionMap = deriveProtectionMap(config);
 
+  // Build O(1) lookup map for majorArcana definitions
+  config.majorArcanaMap = new Map();
+  for (const def of config.majorArcana || []) {
+    config.majorArcanaMap.set(def.number, def);
+  }
+
   const players = [];
   for (let i = 0; i < numPlayers; i++) {
     players.push({
@@ -89,6 +95,13 @@ export function cloneState(state) {
   for (const player of clone.players) {
     player.tomeProtections = new Set(player.tomeProtections);
   }
+  // Rebuild the majorArcanaMap (Maps don't survive JSON serialization)
+  if (clone.config?.majorArcana) {
+    clone.config.majorArcanaMap = new Map();
+    for (const def of clone.config.majorArcana) {
+      clone.config.majorArcanaMap.set(def.number, def);
+    }
+  }
   // Share RNG reference — clones shouldn't diverge the RNG independently
   clone.rng = rng;
   // Share history reference — clones used for lookahead shouldn't bloat with duplicate history
@@ -117,7 +130,7 @@ export function getEffectiveHandLimit(player, config) {
   // Check if any tome card has a DRAW_TO_LIMIT on-play effect
   for (const card of player.tome) {
     if (card.type !== 'major') continue;
-    const def = config?.majorArcana?.find(m => m.number === card.number);
+    const def = config?.majorArcanaMap?.get(card.number) ?? config?.majorArcana?.find(m => m.number === card.number);
     const onPlay = def?.effect?.onPlay;
     if (onPlay?.action === 'DRAW_TO_LIMIT') {
       return onPlay.limit ?? config?.gameRules?.devilHandSizeLimit ?? 7;

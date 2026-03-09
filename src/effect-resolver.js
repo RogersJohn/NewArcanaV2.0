@@ -8,16 +8,23 @@ import { drawMinorCard, getHandSize, log } from './state.js';
 import { recordDecision, DECISION_TYPES } from './history.js';
 
 /**
+ * O(1) lookup of a Major Arcana definition by card number.
+ * Uses the pre-built Map on state.config, falling back to linear scan.
+ */
+export function getMajorDef(state, cardNumber) {
+  return state.config?.majorArcanaMap?.get(cardNumber)
+    ?? state.config?.majorArcana?.find(m => m.number === cardNumber)
+    ?? null;
+}
+
+/**
  * Look up the effect definition for a card from config.
  * Falls back to the card's own effect field if present.
  */
 export function getCardEffect(state, card) {
   if (!card) return null;
-  const majorDefs = state.config?.majorArcana;
-  if (majorDefs) {
-    const def = majorDefs.find(m => m.number === card.number);
-    if (def?.effect) return def.effect;
-  }
+  const def = getMajorDef(state, card.number);
+  if (def?.effect) return def.effect;
   return card.effect || null;
 }
 

@@ -10,6 +10,7 @@ import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
+import { getMajorDef } from '../effect-resolver.js';
 
 export class TacticianAI extends RandomAI {
   constructor() {
@@ -30,7 +31,7 @@ export class TacticianAI extends RandomAI {
     // Priority 1: Strategic Judgement — play only when we would win the pot (config-aware)
     const judgementActions = legalActions.filter(a => {
       if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      const eff = getMajorDef(state, a.card.number);
       return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
     });
     if (judgementActions.length > 0 && this.wouldWinPot(state, playerIndex)) {
@@ -48,7 +49,7 @@ export class TacticianAI extends RandomAI {
       // Use disruptive action cards against marker holder (config-aware)
       const markerActions = legalActions.filter(a => {
         if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-        const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+        const eff = getMajorDef(state, a.card.number);
         const act = eff?.effect?.action;
         return act === 'STEAL_FROM_TOME' || act === 'TOWER_DESTROY';
       });
@@ -58,7 +59,7 @@ export class TacticianAI extends RandomAI {
     // Priority 3: Wheel of Fortune when ahead or even (config-aware)
     const wheelActions = legalActions.filter(a => {
       if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = state.config?.majorArcana?.find(m => m.number === a.card.number);
+      const eff = getMajorDef(state, a.card.number);
       return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
     });
     if (wheelActions.length > 0) {
@@ -169,7 +170,7 @@ export class TacticianAI extends RandomAI {
         if (card) {
           let val = estimateCardValue(state, playerIndex, card, 'buy');
           // Tactician personality: boost Judgement-like cards
-          const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+          const eff = getMajorDef(state, card.number);
           if (eff?.effect?.action === 'CLAIM_ROUND_END_MARKER') val *= 1.8;
           if (val > bestScore) { bestScore = val; bestAction = action; }
         }
@@ -227,7 +228,7 @@ export class TacticianAI extends RandomAI {
     const values = majorCards.map((card, i) => {
       let val = estimateCardValue(state, 0, card, 'keep');
       // Tactician personality: boost Judgement-like and celestial cards
-      const eff = state.config?.majorArcana?.find(m => m.number === card.number);
+      const eff = getMajorDef(state, card.number);
       if (eff?.effect?.action === 'CLAIM_ROUND_END_MARKER') val *= 2;
       if (isCelestial(card)) val *= 1.3;
       return { i, score: val };

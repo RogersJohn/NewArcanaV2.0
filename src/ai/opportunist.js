@@ -10,6 +10,7 @@ import { getHandSize, getEffectiveHandLimit } from '../state.js';
 import { RandomAI } from './base.js';
 import { checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
+import { getMajorDef } from '../effect-resolver.js';
 
 export class OpportunistAI extends RandomAI {
   constructor() {
@@ -132,7 +133,7 @@ export class OpportunistAI extends RandomAI {
 
   targetsThreatCelestials(action, state, threatPlayer) {
     if (action.type === 'PLAY_MAJOR_ACTION' && action.card) {
-      const eff = state.config?.majorArcana?.find(m => m.number === action.card.number);
+      const eff = getMajorDef(state, action.card.number);
       const act = eff?.effect?.action;
       if (act === 'STEAL_FROM_TOME' && action.targets?.playerIndex === threatPlayer) return true;
       if (act === 'TOWER_DESTROY') return true;
