@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Monte Carlo simulation engine for the tarot card game "New Arcana" designed by Danny Rafferty. The core engine is built and functional. Two expansion workstreams are in progress: (A) improving the statistical engine and (B) building a browser-based game client where a human plays against AI opponents.
+Monte Carlo simulation engine for the tarot card game "New Arcana" designed by Danny Rafferty. The core engine is built and functional. A card editor UI (React + Vite) allows the game designer to tweak card definitions without editing JSON directly. Next major workstream: browser-based game client where a human plays against AI opponents.
 
 The engine was rebuilt from scratch from RULES.md and CARDS.md. The old project (https://github.com/NewarkCanningCompany/NewArcanaStatsEngine) had fundamental rule errors — do NOT reference or copy code from it.
 
@@ -11,7 +11,8 @@ The engine was rebuilt from scratch from RULES.md and CARDS.md. The old project 
 - Node.js with ESM modules (`"type": "module"` in package.json)
 - No external runtime dependencies for the engine (pure JS)
 - Vitest for testing (`npm install -D vitest`)
-- Game client: React + Vite (planned — see Workstream B)
+- Card editor: React + Vite (`editor/` directory)
+- ESLint for linting (`npm run lint`)
 
 ## Commands
 
@@ -20,6 +21,8 @@ The engine was rebuilt from scratch from RULES.md and CARDS.md. The old project 
 - Single game debug: `node index.js --single --players 4 --verbose`
 - Card balance analysis: `node index.js --games 1000 --card-balance --json results/balance.json`
 - Card analytics report: `node index.js --games 1000 --report`
+- Lint: `npm run lint`
+- Card editor: `npm run editor`
 
 ## File Structure
 
@@ -29,12 +32,22 @@ src/
 ├── poker.js          # Hand evaluation engine
 ├── state.js          # Game state: players, decks, piles, display, cloneState
 ├── actions.js        # Enumerate legal actions for active player
-├── engine.js         # Game loop orchestration
+├── engine.js         # Game loop orchestration (generator-based + sync wrappers)
 ├── effects.js        # Card effects: Royal attacks, Ace blocking, Major Arcana
+├── effect-resolver.js# Data-driven effect resolution, getMajorDef() lookup
 ├── scoring.js        # Round-end and game-end scoring
+├── config.js         # Config loader (reads data/cards.json)
+├── config-core.js    # Config merger (no filesystem dependency)
+├── rng.js            # Seeded PRNG (xoshiro128**)
+├── history.js        # Decision history recording and replay
+├── game-controller.js# Async GameController for human/AI play
 ├── card-balance.js   # Card balance analysis (5 per-card metrics)
+├── compare.js        # A/B config comparison mode
+├── simulation.js     # Monte Carlo runner
+├── stats.js          # Statistics aggregation and reporting
 ├── ai/
 │   ├── base.js       # AI interface + RandomAI
+│   ├── card-value.js # Config-aware card valuation (shared by all AIs)
 │   ├── builder.js    # Focuses on building strong poker hands
 │   ├── aggressive.js # Attacks opponents, disrupts leaders
 │   ├── celestial.js  # Pursues 3-Celestial win condition
@@ -46,24 +59,26 @@ src/
 │   ├── scoring.js    # 1-step lookahead, position evaluation
 │   ├── awareness.js  # Shared celestial threat detection
 │   └── index.js      # Registry, factory, assignment
-├── simulation.js     # Monte Carlo runner
-└── stats.js          # Statistics aggregation and reporting
 test/
 ├── poker.test.js
 ├── actions.test.js
 ├── engine.test.js
 ├── effects.test.js
+├── effect-resolver.test.js
 ├── scoring.test.js
 ├── history.test.js
 ├── game-controller.test.js
 ├── major-arcana.test.js
+├── card-comprehensive.test.js
 ├── regression.test.js
 └── statistical.test.js
+data/
+└── cards.json        # Card definitions and game rules (editable by designer)
+editor/               # React + Vite card editor UI
 scripts/
 ├── ai-coverage-diagnostic.js
 └── card-balance.js
 results/              # Simulation output data (JSON, HTML, MD)
-data/                 # Card definitions and rule configs (planned — see task A2)
 index.js              # CLI entry
 RULES.md              # Full game rules
 CARDS.md              # All card definitions and effects
@@ -73,7 +88,7 @@ PLAN.md               # Detailed expansion plan (reference document)
 ## Architectural Rules
 
 - **Randomness:** All randomness MUST go through `state.rng` (seeded PRNG via `src/rng.js`). Never use `Math.random()` in game/simulation code.
-- **Card definitions:** Card data should live in `data/cards.json`, not hardcoded in switch statements. Bonus values, VP awards, effect types, and purchase costs must be configurable so Danny can tweak values without editing source. *(Not yet implemented — see task A2.)*
+- **Card definitions:** Card data lives in `data/cards.json`. Bonus values, VP awards, effect types, and purchase costs are configurable so Danny can tweak values without editing source. The card editor UI (`npm run editor`) provides a visual interface for editing.
 - **State:** Game state is the single source of truth. Engine functions transform state. State carries a `log` array (human-readable messages) and an `events` array (structured analytics events).
 - **AI interface:** AI classes extend `RandomAI` from `src/ai/base.js`. Every decision method must be implementable by both AI and human players (critical for the game client). The decision points are:
   - `chooseMajorKeep(majorCards)` — setup: pick 1 of 2 majors
@@ -201,22 +216,19 @@ These rules were wrong in the old project and must stay correct. Read RULES.md a
 ## Known Limitations
 
 ### AI Personas and Custom Cards
-The 10 AI persona files in `src/ai/` contain hardcoded card-number references for
-strategic heuristics (e.g., "if it's the Devil, rate it highly"). This means:
+All 10 AI personas now use config-aware card valuation via `src/ai/card-value.js`,
+which reads effect types and bonus parameters from `data/cards.json`. This means:
 
-- **Existing cards**: AI plays correctly. Changing a card's VP values or bonus
-  parameters in the editor WILL affect AI behavior correctly (AIs use the scoring
-  engine which is fully data-driven).
-- **New cards**: AI will treat new cards as generic/unrecognized and play them
-  with default (low) priority. The AI won't know that your new card is powerful
-  until someone adds explicit heuristics for it in the relevant AI file.
-- **Changing what a card DOES** (e.g., making The Chariot do something other than
-  MOVE_CELESTIAL_TO_TOME): The AI may play it at the wrong time because it still
-  thinks it does the old thing. The card WILL work correctly — the engine is
-  data-driven — but the AI's strategic evaluation will be stale.
+- **Existing cards**: AI plays correctly and responds to balance changes in the config.
+- **New cards**: AI will evaluate new cards based on their configured effect types
+  and bonus parameters. Cards with recognized effect actions (e.g., PROTECT_SUIT,
+  MOVE_CELESTIAL_TO_TOME) will be valued appropriately.
+- **Personality modifiers**: Each AI persona applies multipliers on top of the base
+  valuation (e.g., CelestialAI values celestials 3x higher). These personality
+  modifiers are still hardcoded per AI file.
 
-This is acceptable for playtesting balance changes. If Danny adds significant new
-cards that AI should play well, a developer should update the relevant AI files.
+For significantly novel effect types not covered by existing action categories,
+a developer should add valuation logic in `card-value.js`.
 
 ---
 
@@ -233,45 +245,40 @@ Full details in PLAN.md. Below is the summary for task-by-task execution.
 - `--seed N` CLI flag. Per-game seed in JSON output.
 - Verified: same seed produces byte-identical results across runs
 
-**A2. Data-Driven Card Definitions** — CRITICAL for Danny
-- Create `data/cards.json` with all card definitions, configurable values (VP awards, bonus types, costs, effects, game rules like hand limits and pot math)
-- Refactor `scoring.js`, `effects.js`, `engine.js` to read from card config instead of hardcoded switches
+**A2. Data-Driven Card Definitions** — DONE
+- `data/cards.json` contains all card definitions with configurable values
+- `scoring.js`, `effect-resolver.js`, `engine.js` read from card config
 - `createInitialState()` accepts optional `cardConfig` parameter
-- Add `--config path/to/cards.json` CLI flag
-- Done when: Danny can change celestialVp from 2 to 1 in JSON and see different simulation results without editing source
+- `--config path/to/cards.json` CLI flag supported
+- Card editor UI in `editor/` for visual editing
 
-**A3. A/B Comparison Mode** — depends on A1 + A2
+**A3. A/B Comparison Mode** — DONE
 - `--compare configA.json configB.json` CLI mode
 - Runs N games with each config using same seeds
-- Produces diff report: win rate deltas with statistical significance, VP shift, card power ranking changes, game length impact
-- Output as console text and self-contained HTML report
+- Produces diff report with statistical significance
 
-**A4. Immutable State & History** — HIGH priority
-- Improve `cloneState()` robustness (current JSON.parse/stringify is fragile with Sets)
-- Add `state.history[]` recording each action (action object + player index + round)
-- Add `replayFromHistory(seed, history)` for replay, undo, and save/load
-- Done when: a game can be replayed from seed + action history to identical final state
+**A4. Immutable State & History** — DONE
+- `cloneState()` handles Sets, Maps, and forks RNG for independent lookahead
+- `state.history[]` records all decision types via `src/history.js`
+- `replayGame()` and `compareHistories()` available for replay and verification
 
-**A5. Test Coverage Expansion** — ongoing, spread across all tasks
-- Targeted tests for each Major Arcana effect
-- Regression tests for Fix #1–#8 (currently no tests guard against recurrence)
-- Statistical regression: 10,000 seeded games, assert metrics within expected ranges
-- Property-based tests for poker hand evaluation
+**A5. Test Coverage Expansion** — DONE
+- Targeted tests for Major Arcana effects, card valuation, effect resolution
+- Statistical regression tests with seeded games
+- 319+ tests across 12 test files
 
-**A6. Smarter AI** — LOW for stats, HIGH for game client
-- Phase 1: `ScoringAI` with 1-step lookahead (requires A4 cloneState)
-- Phase 2: Tune AI personalities using card config metadata (requires A2)
-- Phase 3: Difficulty levels for game client (Easy/Medium/Hard)
+**A6. Smarter AI** — DONE (Phase 1-2)
+- `ScoringAI` with 1-step lookahead using `cloneState`
+- All 10 AI personas use config-aware `estimateCardValue()` from `src/ai/card-value.js`
+- Phase 3 (difficulty levels for game client) deferred to Workstream B
 
 ### Workstream B: Game Client
 
-**B1. Engine Interface Layer** — CRITICAL, hardest task, blocks all client work
-- Create async `GameController` that wraps the synchronous engine
+**B1. Engine Interface Layer** — DONE
+- `GameController` in `src/game-controller.js` wraps the generator-based engine
 - Advances game one decision point at a time, yields state + options to caller
-- For AI players: auto-resolves instantly. For human: pauses and returns control to UI.
-- Requires refactoring the nested synchronous game loop to pause at all 11 decision points
-- Recommended approach: generator/yield pattern — prototype on `CHOOSE_ACTION` first
-- Done when: a test can create a GameController, feed it manual decisions for a human player, and complete a game
+- For AI players: auto-resolves. For human: pauses and returns control to UI.
+- All 15 decision-containing engine functions converted to generators with sync wrappers
 
 **B2. Client Shell & Game Board** — depends on B1
 - Vite + React project (packages/client/ in monorepo)
@@ -296,29 +303,17 @@ Full details in PLAN.md. Below is the summary for task-by-task execution.
 **B6. Polish & Visuals** — LOW priority
 - Card art/templates, sound, responsive mobile, tutorial, save/load
 
-### Execution Order
+### Remaining Work
+
+All of Workstream A and B1 are complete. Remaining tasks are the game client UI:
 
 ```
-Phase 1 — Foundation (do first)
-├── A1. Seeded RNG
-├── A4. State History
-└── Monorepo restructure (packages/engine, packages/cli, packages/client)
-
-Phase 2 — Core
-├── A2. Data-Driven Cards
-├── B1. Engine Interface Layer
-└── A5. Tests (ongoing)
-
-Phase 3 — Parallel
-├── A3. A/B Comparison
-├── A6. Smarter AI (Phase 1)
-├── B2. Client Shell
-└── B3. Interaction Model
-
-Phase 4 — Polish
-├── B4. AI Visualization
+Next — Game Client
+├── B2. Client Shell & Game Board
+├── B3. Interaction Model
+├── B4. AI Turn Visualization
 ├── B5. Game Flow Screens
-└── B6. Card Visuals
+└── B6. Polish & Visuals
 ```
 
 ### Task Completion Checklist
