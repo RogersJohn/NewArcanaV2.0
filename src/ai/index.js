@@ -64,7 +64,7 @@ export function getAllAINames() {
  * @returns {object[]}
  */
 export function createAIPool(numPlayers, rng) {
-  const nonRandom = AI_NAMES.filter(n => n !== 'random' && n !== 'passive');
+  const nonRandom = AI_NAMES.filter(n => n !== 'random');
   // Shuffle available AIs so different combinations play each game
   const shuffledNames = shuffle([...nonRandom], rng);
   const ais = [];

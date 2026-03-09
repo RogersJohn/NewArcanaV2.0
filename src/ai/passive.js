@@ -5,6 +5,7 @@
 
 import { evaluateHand } from '../poker.js';
 import { RandomAI } from './base.js';
+import { aceBlockValue } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class PassiveAI extends RandomAI {
@@ -138,9 +139,17 @@ export class PassiveAI extends RandomAI {
     return scores.slice(0, numToDiscard).map(s => s.index).sort((a, b) => b - a);
   }
 
-  // Passive AI never blocks — no interference
-  shouldBlockWithAce() { return false; }
-  shouldBlockWithKing() { return false; }
+  shouldBlockWithAce(state, playerIndex, action) {
+    // Only block actions directly targeting our realm or tome
+    const threat = aceBlockValue(state, playerIndex, action);
+    return threat >= 55; // High threshold — only block serious direct threats
+  }
+
+  shouldBlockWithKing(state, playerIndex) {
+    // Block if we have significant realm
+    return state.players[playerIndex].realm.length >= 4 &&
+      state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'KING');
+  }
 
   chooseMajorKeep(majorCards, state) {
     if (!state) return 0;
