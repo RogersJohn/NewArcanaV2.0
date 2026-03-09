@@ -12,6 +12,7 @@ import { PassiveAI } from './passive.js';
 import { TacticianAI } from './tactician.js';
 import { CollectorAI } from './collector.js';
 import { ScoringAI } from './scoring.js';
+import { MctsAI } from './mcts.js';
 import { shuffle } from '../cards.js';
 
 const AI_CLASSES = {
@@ -25,6 +26,7 @@ const AI_CLASSES = {
   'tactician': TacticianAI,
   'collector': CollectorAI,
   'scoring': ScoringAI,
+  'mcts': MctsAI,
 };
 
 const AI_NAMES = Object.keys(AI_CLASSES);
@@ -64,7 +66,7 @@ export function getAllAINames() {
  * @returns {object[]}
  */
 export function createAIPool(numPlayers, rng) {
-  const nonRandom = AI_NAMES.filter(n => n !== 'random');
+  const nonRandom = AI_NAMES.filter(n => n !== 'random' && n !== 'mcts');
   // Shuffle available AIs so different combinations play each game
   const shuffledNames = shuffle([...nonRandom], rng);
   const ais = [];
@@ -107,4 +109,4 @@ export function createAIs(numPlayers, assignment = 'diverse', rng) {
   return createAIPool(numPlayers, rng);
 }
 
-export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI, ScoringAI };
+export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI, ScoringAI, MctsAI };

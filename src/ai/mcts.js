@@ -31,7 +31,7 @@ export class MctsAI extends RandomAI {
   constructor(options = {}) {
     super();
     this.name = 'MCTS';
-    this.rolloutsPerAction = options.rolloutsPerAction ?? 20;
+    this.rolloutsPerAction = options.rolloutsPerAction ?? 10;
     this.maxCandidates = options.maxCandidates ?? 8;
     this.verbose = options.verbose ?? false;
 
