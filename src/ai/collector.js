@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -20,6 +20,8 @@ export class CollectorAI extends RandomAI {
 
   chooseAction(state, legalActions, playerIndex) {
     const player = state.players[playerIndex];
+    const urgency = potUrgency(state);
+    const ranking = getHandRanking(state, playerIndex);
 
     // Priority 0: Celestial threat disruption
     const threat = checkCelestialThreat(state, playerIndex);
@@ -28,7 +30,38 @@ export class CollectorAI extends RandomAI {
       if (disruption) return disruption;
     }
 
-    // Priority 1: Wheel of Fortune — top action priority (config-aware)
+    // Priority 1: Play Celestials to Tome (always)
+    const celestialTome = legalActions.filter(a =>
+      a.type === 'PLAY_MAJOR_TOME' && a.card && isCelestial(a.card)
+    );
+    if (celestialTome.length > 0) return celestialTome[0];
+
+    // Priority 2: Play best multi-card set to realm
+    const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
+    const multiSets = setActions.filter(a => a.cards.length >= 2);
+    if (multiSets.length > 0) {
+      let best = null;
+      let bestRank = -1;
+      const opts = { aceHigh: state.config?.gameRules?.aceHigh ?? false };
+      for (const action of multiSets) {
+        const newRealm = [...player.realm, ...action.cards];
+        const eval_ = evaluateHand(newRealm, opts);
+        if (eval_.rank > bestRank) { bestRank = eval_.rank; best = action; }
+      }
+      if (best) return best;
+    }
+
+    // Priority 3: Play singles if realm < 4
+    if (player.realm.length < 4 && setActions.length > 0) {
+      // Pick singles that match existing realm ranks
+      const completions = setActions.filter(a => a.cards.length === 1 && a.isCompletion);
+      if (completions.length > 0) return completions[0];
+      // Otherwise any single
+      const singles = setActions.filter(a => a.cards.length === 1);
+      if (singles.length > 0) return singles[0];
+    }
+
+    // Priority 4: Wheel of Fortune (config-aware — card advantage)
     const wheelActions = legalActions.filter(a => {
       if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
       const eff = getMajorDef(state, a.card.number);
@@ -36,103 +69,46 @@ export class CollectorAI extends RandomAI {
     });
     if (wheelActions.length > 0) return wheelActions[0];
 
-    // Priority 2: Play Celestials and bonus cards to Tome
-    const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0) {
-      const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
-      if (celestialTome.length > 0) return celestialTome[0];
-
-      // Prefer bonus cards that synergize with our realm (config-aware)
-      const bonusTome = tomeActions.filter(a => {
-        if (!a.card) return false;
-        const eff = getMajorDef(state, a.card.number);
-        return eff?.effect?.bonus || eff?.effect?.type === 'bonus';
-      });
-      if (bonusTome.length > 0) {
-        const best = this.pickBestBonusTome(bonusTome, state, playerIndex);
-        if (best) return best;
+    // Priority 5: Play bonus/tome cards (only if realm has 2+ cards)
+    if (player.realm.length >= 2) {
+      const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
+      if (tomeActions.length > 0) {
+        // Prefer bonus cards matching our realm
+        const scored = tomeActions.map(a => ({
+          action: a,
+          score: estimateCardValue(state, playerIndex, a.card, 'tome'),
+        }));
+        scored.sort((a, b) => b.score - a.score);
+        return scored[0].action;
       }
-
-      return tomeActions[0];
     }
 
-    // Priority 3: Buy Major Arcana aggressively
-    const buyActions = legalActions.filter(a => a.type === 'BUY');
-    if (buyActions.length > 0) {
-      const bestBuy = this.pickCollectorBuy(buyActions, state, playerIndex);
-      if (bestBuy) return bestBuy;
-    }
-
-    // Priority 4: Other action cards (config-aware)
-    const actionCards = legalActions.filter(a => a.type === 'PLAY_MAJOR_ACTION' && a.card);
-    if (actionCards.length > 0) {
-      // Prefer Judgement-like when we'd win pot
-      const judgement = actionCards.filter(a => {
-        const eff = getMajorDef(state, a.card.number);
-        return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
-      });
-      if (judgement.length > 0 && this.wouldWinPot(state, playerIndex)) {
-        return judgement[0];
+    // Priority 6: Buy Major Arcana (only if no good realm play and realm >= 2)
+    if (player.realm.length >= 2) {
+      const buyActions = legalActions.filter(a => a.type === 'BUY');
+      if (buyActions.length > 0) {
+        const bestBuy = this.pickCollectorBuy(buyActions, state, playerIndex);
+        if (bestBuy) return bestBuy;
       }
-      // Score remaining by config value
-      const scored = actionCards.map(a => ({
-        action: a,
-        score: estimateCardValue(state, playerIndex, a.card, 'tome'),
-      }));
-      scored.sort((a, b) => b.score - a.score);
-      if (scored[0].score > 8) return scored[0].action;
     }
 
-    // Priority 5: Build realm
-    const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
-    if (setActions.length > 0) {
-      const multiSets = setActions.filter(a => a.cards.length >= 2);
-      if (multiSets.length > 0) {
-        let best = null;
-        let bestRank = -1;
-        for (const action of multiSets) {
-          const newRealm = [...player.realm, ...action.cards];
-          const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-          if (eval_.rank > bestRank) { bestRank = eval_.rank; best = action; }
-        }
-        if (best) return best;
-      }
-      if (player.realm.length < 4) return setActions[0];
+    // Priority 7: Judgement if winning the pot
+    const judgementActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = getMajorDef(state, a.card.number);
+      return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
+    });
+    if (judgementActions.length > 0 && ranking.winning && player.realm.length >= 3) {
+      return judgementActions[0];
     }
 
-    // Priority 6: Play wild
+    // Priority 8: Play wild to realm
     const wildActions = legalActions.filter(a => a.type === 'PLAY_WILD');
     if (wildActions.length > 0 && player.realm.length >= 2) {
       return wildActions[0];
     }
 
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];
-  }
-
-  wouldWinPot(state, playerIndex) {
-    const myRealm = state.players[playerIndex].realm;
-    if (myRealm.length === 0) return false;
-    const myEval = evaluateHand(myRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-    for (let pi = 0; pi < state.players.length; pi++) {
-      if (pi === playerIndex) continue;
-      const opRealm = state.players[pi].realm;
-      if (opRealm.length === 0) continue;
-      const opEval = evaluateHand(opRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-      if (opEval.rank >= myEval.rank) return false;
-    }
-    return true;
-  }
-
-  pickBestBonusTome(bonusTomeActions, state, playerIndex) {
-    let bestAction = null;
-    let bestScore = -1;
-
-    for (const action of bonusTomeActions) {
-      const score = estimateCardValue(state, playerIndex, action.card, 'tome');
-      if (score > bestScore) { bestScore = score; bestAction = action; }
-    }
-
-    return bestAction;
   }
 
   pickCollectorBuy(buyActions, state, playerIndex) {
