@@ -312,7 +312,8 @@ function* discardPhaseGen(state, playerIndex) {
       state,
     };
     recordDecision(state, DECISION_TYPES.REALM_DISCARD, playerIndex, indices);
-    for (const idx of indices) {
+    const sortedRealmIndices = [...indices].sort((a, b) => b - a);
+    for (const idx of sortedRealmIndices) {
       if (idx >= 0 && idx < player.realm.length) {
         const card = player.realm.splice(idx, 1)[0];
         state.minorDiscard.push(card);
@@ -335,7 +336,8 @@ function* discardPhaseGen(state, playerIndex) {
         state,
       };
       recordDecision(state, DECISION_TYPES.DISCARD, playerIndex, indices);
-      for (const idx of indices) {
+      const sortedHandIndices = [...indices].sort((a, b) => b - a);
+      for (const idx of sortedHandIndices) {
         if (idx >= 0 && idx < player.hand.length) {
           const card = player.hand.splice(idx, 1)[0];
           state.minorDiscard.push(card);
