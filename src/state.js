@@ -102,8 +102,8 @@ export function cloneState(state) {
       clone.config.majorArcanaMap.set(def.number, def);
     }
   }
-  // Share RNG reference — clones shouldn't diverge the RNG independently
-  clone.rng = rng;
+  // Fork RNG so clone has independent state (doesn't consume main game's RNG)
+  clone.rng = rng.fork();
   // Share history reference — clones used for lookahead shouldn't bloat with duplicate history
   clone.history = history;
   return clone;

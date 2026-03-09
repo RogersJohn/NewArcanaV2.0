@@ -104,6 +104,18 @@ export class SeededRNG {
   }
 
   /**
+   * Create a forked RNG seeded from the current state.
+   * The fork is independent — consuming values from it does not
+   * affect this RNG, and vice versa.
+   * @returns {SeededRNG}
+   */
+  fork() {
+    // Use the next output value as the seed for the fork
+    const forkSeed = Math.floor(this.next() * 2147483647);
+    return new SeededRNG(forkSeed);
+  }
+
+  /**
    * @private
    */
   _rotl(x, k) {
