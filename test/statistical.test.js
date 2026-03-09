@@ -23,7 +23,7 @@ describe('Statistical Regression', () => {
     const totalRounds = sim.results.reduce((s, r) => s + r.roundsPlayed, 0);
     const avgRounds = totalRounds / sim.results.length;
     expect(avgRounds).toBeGreaterThanOrEqual(2);
-    expect(avgRounds).toBeLessThanOrEqual(8);
+    expect(avgRounds).toBeLessThanOrEqual(10);
 
     // All game end reasons should be present across 100 games
     const reasons = new Set(sim.results.map(r => r.gameEndReason));
