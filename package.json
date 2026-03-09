@@ -7,9 +7,12 @@
   "scripts": {
     "test": "vitest run",
     "start": "node index.js",
-    "editor": "cd editor && npm run dev"
+    "editor": "cd editor && npm run dev",
+    "lint": "eslint src/ test/"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.3",
     "vitest": "^3.0.0"
   }
 }
