@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { checkCelestialThreat, findCelestialDisruption } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -20,6 +20,8 @@ export class TacticianAI extends RandomAI {
 
   chooseAction(state, legalActions, playerIndex) {
     const player = state.players[playerIndex];
+    const urgency = potUrgency(state);
+    const ranking = getHandRanking(state, playerIndex);
 
     // Priority 0: Celestial threat disruption
     const threat = checkCelestialThreat(state, playerIndex);
@@ -28,104 +30,62 @@ export class TacticianAI extends RandomAI {
       if (disruption) return disruption;
     }
 
-    // Priority 1: Strategic Judgement — play only when we would win the pot (config-aware)
-    const judgementActions = legalActions.filter(a => {
-      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = getMajorDef(state, a.card.number);
-      return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
-    });
-    if (judgementActions.length > 0 && this.wouldWinPot(state, playerIndex)) {
-      return judgementActions[0];
-    }
-
-    // Priority 2: Attack marker holders to delay round end
-    const markerHolder = state.roundEndMarkerHolder;
-    if (markerHolder >= 0 && markerHolder !== playerIndex) {
-      const markerAttacks = legalActions.filter(a =>
-        a.type === 'PLAY_ROYAL' && a.target?.playerIndex === markerHolder
-      );
-      if (markerAttacks.length > 0) return markerAttacks[0];
-
-      // Use disruptive action cards against marker holder (config-aware)
-      const markerActions = legalActions.filter(a => {
-        if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-        const eff = getMajorDef(state, a.card.number);
-        const act = eff?.effect?.action;
-        return act === 'STEAL_FROM_TOME' || act === 'TOWER_DESTROY';
-      });
-      if (markerActions.length > 0) return markerActions[0];
-    }
-
-    // Priority 3: Wheel of Fortune when ahead or even (config-aware)
-    const wheelActions = legalActions.filter(a => {
-      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = getMajorDef(state, a.card.number);
-      return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
-    });
-    if (wheelActions.length > 0) {
-      const myVp = player.vp;
-      const avgOpVp = state.players
-        .filter((_, i) => i !== playerIndex)
-        .reduce((s, p) => s + p.vp, 0) / (state.players.length - 1);
-      if (myVp >= avgOpVp) return wheelActions[0];
-    }
-
-    // Priority 4: Play sets strategically — larger sets preferred near round end
+    // Priority 1: Build realm aggressively (Judgement needs a strong hand to be useful)
     const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
       const best = this.pickTimedSet(setActions, player, state);
       if (best) return best;
     }
 
+    // Priority 2: Judgement when winning pot AND have 3+ realm cards
+    const judgementActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = getMajorDef(state, a.card.number);
+      return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
+    });
+    if (judgementActions.length > 0 && ranking.winning && player.realm.length >= 3) {
+      return judgementActions[0];
+    }
+
+    // Priority 3: Attack marker holders ONLY if they would beat us
+    const markerHolder = state.roundEndMarkerHolder;
+    if (markerHolder >= 0 && markerHolder !== playerIndex && ranking.beatenBy.includes(markerHolder)) {
+      const markerAttacks = legalActions.filter(a =>
+        a.type === 'PLAY_ROYAL' && a.target?.playerIndex === markerHolder
+      );
+      if (markerAttacks.length > 0) return markerAttacks[0];
+    }
+
+    // Priority 4: Wheel of Fortune (card advantage — play aggressively)
+    const wheelActions = legalActions.filter(a => {
+      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
+      const eff = getMajorDef(state, a.card.number);
+      return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
+    });
+    if (wheelActions.length > 0) return wheelActions[0];
+
     // Priority 5: Play tome cards
     const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0) {
-      // Prefer celestials, then bonus, then tome
+    if (tomeActions.length > 0 && player.realm.length >= 2) {
       const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
       if (celestialTome.length > 0) return celestialTome[0];
       return tomeActions[0];
     }
 
-    // Priority 6: Buy cards strategically
+    // Priority 6: Buy cards (prefer Judgement-like)
     const buyActions = legalActions.filter(a => a.type === 'BUY');
-    if (buyActions.length > 0) {
+    if (buyActions.length > 0 && player.realm.length >= 2) {
       const goodBuy = this.pickTacticalBuy(buyActions, state, playerIndex);
       if (goodBuy) return goodBuy;
     }
 
-    // Priority 7: Other action cards (config-aware scoring)
-    const otherActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_ACTION' && a.card);
-    if (otherActions.length > 0) {
-      const scored = otherActions.map(a => ({
-        action: a,
-        score: estimateCardValue(state, playerIndex, a.card, 'tome'),
-      }));
-      scored.sort((a, b) => b.score - a.score);
-      if (scored[0].score > 8) return scored[0].action;
-    }
-
-    // Priority 8: Play wild if it improves hand
+    // Priority 7: Wild card play
     const wildActions = legalActions.filter(a => a.type === 'PLAY_WILD');
     if (wildActions.length > 0 && player.realm.length >= 2) {
       return wildActions[0];
     }
 
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];
-  }
-
-  wouldWinPot(state, playerIndex) {
-    const myRealm = state.players[playerIndex].realm;
-    if (myRealm.length === 0) return false;
-    const myEval = evaluateHand(myRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-
-    for (let pi = 0; pi < state.players.length; pi++) {
-      if (pi === playerIndex) continue;
-      const opRealm = state.players[pi].realm;
-      if (opRealm.length === 0) continue;
-      const opEval = evaluateHand(opRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-      if (opEval.rank >= myEval.rank) return false;
-    }
-    return true;
   }
 
   pickTimedSet(setActions, player, state) {
@@ -200,22 +160,12 @@ export class TacticianAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
-    // Block Celestials being played to Tome by threat players
     if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
       const threat = checkCelestialThreat(state, playerIndex);
       if (threat.threatening) return true;
     }
-    // Block Judgement and Wheel that target us or change scoring
-    if (action.type === 'PLAY_MAJOR_ACTION') {
-      if (action.card?.number === 20) return state.rng.next() < 0.4; // Block Judgement sometimes
-      if (action.card?.number === 10) return state.rng.next() < 0.3; // Block Wheel sometimes
-    }
-    // Block attacks on our realm when we have good hands
-    if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
-      const realmSize = state.players[playerIndex].realm.length;
-      return realmSize >= 3;
-    }
-    return false;
+    const threat = aceBlockValue(state, playerIndex, action);
+    return threat >= 35;
   }
 
   shouldBlockWithKing(state, playerIndex) {
