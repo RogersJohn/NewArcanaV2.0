@@ -20,9 +20,9 @@ export const DEFAULT_WEIGHTS = {
   setMulti: 1.0,       // Multi-card sets (pairs, triples, etc.)
   setSingle: 0.2,      // Single card plays
   setCompletion: 0.8,  // Completing/repairing an existing set
-  wild: 1.0,           // Wild card plays
-  attack: 0.5,         // Royal attacks
-  buy: 0.3,            // Buying Major Arcana
+  wild: 0.5,           // Wild card plays — last resort, not primary strategy
+  attack: 0.3,         // Royal attacks
+  buy: 0.4,            // Buying Major Arcana — helps deplete Major deck
   tome: 0.4,           // Playing to Tome
   tomecelestial: 1.5,  // Playing Celestials to Tome (always high)
   action: 0.5,         // Major Arcana action plays
@@ -54,18 +54,16 @@ export const BUILDER_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.4,
   setSingle: 0.1,
-  wild: 1.2,
-  attack: 0.2,
-  buy: 0.35,
+  wild: 0.5,
+  attack: 0.15,
   noise: 0.08,
 };
 
 export const AGGRESSOR_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 0.9,
-  attack: 1.2,
+  attack: 0.7,
   action: 0.8,
-  buy: 0.25,
   noise: 0.15,
 };
 
@@ -73,7 +71,7 @@ export const CELESTIAL_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 0.9,
   tomecelestial: 2.5,
-  buy: 0.5,
+  buy: 0.6,
   tome: 0.6,
   noise: 0.1,
 };
@@ -81,7 +79,7 @@ export const CELESTIAL_WEIGHTS = {
 export const CONTROLLER_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.1,
-  attack: 0.3,
+  attack: 0.2,
   tome: 0.5,
   noise: 0.08,
   aceBlockThreshold: 25,
@@ -91,7 +89,7 @@ export const CONTROLLER_WEIGHTS = {
 export const COLLECTOR_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.0,
-  buy: 0.6,
+  buy: 0.7,
   tome: 0.6,
   action: 0.7,
   noise: 0.12,
@@ -101,18 +99,16 @@ export const TACTICIAN_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.1,
   action: 0.9,
-  attack: 0.4,
+  attack: 0.3,
   noise: 0.1,
 };
 
 export const OPPORTUNIST_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.1,
-  attack: 0.6,
-  buy: 0.35,
+  attack: 0.35,
   tome: 0.45,
   action: 0.6,
-  wild: 1.1,
   noise: 0.08,
   rushWhenAhead: true,
 };
@@ -180,7 +176,19 @@ export function scoreAction(state, playerIndex, action, weights) {
       const improvement = (newEval.rank - currentEval.rank) * 8;
       const companions = (action.withCards || []).length;
       const closingRealm = newRealm.length >= 5 ? 25 : newRealm.length >= 4 ? 10 : 0;
-      const baseScore = 20 + improvement + companions * 5 + closingRealm;
+
+      // Only attractive when it fills realm to 5 or hand has no minor pairs
+      let baseScore = 10 + improvement + companions * 3 + closingRealm;
+
+      // Penalize wild if player has a playable pair in hand (pairs are better)
+      const minors = player.hand.filter(c => c.type === 'minor');
+      const rankGroups = {};
+      for (const c of minors) rankGroups[c.numericRank] = (rankGroups[c.numericRank] || 0) + 1;
+      const hasPair = Object.values(rankGroups).some(v => v >= 2);
+      if (hasPair && newRealm.length < 5) {
+        baseScore *= 0.3; // Heavily penalize wild when a pair is available
+      }
+
       return baseScore * weights.wild * rush;
     }
 
@@ -191,11 +199,11 @@ export function scoreAction(state, playerIndex, action, weights) {
       const targetRealmSize = state.players[targetPi]?.realm.length || 0;
       const targetIsLeader = targetVp >= Math.max(...state.players.map(p => p.vp)) - 1;
 
-      let baseScore = 10;
-      if (targetIsLeader) baseScore += 10;
-      if (targetRealmSize >= 4) baseScore += 12;
-      if (action.card?.rank === 'QUEEN') baseScore += 8;
-      else if (action.card?.rank === 'KNIGHT') baseScore += 4;
+      let baseScore = 5;
+      if (targetIsLeader) baseScore += 5;
+      if (targetRealmSize >= 4) baseScore += 8;
+      if (action.card?.rank === 'QUEEN') baseScore += 5;
+      else if (action.card?.rank === 'KNIGHT') baseScore += 3;
 
       return baseScore * weights.attack;
     }
