@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, analyzeHandPotential } from './awareness.js';
+import { potUrgency, getHandRanking, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -64,7 +64,7 @@ export class CelestialAI extends RandomAI {
       }
     }
 
-    // Priority 4: Buy Celestials from display
+    // Priority 4: Buy Celestials from display (always allowed — core strategy)
     const buyActions = legalActions.filter(a => a.type === 'BUY');
     const celestialBuys = buyActions.filter(a => {
       if (a.source.startsWith('display')) {
@@ -93,8 +93,8 @@ export class CelestialAI extends RandomAI {
       return wildActions[0];
     }
 
-    // Priority 7: Buy non-Celestial Major Arcana only if realm is built and pot urgency is low
-    if (buyActions.length > 0 && player.realm.length >= 3 && urgency < 1.0) {
+    // Priority 7: Buy non-Celestial Major Arcana only if realm is built and not rushing
+    if (!shouldSkipBuying(state, playerIndex) && buyActions.length > 0 && urgency < 1.0) {
       const noAceBuys = buyActions.filter(a => !a.payment.some(c => c.rank === 'ACE'));
       if (noAceBuys.length > 0) return noAceBuys[0];
     }

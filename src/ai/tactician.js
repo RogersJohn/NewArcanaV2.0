@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -38,12 +38,18 @@ export class TacticianAI extends RandomAI {
     }
 
     // Priority 2: Judgement when winning pot AND have 3+ realm cards
+    // VP leaders use Judgement more aggressively to compound lead
     const judgementActions = legalActions.filter(a => {
       if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
       const eff = getMajorDef(state, a.card.number);
       return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
     });
+    const isVpLeader = player.vp > Math.max(0, ...state.players.filter((_, i) => i !== playerIndex).map(p => p.vp));
     if (judgementActions.length > 0 && ranking.winning && player.realm.length >= 3) {
+      return judgementActions[0];
+    }
+    // VP leader plays Judgement even with just realm >= 3 (don't need to be winning yet)
+    if (judgementActions.length > 0 && isVpLeader && player.realm.length >= 3) {
       return judgementActions[0];
     }
 
@@ -66,17 +72,21 @@ export class TacticianAI extends RandomAI {
 
     // Priority 5: Play tome cards
     const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0 && player.realm.length >= 2) {
+    if (tomeActions.length > 0) {
+      // Always play Celestials to Tome
       const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
       if (celestialTome.length > 0) return celestialTome[0];
-      return tomeActions[0];
+      // Other tome plays only if realm is progressing
+      if (player.realm.length >= 3) return tomeActions[0];
     }
 
     // Priority 6: Buy cards (prefer Judgement-like)
-    const buyActions = legalActions.filter(a => a.type === 'BUY');
-    if (buyActions.length > 0 && player.realm.length >= 2) {
-      const goodBuy = this.pickTacticalBuy(buyActions, state, playerIndex);
-      if (goodBuy) return goodBuy;
+    if (!shouldSkipBuying(state, playerIndex)) {
+      const buyActions = legalActions.filter(a => a.type === 'BUY');
+      if (buyActions.length > 0) {
+        const goodBuy = this.pickTacticalBuy(buyActions, state, playerIndex);
+        if (goodBuy) return goodBuy;
+      }
     }
 
     // Priority 7: Wild card play

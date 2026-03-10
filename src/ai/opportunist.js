@@ -8,7 +8,7 @@ import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { getHandSize, getEffectiveHandLimit } from '../state.js';
 import { RandomAI } from './base.js';
-import { aceBlockValue, checkCelestialThreat, analyzeHandPotential } from './awareness.js';
+import { aceBlockValue, checkCelestialThreat, analyzeHandPotential, vpUrgency, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -46,6 +46,7 @@ export class OpportunistAI extends RandomAI {
 
   scoreAction(state, playerIndex, action, behind) {
     const player = state.players[playerIndex];
+    const rush = vpUrgency(state, playerIndex);
 
     switch (action.type) {
       case 'PASS': {
@@ -74,7 +75,8 @@ export class OpportunistAI extends RandomAI {
           score -= 25;
         }
 
-        return score;
+        // VP-aware rush: boost realm-building when ahead or pot is large
+        return score * rush;
       }
 
       case 'PLAY_ROYAL': {
@@ -88,12 +90,21 @@ export class OpportunistAI extends RandomAI {
       }
 
       case 'PLAY_MAJOR_TOME': {
-        return estimateCardValue(state, playerIndex, action.card, 'tome');
+        let val = estimateCardValue(state, playerIndex, action.card, 'tome');
+        // Deprioritize tome plays when realm is small (except Celestials)
+        if (player.realm.length < 3 && !(action.card && isCelestial(action.card))) {
+          val *= 0.3;
+        }
+        return val;
       }
 
       case 'PLAY_MAJOR_ACTION': {
         let val = estimateCardValue(state, playerIndex, action.card, 'tome');
         if (behind > 3) val *= 1.2; // More aggressive when behind
+        // Deprioritize action plays when realm is small
+        if (player.realm.length < 3) {
+          val *= 0.4;
+        }
         return val;
       }
 
@@ -102,10 +113,13 @@ export class OpportunistAI extends RandomAI {
         const newEval = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
         const improvement = (newEval.rank - currentEval.rank) * 8;
-        return improvement + action.withCards.length * 2 + 5;
+        return (improvement + action.withCards.length * 2 + 5) * rush;
       }
 
       case 'BUY': {
+        // Heavy penalty when should be building realm
+        if (shouldSkipBuying(state, playerIndex)) return -10;
+
         const paymentTotal = action.payment.reduce((s, c) => s + c.purchaseValue, 0);
         const paymentCost = paymentTotal * 0.7; // Opportunity cost
         const hasAcePayment = action.payment.some(c => c.rank === 'ACE');

@@ -272,3 +272,74 @@ export function analyzeHandPotential(hand, realm) {
     hasPairForming: maxRankGroup >= 2,
   };
 }
+
+/**
+ * How much should this player prioritize ending the round quickly?
+ * Returns a multiplier (1.0 = normal, up to 2.0 = rush).
+ * Players who are ahead in VP should rush to claim pots and compound their lead.
+ *
+ * @param {object} state
+ * @param {number} playerIndex
+ * @returns {number} Rush multiplier 1.0 - 2.0
+ */
+export function vpUrgency(state, playerIndex) {
+  const player = state.players[playerIndex];
+  const myVp = player.vp;
+  const opponents = state.players.filter((_, i) => i !== playerIndex);
+  const maxOpponentVp = Math.max(0, ...opponents.map(p => p.vp));
+
+  const vpLead = myVp - maxOpponentVp;
+
+  let rush = 1.0;
+
+  // Ahead by any amount → rush to compound
+  if (vpLead > 0) {
+    rush += Math.min(0.5, vpLead * 0.05); // +0.05 per VP ahead, cap at +0.5
+  }
+
+  // Round 1 has no leader yet — everyone should rush equally
+  if (state.roundNumber <= 1) {
+    rush = 1.2; // Slight rush to establish early lead
+  }
+
+  // Large pot → more urgent to claim it
+  const potValue = state.pot || 0;
+  if (potValue >= 8) {
+    rush += 0.2;
+  }
+
+  return Math.min(2.0, rush);
+}
+
+/**
+ * Should this player deprioritize buying this turn?
+ * Returns true if the player should focus on realm building instead.
+ *
+ * @param {object} state
+ * @param {number} playerIndex
+ * @returns {boolean}
+ */
+export function shouldSkipBuying(state, playerIndex) {
+  const player = state.players[playerIndex];
+
+  // If realm is small, focus on building it
+  if (player.realm.length < 3) return true;
+
+  // If we're the VP leader, skip buying to rush realm completion
+  const myVp = player.vp;
+  const maxOpponentVp = Math.max(0, ...state.players
+    .filter((_, i) => i !== playerIndex)
+    .map(p => p.vp));
+  if (myVp > maxOpponentVp && player.realm.length < 5) return true;
+
+  // If hand has playable multi-card sets, play those instead of buying
+  const minors = player.hand.filter(c => c.type === 'minor');
+  const rankGroups = {};
+  for (const c of minors) {
+    rankGroups[c.numericRank] = (rankGroups[c.numericRank] || 0) + 1;
+  }
+  const hasPair = Object.values(rankGroups).some(c => c >= 2);
+  if (hasPair && player.realm.length < 5) return true;
+
+  return false;
+}

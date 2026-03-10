@@ -10,7 +10,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
+import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -39,10 +39,14 @@ export class ControllerAI extends RandomAI {
       if (best) return best;
     }
 
-    // Priority 2: Play Tome cards (only after realm has 2+ cards)
-    if (player.realm.length >= 2) {
-      const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-      if (tomeActions.length > 0) {
+    // Priority 2: Play Tome cards (only after realm has 3+ cards, except Celestials)
+    const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
+    if (tomeActions.length > 0) {
+      // Always play Celestials to Tome
+      const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
+      if (celestialTome.length > 0) return celestialTome[0];
+      // Other tome plays only if realm is progressing
+      if (player.realm.length >= 3) {
         const scored = tomeActions.map(a => {
           let val = estimateCardValue(state, playerIndex, a.card, 'tome');
           const eff = getMajorDef(state, a.card?.number);
@@ -62,8 +66,8 @@ export class ControllerAI extends RandomAI {
       }
     }
 
-    // Priority 3: Buy protection/Devil cards (only if realm >= 2)
-    if (player.realm.length >= 2) {
+    // Priority 3: Buy protection/Devil cards (only if not rushing realm)
+    if (!shouldSkipBuying(state, playerIndex)) {
       const buyActions = legalActions.filter(a => a.type === 'BUY');
       if (buyActions.length > 0) {
         const protectionBuy = this.pickProtectionBuy(buyActions, state, playerIndex);
@@ -80,8 +84,8 @@ export class ControllerAI extends RandomAI {
       }
     }
 
-    // Priority 5: Buy anything affordable (only if realm >= 3 and pot urgency low)
-    if (urgency < 1.2 && player.realm.length >= 3) {
+    // Priority 5: Buy anything affordable (only if not rushing realm and pot urgency low)
+    if (!shouldSkipBuying(state, playerIndex) && urgency < 1.2) {
       const buyActions = legalActions.filter(a => a.type === 'BUY');
       const cheap = buyActions.filter(a =>
         a.payment.reduce((s, c) => s + c.purchaseValue, 0) <= 10 &&

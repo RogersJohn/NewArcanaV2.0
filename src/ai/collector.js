@@ -8,7 +8,7 @@
 import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential } from './awareness.js';
+import { potUrgency, getHandRanking, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -67,11 +67,14 @@ export class CollectorAI extends RandomAI {
     });
     if (wheelActions.length > 0) return wheelActions[0];
 
-    // Priority 5: Play bonus/tome cards (only if realm has 2+ cards)
-    if (player.realm.length >= 2) {
-      const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-      if (tomeActions.length > 0) {
-        // Prefer bonus cards matching our realm
+    // Priority 5: Play bonus/tome cards
+    const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
+    if (tomeActions.length > 0) {
+      // Always play Celestials to Tome (already handled at Priority 1, but just in case)
+      const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
+      if (celestialTome.length > 0) return celestialTome[0];
+      // Other tome plays only if realm is progressing
+      if (player.realm.length >= 3) {
         const scored = tomeActions.map(a => ({
           action: a,
           score: estimateCardValue(state, playerIndex, a.card, 'tome'),
@@ -81,8 +84,8 @@ export class CollectorAI extends RandomAI {
       }
     }
 
-    // Priority 6: Buy Major Arcana (only if no good realm play and realm >= 2)
-    if (player.realm.length >= 2) {
+    // Priority 6: Buy Major Arcana (only if not rushing realm)
+    if (!shouldSkipBuying(state, playerIndex)) {
       const buyActions = legalActions.filter(a => a.type === 'BUY');
       if (buyActions.length > 0) {
         const bestBuy = this.pickCollectorBuy(buyActions, state, playerIndex);

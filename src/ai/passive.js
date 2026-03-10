@@ -5,7 +5,8 @@
 
 import { evaluateHand } from '../poker.js';
 import { RandomAI } from './base.js';
-import { aceBlockValue, analyzeHandPotential } from './awareness.js';
+import { isCelestial } from '../cards.js';
+import { aceBlockValue, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class PassiveAI extends RandomAI {
@@ -58,19 +59,27 @@ export class PassiveAI extends RandomAI {
     // Priority 3: Play tome cards (config-aware)
     const tomeActions = peaceful.filter(a => a.type === 'PLAY_MAJOR_TOME');
     if (tomeActions.length > 0) {
-      const scored = tomeActions.map(a => ({
-        action: a,
-        score: a.card ? estimateCardValue(state, playerIndex, a.card, 'tome') : 0,
-      }));
-      scored.sort((a, b) => b.score - a.score);
-      return scored[0].action;
+      // Always play Celestials to Tome
+      const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
+      if (celestialTome.length > 0) return celestialTome[0];
+      // Other tome plays only if realm is progressing
+      if (player.realm.length >= 3) {
+        const scored = tomeActions.map(a => ({
+          action: a,
+          score: a.card ? estimateCardValue(state, playerIndex, a.card, 'tome') : 0,
+        }));
+        scored.sort((a, b) => b.score - a.score);
+        return scored[0].action;
+      }
     }
 
     // Priority 4: Buy Major Arcana
-    const buyActions = peaceful.filter(a => a.type === 'BUY');
-    if (buyActions.length > 0) {
-      const goodBuy = this.pickBestBuy(buyActions, state, playerIndex);
-      if (goodBuy) return goodBuy;
+    if (!shouldSkipBuying(state, playerIndex)) {
+      const buyActions = peaceful.filter(a => a.type === 'BUY');
+      if (buyActions.length > 0) {
+        const goodBuy = this.pickBestBuy(buyActions, state, playerIndex);
+        if (goodBuy) return goodBuy;
+      }
     }
 
     // Priority 5: Play singles ONLY as last resort

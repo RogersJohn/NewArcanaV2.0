@@ -6,7 +6,7 @@
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, aceBlockValue, checkCelestialThreat, analyzeHandPotential } from './awareness.js';
+import { potUrgency, aceBlockValue, checkCelestialThreat, analyzeHandPotential, vpUrgency, shouldSkipBuying } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -54,6 +54,7 @@ export class ScoringAI extends RandomAI {
       }
 
       case 'PLAY_SET': {
+        const rush = vpUrgency(state, playerIndex);
         const setSize = action.cards.length;
         const newSize = player.realm.length + setSize;
         const setsBonus = setSize >= 5 ? 40 : setSize >= 3 ? 30 : setSize === 2 ? 18 : 2;
@@ -64,7 +65,8 @@ export class ScoringAI extends RandomAI {
         if (setSize === 1 && !action.isCompletion && player.realm.length < 4) {
           score -= 20 * urgency;
         }
-        return score;
+        // Apply VP rush multiplier
+        return score * rush;
       }
 
       case 'PLAY_ROYAL': {
@@ -93,7 +95,11 @@ export class ScoringAI extends RandomAI {
       }
 
       case 'PLAY_MAJOR_TOME': {
-        return estimateCardValue(state, playerIndex, action.card, 'tome');
+        let val = estimateCardValue(state, playerIndex, action.card, 'tome');
+        if (player.realm.length < 3 && !(action.card && isCelestial(action.card))) {
+          val *= 0.3;
+        }
+        return val;
       }
 
       case 'PLAY_MAJOR_ACTION': {
@@ -101,6 +107,7 @@ export class ScoringAI extends RandomAI {
       }
 
       case 'BUY': {
+        if (shouldSkipBuying(state, playerIndex)) return -15;
         const paymentTotal = action.payment.reduce((s, c) => s + c.purchaseValue, 0);
         const hasAce = action.payment.some(c => c.rank === 'ACE');
         if (hasAce) return -15; // Never spend aces
