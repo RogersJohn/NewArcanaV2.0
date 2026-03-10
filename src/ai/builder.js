@@ -6,12 +6,11 @@
  * Never attacks unless significantly behind.
  */
 
-import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { getHandRanking, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
+import { chooseActionByScore, BUILDER_WEIGHTS } from './personality.js';
+import { checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
-import { getMajorDef } from '../effect-resolver.js';
 
 export class BuilderAI extends RandomAI {
   constructor() {
@@ -20,139 +19,7 @@ export class BuilderAI extends RandomAI {
   }
 
   chooseAction(state, legalActions, playerIndex) {
-    const player = state.players[playerIndex];
-    const ranking = getHandRanking(state, playerIndex);
-
-    // Celestial threat check
-    const threat = checkCelestialThreat(state, playerIndex);
-    if (threat.threatening) {
-      const disruption = findCelestialDisruption(state, playerIndex, legalActions, threat.threatPlayer);
-      if (disruption) return disruption;
-    }
-
-    // VP leader Judgement: claim pot when winning hand and ahead in VP
-    if (player.vp > Math.max(0, ...state.players.filter((_, i) => i !== playerIndex).map(p => p.vp))) {
-      if (ranking.winning && player.realm.length >= 3) {
-        const judgementActions = legalActions.filter(a => {
-          if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-          const eff = getMajorDef(state, a.card.number);
-          return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
-        });
-        if (judgementActions.length > 0) return judgementActions[0];
-      }
-    }
-
-    // Priority 1: Play best set to realm
-    const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
-    if (setActions.length > 0) {
-      const best = this.pickBestSet(setActions, player, state);
-      if (best) return best;
-    }
-
-    // Priority 2: Attack when another player is beating our hand
-    if (!ranking.winning && player.realm.length >= 3) {
-      const royalActions = legalActions.filter(a => a.type === 'PLAY_ROYAL');
-      // Target only players beating us
-      const defensiveAttacks = royalActions.filter(a =>
-        ranking.beatenBy.includes(a.target?.playerIndex)
-      );
-      if (defensiveAttacks.length > 0) {
-        // Prefer Queens (get the card to our realm)
-        const queens = defensiveAttacks.filter(a => a.card.rank === 'QUEEN');
-        if (queens.length > 0) return queens[0];
-        return defensiveAttacks[0];
-      }
-    }
-
-    // Priority 3: Play wild if it significantly improves hand
-    const wildActions = legalActions.filter(a => a.type === 'PLAY_WILD');
-    if (wildActions.length > 0 && player.realm.length >= 2) {
-      return wildActions[0];
-    }
-
-    // Priority 4: Buy bonus/tome cards
-    if (!shouldSkipBuying(state, playerIndex)) {
-      const buyActions = legalActions.filter(a => a.type === 'BUY');
-      if (buyActions.length > 0) {
-        const goodBuy = this.pickBestBuy(buyActions, state, playerIndex);
-        if (goodBuy) return goodBuy;
-      }
-    }
-
-    // Priority 5: Play tome cards
-    const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0) {
-      // Always play Celestials to Tome
-      const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
-      if (celestialTome.length > 0) return celestialTome[0];
-      // Other tome plays only if realm is progressing
-      if (player.realm.length >= 3) return tomeActions[0];
-    }
-
-    return legalActions.find(a => a.type === 'PASS') || legalActions[0];
-  }
-
-  pickBestSet(setActions, player, state) {
-    let bestAction = null;
-    let bestRank = -1;
-
-    for (const action of setActions) {
-      // Evaluate what realm would look like after playing this set
-      const newRealm = [...player.realm, ...action.cards];
-      const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-      if (eval_.rank > bestRank) {
-        bestRank = eval_.rank;
-        bestAction = action;
-      }
-    }
-
-    // Only play if it improves from current
-    const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-    if (bestRank > currentEval.rank) return bestAction;
-
-    // Play multi-card sets even if rank doesn't improve
-    const multiCardSets = setActions.filter(a => a.cards.length >= 2);
-    if (multiCardSets.length > 0) return multiCardSets[0];
-
-    // Singles only as last resort: realm needs exactly 1 more, or empty with no pairs
-    if (player.realm.length === 4) return bestAction;
-    const potential = analyzeHandPotential(player.hand, player.realm);
-    if (player.realm.length === 0 && !potential.hasPairForming) return bestAction;
-
-    return null;
-  }
-
-  pickBestBuy(buyActions, state, playerIndex) {
-    let bestAction = null;
-    let bestNetValue = -Infinity;
-
-    for (const action of buyActions) {
-      const paymentHasAce = action.payment.some(c => c.rank === 'ACE');
-      const paymentHasKing = action.payment.some(c => c.rank === 'KING');
-      if (paymentHasAce) continue; // Never spend Aces
-
-      let cardValue = 5; // base value for blind draw
-      if (action.source.startsWith('display')) {
-        const slot = parseInt(action.source.slice(-1));
-        const card = state.display[slot];
-        if (card) {
-          cardValue = estimateCardValue(state, playerIndex, card, 'buy');
-          // Builder boost for bonus cards matching our realm
-          if (card.category === 'bonus-round' || card.category === 'tome') cardValue *= 1.3;
-        }
-      }
-
-      const paymentCost = action.payment.reduce((s, c) => s + c.purchaseValue, 0) * 0.4;
-      const kingPenalty = paymentHasKing ? 3 : 0;
-      const netValue = cardValue - paymentCost - kingPenalty;
-
-      if (netValue > bestNetValue) {
-        bestNetValue = netValue;
-        bestAction = action;
-      }
-    }
-
-    return bestNetValue > 2 ? bestAction : null; // Only buy if net-positive
+    return chooseActionByScore(state, legalActions, playerIndex, BUILDER_WEIGHTS);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {

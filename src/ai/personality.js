@@ -1,0 +1,290 @@
+/**
+ * Unified action scoring with personality weights.
+ *
+ * Every AI uses this function. Personality comes from the weights object.
+ * Returns scores for all legal actions, with optional noise for human-like variance.
+ */
+
+import { evaluateHand } from '../poker.js';
+import { isCelestial } from '../cards.js';
+import { analyzeHandPotential, vpUrgency, checkCelestialThreat, getHandRanking } from './awareness.js';
+import { estimateCardValue } from './card-value.js';
+import { getMajorDef } from '../effect-resolver.js';
+
+/**
+ * Default weight profile. Each AI overrides specific weights.
+ * Weights are multipliers applied to base scores.
+ */
+export const DEFAULT_WEIGHTS = {
+  // Core action type multipliers
+  setMulti: 1.0,       // Multi-card sets (pairs, triples, etc.)
+  setSingle: 0.2,      // Single card plays
+  setCompletion: 0.8,  // Completing/repairing an existing set
+  wild: 1.0,           // Wild card plays
+  attack: 0.5,         // Royal attacks
+  buy: 0.3,            // Buying Major Arcana
+  tome: 0.4,           // Playing to Tome
+  tomecelestial: 1.5,  // Playing Celestials to Tome (always high)
+  action: 0.5,         // Major Arcana action plays
+  pass: 0.0,           // Base PASS score (before hand potential)
+
+  // Behavioral modifiers
+  rushWhenAhead: true,    // Boost realm-building when VP leader
+  celestialAware: true,   // React to celestial threats
+  noise: 0.1,             // Random variance (0 = deterministic, 0.2 = moderate noise)
+
+  // Thresholds
+  aceBlockThreshold: 35,  // Minimum threat score to block with Ace
+  kingBlockMinRealm: 3,   // Minimum realm size to block with King
+};
+
+// --- Personality Weight Profiles ---
+
+export const PASSIVE_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.3,
+  attack: 0.0,
+  buy: 0.2,
+  tome: 0.3,
+  noise: 0.05,
+  aceBlockThreshold: 55,
+};
+
+export const BUILDER_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.4,
+  setSingle: 0.1,
+  wild: 1.2,
+  attack: 0.2,
+  buy: 0.35,
+  noise: 0.08,
+};
+
+export const AGGRESSOR_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 0.9,
+  attack: 1.2,
+  action: 0.8,
+  buy: 0.25,
+  noise: 0.15,
+};
+
+export const CELESTIAL_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 0.9,
+  tomecelestial: 2.5,
+  buy: 0.5,
+  tome: 0.6,
+  noise: 0.1,
+};
+
+export const CONTROLLER_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.1,
+  attack: 0.3,
+  tome: 0.5,
+  noise: 0.08,
+  aceBlockThreshold: 25,
+  kingBlockMinRealm: 2,
+};
+
+export const COLLECTOR_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.0,
+  buy: 0.6,
+  tome: 0.6,
+  action: 0.7,
+  noise: 0.12,
+};
+
+export const TACTICIAN_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.1,
+  action: 0.9,
+  attack: 0.4,
+  noise: 0.1,
+};
+
+export const OPPORTUNIST_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.1,
+  attack: 0.6,
+  buy: 0.35,
+  tome: 0.45,
+  action: 0.6,
+  wild: 1.1,
+  noise: 0.08,
+  rushWhenAhead: true,
+};
+
+export const SCORING_WEIGHTS = {
+  ...DEFAULT_WEIGHTS,
+  setMulti: 1.2,
+  setSingle: 0.15,
+  buy: 0.3,
+  tome: 0.35,
+  noise: 0.05,
+  rushWhenAhead: true,
+};
+
+/**
+ * Score a single action using personality weights.
+ *
+ * @param {object} state - Game state
+ * @param {number} playerIndex - Active player
+ * @param {object} action - Legal action to evaluate
+ * @param {object} weights - Personality weight profile
+ * @returns {number} Score (higher = better)
+ */
+export function scoreAction(state, playerIndex, action, weights) {
+  const player = state.players[playerIndex];
+  const opts = { aceHigh: state.config?.gameRules?.aceHigh ?? false };
+  const rush = weights.rushWhenAhead ? vpUrgency(state, playerIndex) : 1.0;
+
+  switch (action.type) {
+    case 'PASS': {
+      const potential = analyzeHandPotential(player.hand, player.realm);
+      // PASS is only good when hand has developing potential
+      // Base of 2 means PASS almost never wins over a real action
+      return (weights.pass + potential.holdScore * 0.3) * rush;
+    }
+
+    case 'PLAY_SET': {
+      const currentEval = evaluateHand(player.realm, opts);
+      const newRealm = [...player.realm, ...action.cards];
+      const newEval = evaluateHand(newRealm, opts);
+      const handImprovement = (newEval.rank - currentEval.rank) * 8;
+      const closingRealm = newRealm.length >= 5 ? 25 : newRealm.length >= 4 ? 10 : 0;
+
+      let baseScore;
+      if (action.cards.length >= 3) {
+        baseScore = 35 + handImprovement + closingRealm;
+      } else if (action.cards.length === 2) {
+        baseScore = 25 + handImprovement + closingRealm;
+      } else if (action.isCompletion) {
+        baseScore = 15 + handImprovement + closingRealm;
+        return baseScore * weights.setCompletion * rush;
+      } else {
+        // Single card — low base but not impossible
+        baseScore = 5 + closingRealm;
+        return baseScore * weights.setSingle * rush;
+      }
+
+      return baseScore * weights.setMulti * rush;
+    }
+
+    case 'PLAY_WILD': {
+      const currentEval = evaluateHand(player.realm, opts);
+      const newRealm = [...player.realm, action.card, ...(action.withCards || [])];
+      const newEval = evaluateHand(newRealm, opts);
+      const improvement = (newEval.rank - currentEval.rank) * 8;
+      const companions = (action.withCards || []).length;
+      const closingRealm = newRealm.length >= 5 ? 25 : newRealm.length >= 4 ? 10 : 0;
+      const baseScore = 20 + improvement + companions * 5 + closingRealm;
+      return baseScore * weights.wild * rush;
+    }
+
+    case 'PLAY_ROYAL': {
+      const targetPi = action.target?.playerIndex;
+      if (targetPi === playerIndex) return -5;
+      const targetVp = state.players[targetPi]?.vp || 0;
+      const targetRealmSize = state.players[targetPi]?.realm.length || 0;
+      const targetIsLeader = targetVp >= Math.max(...state.players.map(p => p.vp)) - 1;
+
+      let baseScore = 10;
+      if (targetIsLeader) baseScore += 10;
+      if (targetRealmSize >= 4) baseScore += 12;
+      if (action.card?.rank === 'QUEEN') baseScore += 8;
+      else if (action.card?.rank === 'KNIGHT') baseScore += 4;
+
+      return baseScore * weights.attack;
+    }
+
+    case 'PLAY_MAJOR_TOME': {
+      const cardVal = estimateCardValue(state, playerIndex, action.card, 'tome');
+      if (action.card && isCelestial(action.card)) {
+        return cardVal * weights.tomecelestial;
+      }
+      // Scale down tome plays when realm is small
+      const realmPenalty = player.realm.length < 3 ? 0.4 : 1.0;
+      return cardVal * weights.tome * realmPenalty;
+    }
+
+    case 'PLAY_MAJOR_ACTION': {
+      const cardVal = estimateCardValue(state, playerIndex, action.card, 'tome');
+      const realmPenalty = player.realm.length < 2 ? 0.3 : 1.0;
+      return cardVal * weights.action * realmPenalty;
+    }
+
+    case 'BUY': {
+      const paymentTotal = action.payment.reduce((s, c) => s + (c.purchaseValue || 0), 0);
+      const hasAce = action.payment.some(c => c.rank === 'ACE');
+      if (hasAce) return -10;
+
+      let cardValue = 8;
+      if (action.source.startsWith('display')) {
+        const slot = parseInt(action.source.slice(-1));
+        const card = state.display[slot];
+        if (card) cardValue = estimateCardValue(state, playerIndex, card, 'buy');
+      }
+
+      const netValue = cardValue - paymentTotal * 0.5;
+      // Scale down buying when realm is small
+      const realmPenalty = player.realm.length < 3 ? 0.3 : 1.0;
+      return netValue * weights.buy * realmPenalty;
+    }
+
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Choose the best action using weighted scoring with optional noise.
+ *
+ * @param {object} state
+ * @param {object[]} legalActions
+ * @param {number} playerIndex
+ * @param {object} weights - Personality weight profile
+ * @returns {object} Chosen action
+ */
+export function chooseActionByScore(state, legalActions, playerIndex, weights) {
+  const threat = weights.celestialAware ? checkCelestialThreat(state, playerIndex) : null;
+
+  const scored = legalActions.map(action => {
+    let score = scoreAction(state, playerIndex, action, weights);
+
+    // Celestial threat boost
+    if (threat && threat.threatening && targetsCelestialThreat(action, state, threat.threatPlayer)) {
+      score += 200;
+    }
+
+    // Add noise for human-like variance
+    if (weights.noise > 0) {
+      const noiseAmount = Math.abs(score) * weights.noise;
+      score += (state.rng.next() - 0.5) * 2 * noiseAmount;
+    }
+
+    return { action, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.action || legalActions[0];
+}
+
+/** Check if an action disrupts a celestial threat. */
+function targetsCelestialThreat(action, state, threatPlayer) {
+  if (action.type === 'PLAY_MAJOR_ACTION' && action.card) {
+    const eff = getMajorDef(state, action.card.number);
+    const act = eff?.effect?.action;
+    if (act === 'STEAL_FROM_TOME' && action.targets?.playerIndex === threatPlayer) return true;
+    if (act === 'TOWER_DESTROY') return true;
+    if (act === 'MOVE_MAJOR_TO_REALM' && action.targets?.playerIndex === threatPlayer) return true;
+    if (act === 'MOVE_CELESTIAL_TO_TOME') return true;
+  }
+  if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === threatPlayer) {
+    const targetCard = state.players[threatPlayer]?.realm[action.target.realmIndex];
+    if (targetCard && targetCard.type === 'major') return true;
+  }
+  return false;
+}

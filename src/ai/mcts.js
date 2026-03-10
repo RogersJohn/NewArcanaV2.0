@@ -17,6 +17,7 @@ import { playGame } from '../engine.js';
 import { createRNG } from '../rng.js';
 import { createCardTracker } from './card-tracker.js';
 import { isCelestial } from '../cards.js';
+import { scoreAction, SCORING_WEIGHTS } from './personality.js';
 
 // Rollout policy AI — reuse a single instance
 const rolloutAI = new ScoringAI();
@@ -49,7 +50,7 @@ export class MctsAI extends RandomAI {
     const scored = legalActions.map((action, idx) => ({
       action,
       idx,
-      heuristicScore: this._scoringAI.simulateAction(state, playerIndex, action),
+      heuristicScore: scoreAction(state, playerIndex, action, SCORING_WEIGHTS),
     }));
     scored.sort((a, b) => b.heuristicScore - a.heuristicScore);
     const candidates = scored.slice(0, this.maxCandidates);

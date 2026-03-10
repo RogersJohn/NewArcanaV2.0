@@ -1,14 +1,14 @@
 /**
- * ScoringAI: 1-step lookahead AI that evaluates each legal action
- * by simulating immediate card movements on a cloned state and
- * scoring the resulting position.
+ * ScoringAI: Analytical AI that evaluates each legal action
+ * using the shared personality scoring system.
+ * Most consistent/analytical personality with low noise.
  */
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, aceBlockValue, checkCelestialThreat, analyzeHandPotential, vpUrgency, shouldSkipBuying } from './awareness.js';
+import { chooseActionByScore, SCORING_WEIGHTS } from './personality.js';
+import { aceBlockValue, checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
-import { getMajorDef } from '../effect-resolver.js';
 
 export class ScoringAI extends RandomAI {
   constructor() {
@@ -17,172 +17,7 @@ export class ScoringAI extends RandomAI {
   }
 
   chooseAction(state, legalActions, playerIndex) {
-    // Priority: disrupt celestial threats
-    const threat = checkCelestialThreat(state, playerIndex);
-
-    let bestAction = legalActions[0]; // PASS fallback
-    let bestScore = -Infinity;
-
-    for (const action of legalActions) {
-      let score = this.simulateAction(state, playerIndex, action);
-
-      // Boost anti-celestial actions
-      if (threat.threatening && this.targetsThreat(action, state, threat.threatPlayer)) {
-        score += 5000;
-      }
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestAction = action;
-      }
-    }
-
-    return bestAction;
-  }
-
-  /**
-   * Simulate an action's immediate effect and return a position score.
-   */
-  simulateAction(state, playerIndex, action) {
-    const player = state.players[playerIndex];
-    const urgency = potUrgency(state);
-
-    switch (action.type) {
-      case 'PASS': {
-        const potential = analyzeHandPotential(player.hand, player.realm);
-        return Math.max(potential.holdScore, 5) * Math.max(0.5, urgency);
-      }
-
-      case 'PLAY_SET': {
-        const rush = vpUrgency(state, playerIndex);
-        const setSize = action.cards.length;
-        const newSize = player.realm.length + setSize;
-        const setsBonus = setSize >= 5 ? 40 : setSize >= 3 ? 30 : setSize === 2 ? 18 : 2;
-        const realmTrigger = newSize >= 5 ? 20 : 0;
-        let score = (setsBonus + newSize * 2 + realmTrigger) * urgency;
-
-        // Heavy penalty for random singles
-        if (setSize === 1 && !action.isCompletion && player.realm.length < 4) {
-          score -= 20 * urgency;
-        }
-        // Apply VP rush multiplier
-        return score * rush;
-      }
-
-      case 'PLAY_ROYAL': {
-        if (action.target.playerIndex === playerIndex) return -10;
-        const targetPlayer = state.players[action.target.playerIndex];
-        const targetVp = targetPlayer.vp;
-        const myVp = player.vp;
-        const targetIsLeader = targetVp >= Math.max(...state.players.map(p => p.vp)) - 1;
-        const targetRealmSize = targetPlayer.realm.length;
-        // More valuable to attack large realms and leaders
-        const disruptValue = targetRealmSize * 4 + (targetIsLeader ? 12 : 0);
-        // Queen is best (move to our realm), Knight second (steal to hand), Page worst (destroy)
-        const rankBonus = action.card.rank === 'QUEEN' ? 10 : action.card.rank === 'KNIGHT' ? 6 : 2;
-        return disruptValue + rankBonus;
-      }
-
-      case 'PLAY_WILD': {
-        const companionCount = action.withCards ? action.withCards.length : 0;
-        const newSize = player.realm.length + 1 + companionCount;
-        // Wild cards make strongest possible hand — always good
-        const wildBonus = 30;
-        const companionBonus = companionCount * 5;
-        const sizeBonus = newSize * 3;
-        const realmTrigger = newSize >= 5 ? 20 : 0;
-        return wildBonus + companionBonus + sizeBonus + realmTrigger + 3;
-      }
-
-      case 'PLAY_MAJOR_TOME': {
-        let val = estimateCardValue(state, playerIndex, action.card, 'tome');
-        if (player.realm.length < 3 && !(action.card && isCelestial(action.card))) {
-          val *= 0.3;
-        }
-        return val;
-      }
-
-      case 'PLAY_MAJOR_ACTION': {
-        return this.scoreMajorAction(state, playerIndex, action);
-      }
-
-      case 'BUY': {
-        if (shouldSkipBuying(state, playerIndex)) return -15;
-        const paymentTotal = action.payment.reduce((s, c) => s + c.purchaseValue, 0);
-        const hasAce = action.payment.some(c => c.rank === 'ACE');
-        if (hasAce) return -15; // Never spend aces
-        const hasKing = action.payment.some(c => c.rank === 'KING');
-        if (hasKing) return -5; // Avoid spending kings
-
-        let cardValue = 5;
-        if (action.source.startsWith('display')) {
-          const slot = parseInt(action.source.slice(-1));
-          const card = state.display[slot];
-          if (card) cardValue = estimateCardValue(state, playerIndex, card, 'buy');
-        }
-        // Reduce buy value when pot is high (should be building realm instead)
-        const paymentCost = paymentTotal * 0.6;
-        return (cardValue - paymentCost) * (1 / Math.max(urgency, 0.5));
-      }
-
-      default:
-        return 0;
-    }
-  }
-
-  scoreMajorAction(state, playerIndex, action) {
-    const card = action.card;
-    if (!card) return 10;
-    return estimateCardValue(state, playerIndex, card, 'tome');
-  }
-
-  /**
-   * Evaluate overall position quality for a player.
-   */
-  evaluatePosition(state, playerIndex) {
-    const player = state.players[playerIndex];
-    let score = 0;
-
-    // Realm quality heuristic (avoid expensive evaluateHand calls)
-    if (player.realm.length > 0) {
-      const hasWild = player.realm.some(c => c.type === 'major');
-      const rankCounts = {};
-      for (const c of player.realm) {
-        if (c.type === 'minor') rankCounts[c.numericRank] = (rankCounts[c.numericRank] || 0) + 1;
-      }
-      const maxGroup = Math.max(0, ...Object.values(rankCounts));
-      const groupScore = maxGroup >= 4 ? 8 : maxGroup >= 3 ? 6 : maxGroup >= 2 ? 4 : 2;
-      score += (groupScore + (hasWild ? 3 : 0)) * 15;
-    }
-
-    // Realm card count (proximity to 5 for round trigger)
-    score += player.realm.length * 3;
-
-    // Celestial count in tome
-    const celestials = player.tome.filter(c => isCelestial(c)).length;
-    score += celestials * 10;
-
-    // Bonus cards in tome
-    const bonusCards = player.tome.filter(c =>
-      c.category === 'bonus-round' || (c.keywords && c.keywords.includes('bonus'))
-    ).length;
-    score += bonusCards * 3;
-
-    // VP advantage
-    const myVp = player.vp;
-    const bestOpponentVp = Math.max(0, ...state.players
-      .filter((_, i) => i !== playerIndex)
-      .map(p => p.vp));
-    score += (myVp - bestOpponentVp) * 2;
-
-    // Hand quality
-    for (const card of player.hand) {
-      if (card.type === 'minor' && card.rank === 'ACE') score += 5;
-      if (card.type === 'minor' && card.rank === 'KING') score += 3;
-      if (card.type === 'major') score += 4;
-    }
-
-    return score;
+    return chooseActionByScore(state, legalActions, playerIndex, SCORING_WEIGHTS);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
@@ -257,21 +92,5 @@ export class ScoringAI extends RandomAI {
       if (score < worstScore) { worstScore = score; worstIdx = i; }
     }
     return worstIdx;
-  }
-
-  targetsThreat(action, state, threatPlayer) {
-    if (action.type === 'PLAY_MAJOR_ACTION' && action.card) {
-      const eff = getMajorDef(state, action.card.number);
-      const act = eff?.effect?.action;
-      if (act === 'STEAL_FROM_TOME' && action.targets?.playerIndex === threatPlayer) return true;
-      if (act === 'TOWER_DESTROY') return true;
-      if (act === 'MOVE_MAJOR_TO_REALM' && action.targets?.playerIndex === threatPlayer) return true;
-      if (act === 'MOVE_CELESTIAL_TO_TOME') return true;
-    }
-    if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === threatPlayer) {
-      const targetCard = state.players[threatPlayer].realm?.[action.target.realmIndex];
-      if (targetCard && targetCard.type === 'major') return true;
-    }
-    return false;
   }
 }

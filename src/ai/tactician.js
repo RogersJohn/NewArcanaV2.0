@@ -5,10 +5,10 @@
  * Times realm-building to peak at round end.
  */
 
-import { evaluateHand } from '../poker.js';
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { potUrgency, getHandRanking, aceBlockValue, checkCelestialThreat, findCelestialDisruption, analyzeHandPotential, shouldSkipBuying } from './awareness.js';
+import { chooseActionByScore, TACTICIAN_WEIGHTS } from './personality.js';
+import { aceBlockValue, checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -19,145 +19,7 @@ export class TacticianAI extends RandomAI {
   }
 
   chooseAction(state, legalActions, playerIndex) {
-    const player = state.players[playerIndex];
-    const urgency = potUrgency(state);
-    const ranking = getHandRanking(state, playerIndex);
-
-    // Priority 0: Celestial threat disruption
-    const threat = checkCelestialThreat(state, playerIndex);
-    if (threat.threatening) {
-      const disruption = findCelestialDisruption(state, playerIndex, legalActions, threat.threatPlayer);
-      if (disruption) return disruption;
-    }
-
-    // Priority 1: Build realm aggressively (Judgement needs a strong hand to be useful)
-    const setActions = legalActions.filter(a => a.type === 'PLAY_SET');
-    if (setActions.length > 0) {
-      const best = this.pickTimedSet(setActions, player, state);
-      if (best) return best;
-    }
-
-    // Priority 2: Judgement when winning pot AND have 3+ realm cards
-    // VP leaders use Judgement more aggressively to compound lead
-    const judgementActions = legalActions.filter(a => {
-      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = getMajorDef(state, a.card.number);
-      return eff?.effect?.action === 'CLAIM_ROUND_END_MARKER';
-    });
-    const isVpLeader = player.vp > Math.max(0, ...state.players.filter((_, i) => i !== playerIndex).map(p => p.vp));
-    if (judgementActions.length > 0 && ranking.winning && player.realm.length >= 3) {
-      return judgementActions[0];
-    }
-    // VP leader plays Judgement even with just realm >= 3 (don't need to be winning yet)
-    if (judgementActions.length > 0 && isVpLeader && player.realm.length >= 3) {
-      return judgementActions[0];
-    }
-
-    // Priority 3: Attack marker holders ONLY if they would beat us
-    const markerHolder = state.roundEndMarkerHolder;
-    if (markerHolder >= 0 && markerHolder !== playerIndex && ranking.beatenBy.includes(markerHolder)) {
-      const markerAttacks = legalActions.filter(a =>
-        a.type === 'PLAY_ROYAL' && a.target?.playerIndex === markerHolder
-      );
-      if (markerAttacks.length > 0) return markerAttacks[0];
-    }
-
-    // Priority 4: Wheel of Fortune (card advantage — play aggressively)
-    const wheelActions = legalActions.filter(a => {
-      if (a.type !== 'PLAY_MAJOR_ACTION' || !a.card) return false;
-      const eff = getMajorDef(state, a.card.number);
-      return eff?.effect?.action === 'WHEEL_OF_FORTUNE';
-    });
-    if (wheelActions.length > 0) return wheelActions[0];
-
-    // Priority 5: Play tome cards
-    const tomeActions = legalActions.filter(a => a.type === 'PLAY_MAJOR_TOME');
-    if (tomeActions.length > 0) {
-      // Always play Celestials to Tome
-      const celestialTome = tomeActions.filter(a => a.card && isCelestial(a.card));
-      if (celestialTome.length > 0) return celestialTome[0];
-      // Other tome plays only if realm is progressing
-      if (player.realm.length >= 3) return tomeActions[0];
-    }
-
-    // Priority 6: Buy cards (prefer Judgement-like)
-    if (!shouldSkipBuying(state, playerIndex)) {
-      const buyActions = legalActions.filter(a => a.type === 'BUY');
-      if (buyActions.length > 0) {
-        const goodBuy = this.pickTacticalBuy(buyActions, state, playerIndex);
-        if (goodBuy) return goodBuy;
-      }
-    }
-
-    // Priority 7: Wild card play
-    const wildActions = legalActions.filter(a => a.type === 'PLAY_WILD');
-    if (wildActions.length > 0 && player.realm.length >= 2) {
-      return wildActions[0];
-    }
-
-    return legalActions.find(a => a.type === 'PASS') || legalActions[0];
-  }
-
-  pickTimedSet(setActions, player, state) {
-    // Near round end (someone has marker or close to 5 cards), play biggest sets
-    const someoneClose = state.players.some(p => p.realm.length >= 4);
-    const hasMarker = state.roundEndMarkerHolder >= 0;
-
-    if (someoneClose || hasMarker) {
-      // Play the best multi-card set, or completions, or singles if realm needs 1
-      const multiSets = setActions.filter(a => a.cards.length >= 2);
-      if (multiSets.length > 0) {
-        let bestAction = null;
-        let bestRank = -1;
-        for (const action of multiSets) {
-          const newRealm = [...player.realm, ...action.cards];
-          const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-          if (eval_.rank > bestRank) { bestRank = eval_.rank; bestAction = action; }
-        }
-        return bestAction;
-      }
-      const completions = setActions.filter(a => a.isCompletion);
-      if (completions.length > 0) return completions[0];
-      if (player.realm.length === 4) return setActions[0];
-      return null;
-    }
-
-    // Early game: multi-card sets only
-    const multiSets = setActions.filter(a => a.cards.length >= 2);
-    if (multiSets.length > 0) return multiSets[multiSets.length - 1];
-
-    // Completions are OK
-    const completions = setActions.filter(a => a.isCompletion);
-    if (completions.length > 0) return completions[0];
-
-    // Singles only if realm needs 1 more, or empty with no pairs
-    if (player.realm.length === 4) return setActions[0];
-    if (player.realm.length === 0) {
-      const potential = analyzeHandPotential(player.hand, player.realm);
-      if (!potential.hasPairForming) return setActions[0];
-    }
-
-    return null;
-  }
-
-  pickTacticalBuy(buyActions, state, playerIndex) {
-    const noAce = buyActions.filter(a => !a.payment.some(c => c.rank === 'ACE'));
-    let bestAction = null;
-    let bestScore = 0;
-    for (const action of noAce) {
-      if (action.source.startsWith('display')) {
-        const slot = parseInt(action.source.slice(-1));
-        const card = state.display[slot];
-        if (card) {
-          let val = estimateCardValue(state, playerIndex, card, 'buy');
-          // Tactician personality: boost Judgement-like cards
-          const eff = getMajorDef(state, card.number);
-          if (eff?.effect?.action === 'CLAIM_ROUND_END_MARKER') val *= 1.8;
-          if (val > bestScore) { bestScore = val; bestAction = action; }
-        }
-      }
-    }
-    return bestAction || (noAce.length > 0 ? noAce[0] : null);
+    return chooseActionByScore(state, legalActions, playerIndex, TACTICIAN_WEIGHTS);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
