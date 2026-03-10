@@ -54,12 +54,13 @@ export class CelestialAI extends RandomAI {
         }
         if (best) return best;
       }
-      // Play singles to build up realm (only if no developing sets)
-      if (player.realm.length < 4) {
-        const completions = setActions.filter(a => a.isCompletion);
-        if (completions.length > 0) return completions[0];
+      // Completions are OK, but random singles only if realm needs 1 more or empty with no pairs
+      const completions = setActions.filter(a => a.isCompletion);
+      if (completions.length > 0) return completions[0];
+      if (player.realm.length === 4) return setActions[0];
+      if (player.realm.length === 0) {
         const potential = analyzeHandPotential(player.hand, player.realm);
-        if (player.realm.length < 3 && !potential.hasPairForming) return setActions[0];
+        if (!potential.hasPairForming) return setActions[0];
       }
     }
 
@@ -98,10 +99,9 @@ export class CelestialAI extends RandomAI {
       if (noAceBuys.length > 0) return noAceBuys[0];
     }
 
-    // Priority 8: Play remaining singles (only if no developing sets)
-    if (setActions.length > 0 && player.realm.length < 5) {
-      const potential = analyzeHandPotential(player.hand, player.realm);
-      if (!potential.hasPairForming) return setActions[0];
+    // Priority 8: Play singles only if realm needs exactly 1 more
+    if (setActions.length > 0 && player.realm.length === 4) {
+      return setActions[0];
     }
 
     return legalActions.find(a => a.type === 'PASS') || legalActions[0];

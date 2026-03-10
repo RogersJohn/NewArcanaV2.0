@@ -50,24 +50,28 @@ export class OpportunistAI extends RandomAI {
     switch (action.type) {
       case 'PASS': {
         const potential = analyzeHandPotential(player.hand, player.realm);
-        return potential.holdScore;
+        // Even without developing sets, passing is OK — next draw might help
+        return Math.max(potential.holdScore, 5);
       }
 
       case 'PLAY_SET': {
-        const currentEval = evaluateHand(player.realm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
+        const opts = { aceHigh: state.config?.gameRules?.aceHigh ?? false };
+        const currentEval = evaluateHand(player.realm, opts);
         const newRealm = [...player.realm, ...action.cards];
-        const newEval = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
+        const newEval = evaluateHand(newRealm, opts);
         const improvement = (newEval.rank - currentEval.rank) * 10;
-        const sizeBonus = action.cards.length * 2;
         const closeTo5 = newRealm.length >= 4 ? 15 : 0;
-        let score = improvement + sizeBonus + closeTo5 + 1;
 
-        // PENALTY for single-card plays when hand has multi-card potential
-        if (action.cards.length === 1) {
-          const potential = analyzeHandPotential(player.hand, player.realm);
-          if (potential.hasPairForming) {
-            score -= potential.holdScore;
-          }
+        // Strong bonus for multi-card sets
+        const multiCardBonus = action.cards.length >= 3 ? 30
+                             : action.cards.length === 2 ? 20
+                             : 0;
+
+        let score = improvement + multiCardBonus + closeTo5 + 1;
+
+        // HEAVY penalty for singles (unless completing realm or repairing a set)
+        if (action.cards.length === 1 && !action.isCompletion && player.realm.length < 4) {
+          score -= 25;
         }
 
         return score;

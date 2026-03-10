@@ -50,23 +50,19 @@ export class ScoringAI extends RandomAI {
     switch (action.type) {
       case 'PASS': {
         const potential = analyzeHandPotential(player.hand, player.realm);
-        return potential.holdScore * Math.max(0.5, urgency);
+        return Math.max(potential.holdScore, 5) * Math.max(0.5, urgency);
       }
 
       case 'PLAY_SET': {
-        const newSize = player.realm.length + action.cards.length;
         const setSize = action.cards.length;
-        const setsBonus = setSize >= 3 ? 25 : setSize === 2 ? 15 : 5;
-        const sizeBonus = newSize * 3;
+        const newSize = player.realm.length + setSize;
+        const setsBonus = setSize >= 5 ? 40 : setSize >= 3 ? 30 : setSize === 2 ? 18 : 2;
         const realmTrigger = newSize >= 5 ? 20 : 0;
-        let score = (setsBonus + sizeBonus + realmTrigger + 5) * urgency;
+        let score = (setsBonus + newSize * 2 + realmTrigger) * urgency;
 
-        // Single-card penalty
-        if (setSize === 1) {
-          const potential = analyzeHandPotential(player.hand, player.realm);
-          if (potential.hasPairForming) {
-            score -= potential.holdScore * urgency;
-          }
+        // Heavy penalty for random singles
+        if (setSize === 1 && !action.isCompletion && player.realm.length < 4) {
+          score -= 20 * urgency;
         }
         return score;
       }

@@ -94,25 +94,35 @@ export class TacticianAI extends RandomAI {
     const hasMarker = state.roundEndMarkerHolder >= 0;
 
     if (someoneClose || hasMarker) {
-      // Play the best hand-improving set
-      let bestAction = null;
-      let bestRank = -1;
-      for (const action of setActions) {
-        const newRealm = [...player.realm, ...action.cards];
-        const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-        if (eval_.rank > bestRank) {
-          bestRank = eval_.rank;
-          bestAction = action;
+      // Play the best multi-card set, or completions, or singles if realm needs 1
+      const multiSets = setActions.filter(a => a.cards.length >= 2);
+      if (multiSets.length > 0) {
+        let bestAction = null;
+        let bestRank = -1;
+        for (const action of multiSets) {
+          const newRealm = [...player.realm, ...action.cards];
+          const eval_ = evaluateHand(newRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
+          if (eval_.rank > bestRank) { bestRank = eval_.rank; bestAction = action; }
         }
+        return bestAction;
       }
-      return bestAction;
+      const completions = setActions.filter(a => a.isCompletion);
+      if (completions.length > 0) return completions[0];
+      if (player.realm.length === 4) return setActions[0];
+      return null;
     }
 
-    // Early game: build incrementally
+    // Early game: multi-card sets only
     const multiSets = setActions.filter(a => a.cards.length >= 2);
     if (multiSets.length > 0) return multiSets[multiSets.length - 1];
 
-    if (player.realm.length < 3) {
+    // Completions are OK
+    const completions = setActions.filter(a => a.isCompletion);
+    if (completions.length > 0) return completions[0];
+
+    // Singles only if realm needs 1 more, or empty with no pairs
+    if (player.realm.length === 4) return setActions[0];
+    if (player.realm.length === 0) {
       const potential = analyzeHandPotential(player.hand, player.realm);
       if (!potential.hasPairForming) return setActions[0];
     }

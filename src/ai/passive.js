@@ -23,18 +23,19 @@ export class PassiveAI extends RandomAI {
       a.type !== 'PLAY_MAJOR_ACTION'
     );
 
-    // Priority 1: Play best multi-card set to realm
+    // Priority 1: Play best multi-card set or completion to realm
     const setActions = peaceful.filter(a => a.type === 'PLAY_SET');
     if (setActions.length > 0) {
-      const potential = analyzeHandPotential(player.hand, player.realm);
+      const multiCardSets = setActions.filter(a => a.cards.length >= 2);
+      const completions = setActions.filter(a => a.cards.length === 1 && a.isCompletion);
 
-      // Only consider multi-card sets if hand has developing potential
-      const candidateSets = potential.hasPairForming && player.realm.length < 3
-        ? setActions.filter(a => a.cards.length >= 2)
-        : setActions;
-
-      const best = this.pickBestSet(candidateSets.length > 0 ? candidateSets : setActions, player, state);
-      if (best) return best;
+      // Always prefer multi-card sets
+      if (multiCardSets.length > 0) {
+        const best = this.pickBestSet(multiCardSets, player, state);
+        if (best) return best;
+      }
+      // Completions are OK (they repair existing sets)
+      if (completions.length > 0) return completions[0];
     }
 
     // Priority 2: Play wild if realm has cards to combine with
@@ -72,10 +73,11 @@ export class PassiveAI extends RandomAI {
       if (goodBuy) return goodBuy;
     }
 
-    // Priority 5: Play singles to realm only if no hand potential
-    const potential2 = analyzeHandPotential(player.hand, player.realm);
-    if (setActions.length > 0 && player.realm.length < 3 && !potential2.hasPairForming) {
-      return setActions[0];
+    // Priority 5: Play singles ONLY as last resort
+    if (setActions.length > 0) {
+      if (player.realm.length === 4) return setActions[0]; // One more completes realm
+      const potential2 = analyzeHandPotential(player.hand, player.realm);
+      if (player.realm.length === 0 && !potential2.hasPairForming) return setActions[0];
     }
 
     return peaceful.find(a => a.type === 'PASS') || legalActions.find(a => a.type === 'PASS') || legalActions[0];
@@ -101,10 +103,7 @@ export class PassiveAI extends RandomAI {
     const multiCardSets = setActions.filter(a => a.cards.length >= 2);
     if (multiCardSets.length > 0) return multiCardSets[0];
 
-    // Play singles only if realm is tiny AND no developing sets in hand
-    const potential = analyzeHandPotential(player.hand, player.realm);
-    if (player.realm.length < 2 && !potential.hasPairForming) return bestAction;
-
+    // Never play singles from pickBestSet — handled at Priority 5
     return null;
   }
 

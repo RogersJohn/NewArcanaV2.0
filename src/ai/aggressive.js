@@ -38,9 +38,10 @@ export class AggressorAI extends RandomAI {
         multiSets.sort((a, b) => b.cards.length - a.cards.length);
         return multiSets[0];
       }
-      if (setActions.length > 0 && player.realm.length < 2) {
+      // Singles only if realm empty and no pairs in hand
+      if (setActions.length > 0 && player.realm.length === 0) {
         const potential = analyzeHandPotential(player.hand, player.realm);
-        if (!potential.hasPairForming) return setActions[0]; // Play a single to get started
+        if (!potential.hasPairForming) return setActions[0];
       }
     }
 
@@ -58,12 +59,10 @@ export class AggressorAI extends RandomAI {
         multiSets.sort((a, b) => b.cards.length - a.cards.length);
         return multiSets[0];
       }
-      if (player.realm.length < 5) {
-        const completions = setActions.filter(a => a.isCompletion);
-        if (completions.length > 0) return completions[0];
-        const potential = analyzeHandPotential(player.hand, player.realm);
-        if (!potential.hasPairForming) return setActions[0];
-      }
+      // Completions are OK, but random singles only if realm needs 1 more
+      const completions = setActions.filter(a => a.isCompletion);
+      if (completions.length > 0) return completions[0];
+      if (player.realm.length === 4) return setActions[0];
     }
 
     // Priority 4: Attack even when winning (if opponent has large realm)

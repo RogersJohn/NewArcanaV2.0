@@ -95,9 +95,10 @@ export class BuilderAI extends RandomAI {
     const multiCardSets = setActions.filter(a => a.cards.length >= 2);
     if (multiCardSets.length > 0) return multiCardSets[0];
 
-    // Play singles only if realm is tiny AND no developing sets in hand
+    // Singles only as last resort: realm needs exactly 1 more, or empty with no pairs
+    if (player.realm.length === 4) return bestAction;
     const potential = analyzeHandPotential(player.hand, player.realm);
-    if (player.realm.length < 2 && !potential.hasPairForming) return bestAction;
+    if (player.realm.length === 0 && !potential.hasPairForming) return bestAction;
 
     return null;
   }

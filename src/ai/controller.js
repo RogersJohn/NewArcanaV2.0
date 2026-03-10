@@ -71,10 +71,13 @@ export class ControllerAI extends RandomAI {
       }
     }
 
-    // Priority 4: Play singles to reach realm of 3+ (only if no developing sets)
-    if (player.realm.length < 3 && setActions.length > 0) {
-      const potential = analyzeHandPotential(player.hand, player.realm);
-      if (!potential.hasPairForming) return setActions[0];
+    // Priority 4: Play singles ONLY as last resort
+    if (setActions.length > 0) {
+      if (player.realm.length === 4) return setActions[0];
+      if (player.realm.length === 0) {
+        const potential = analyzeHandPotential(player.hand, player.realm);
+        if (!potential.hasPairForming) return setActions[0];
+      }
     }
 
     // Priority 5: Buy anything affordable (only if realm >= 3 and pot urgency low)
@@ -112,11 +115,7 @@ export class ControllerAI extends RandomAI {
     const completions = setActions.filter(a => a.isCompletion);
     if (completions.length > 0) return completions[0];
 
-    // Play singles if realm < 4 (only if no developing sets)
-    if (player.realm.length < 4) {
-      const potential = analyzeHandPotential(player.hand, player.realm);
-      if (!potential.hasPairForming) return setActions[0];
-    }
+    // Never play random singles from pickConsistentSet — handled at Priority 4
 
     return null;
   }
