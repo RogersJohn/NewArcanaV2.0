@@ -22,7 +22,7 @@ export const DEFAULT_WEIGHTS = {
   setCompletion: 0.8,  // Completing/repairing an existing set
   wild: 0.5,           // Wild card plays — last resort, not primary strategy
   attack: 0.3,         // Royal attacks
-  buy: 0.4,            // Buying Major Arcana — helps deplete Major deck
+  buy: 0.6,            // Buying Major Arcana — helps deplete Major deck
   tome: 0.4,           // Playing to Tome
   tomecelestial: 1.5,  // Playing Celestials to Tome (always high)
   action: 0.5,         // Major Arcana action plays
@@ -44,7 +44,7 @@ export const PASSIVE_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.3,
   attack: 0.0,
-  buy: 0.2,
+  buy: 0.4,
   tome: 0.3,
   noise: 0.05,
   aceBlockThreshold: 55,
@@ -55,6 +55,7 @@ export const BUILDER_WEIGHTS = {
   setMulti: 1.4,
   setSingle: 0.1,
   wild: 0.5,
+  buy: 0.5,
   attack: 0.15,
   noise: 0.08,
 };
@@ -62,6 +63,7 @@ export const BUILDER_WEIGHTS = {
 export const AGGRESSOR_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 0.9,
+  buy: 0.5,
   attack: 0.7,
   action: 0.8,
   noise: 0.15,
@@ -71,7 +73,7 @@ export const CELESTIAL_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 0.9,
   tomecelestial: 2.5,
-  buy: 0.6,
+  buy: 0.8,
   tome: 0.6,
   noise: 0.1,
 };
@@ -79,6 +81,7 @@ export const CELESTIAL_WEIGHTS = {
 export const CONTROLLER_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.1,
+  buy: 0.5,
   attack: 0.2,
   tome: 0.5,
   noise: 0.08,
@@ -89,7 +92,7 @@ export const CONTROLLER_WEIGHTS = {
 export const COLLECTOR_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.0,
-  buy: 0.7,
+  buy: 0.9,
   tome: 0.6,
   action: 0.7,
   noise: 0.12,
@@ -98,6 +101,7 @@ export const COLLECTOR_WEIGHTS = {
 export const TACTICIAN_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.1,
+  buy: 0.5,
   action: 0.9,
   attack: 0.3,
   noise: 0.1,
@@ -117,7 +121,7 @@ export const SCORING_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.2,
   setSingle: 0.15,
-  buy: 0.3,
+  buy: 0.5,
   tome: 0.35,
   noise: 0.05,
   rushWhenAhead: true,
@@ -237,9 +241,9 @@ export function scoreAction(state, playerIndex, action, weights) {
       }
 
       const netValue = cardValue - paymentTotal * 0.5;
-      // Scale down buying when realm is small
-      const realmPenalty = player.realm.length < 3 ? 0.3 : 1.0;
-      return netValue * weights.buy * realmPenalty;
+      // REMOVED: realmPenalty — buying should happen whenever no pair is available,
+      // regardless of realm size. It depletes the Major deck which brings Death closer.
+      return netValue * weights.buy;
     }
 
     default:
