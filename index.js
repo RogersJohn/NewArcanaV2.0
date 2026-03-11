@@ -35,6 +35,7 @@ function parseArgs(argv) {
     cardBalance: false,
     config: null,
     compare: null, // [configA, configB] paths
+    learn: false,
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -75,6 +76,9 @@ function parseArgs(argv) {
       case '--compare':
         args.compare = [argv[++i], argv[++i]];
         break;
+      case '--learn':
+        args.learn = true;
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -90,7 +94,8 @@ Usage: node index.js [options]
   --report        Generate card analytics report
   --card-balance  Run card balance analysis (5 metrics with anomaly flags)
   --config FILE   Path to card/game config JSON (overrides defaults)
-  --compare A B   A/B comparison mode: run same games under two config files`);
+  --compare A B   A/B comparison mode: run same games under two config files
+  --learn         Enable cross-game weight adaptation (AIs learn from outcomes)`);
         process.exit(0);
     }
   }
@@ -177,6 +182,7 @@ if (args.compare) {
     verbose: args.verbose,
     seed: args.seed,
     cardConfig,
+    learning: args.learn,
   });
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -202,12 +208,24 @@ if (args.compare) {
     }
   }
 
+  if (args.learn && simResults.learnedWeights) {
+    console.log('\n============================================================');
+    console.log('  LEARNED WEIGHTS (after ' + args.games + ' games)');
+    console.log('============================================================');
+    for (const [name, w] of Object.entries(simResults.learnedWeights)) {
+      const keys = ['setMulti', 'setSingle', 'wild', 'attack', 'buy', 'tome', 'action', 'pass'];
+      const vals = keys.map(k => k + '=' + (w[k] ?? 0).toFixed(3));
+      console.log('  ' + name.padEnd(14) + vals.join('  '));
+    }
+  }
+
   if (args.json) {
     try {
       // Ensure directory exists
       const dir = args.json.includes('/') ? args.json.substring(0, args.json.lastIndexOf('/')) : '.';
       if (dir !== '.') mkdirSync(dir, { recursive: true });
       const jsonOutput = cardAnalytics ? { ...stats, cardAnalytics } : stats;
+      if (simResults.learnedWeights) jsonOutput.learnedWeights = simResults.learnedWeights;
       writeFileSync(args.json, JSON.stringify(jsonOutput, null, 2));
       console.log(`\nJSON stats saved to ${args.json}`);
     } catch (e) {

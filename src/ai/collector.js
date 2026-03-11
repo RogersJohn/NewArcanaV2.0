@@ -7,19 +7,32 @@
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { chooseActionByScore, COLLECTOR_WEIGHTS } from './personality.js';
+import { chooseActionByScore, COLLECTOR_WEIGHTS, createLearnableWeights } from './personality.js';
 import { checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
 export class CollectorAI extends RandomAI {
-  constructor() {
+  constructor({ learning = false } = {}) {
     super();
     this.name = 'Collector';
+
+    if (learning) {
+      const { weights, learn } = createLearnableWeights(COLLECTOR_WEIGHTS);
+      this._weights = weights;
+      this._learn = learn;
+    } else {
+      this._weights = COLLECTOR_WEIGHTS;
+      this._learn = null;
+    }
   }
 
   chooseAction(state, legalActions, playerIndex) {
-    return chooseActionByScore(state, legalActions, playerIndex, COLLECTOR_WEIGHTS);
+    return chooseActionByScore(state, legalActions, playerIndex, this._weights);
+  }
+
+  learn(gameResult, myIndex, state) {
+    if (this._learn) this._learn(gameResult, myIndex, state);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {

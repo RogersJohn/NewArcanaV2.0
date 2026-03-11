@@ -36,10 +36,10 @@ const AI_NAMES = Object.keys(AI_CLASSES);
  * @param {string} name
  * @returns {object} AI instance
  */
-export function getAI(name) {
+export function getAI(name, options = {}) {
   const AIClass = AI_CLASSES[name.toLowerCase()];
   if (!AIClass) throw new Error(`Unknown AI: ${name}`);
-  return new AIClass();
+  return new AIClass(options);
 }
 
 /**
@@ -65,14 +65,14 @@ export function getAllAINames() {
  * @param {object} [rng] - Optional SeededRNG for deterministic assignment
  * @returns {object[]}
  */
-export function createAIPool(numPlayers, rng) {
+export function createAIPool(numPlayers, rng, options = {}) {
   const nonRandom = AI_NAMES.filter(n => n !== 'random' && n !== 'mcts');
   // Shuffle available AIs so different combinations play each game
   const shuffledNames = shuffle([...nonRandom], rng);
   const ais = [];
   for (let i = 0; i < numPlayers; i++) {
     const aiName = shuffledNames[i % shuffledNames.length];
-    ais.push(getAI(aiName));
+    ais.push(getAI(aiName, options));
   }
   shuffle(ais, rng); // Also randomize seat order
   return ais;
@@ -85,28 +85,28 @@ export function createAIPool(numPlayers, rng) {
  * @param {object} [rng] - Optional SeededRNG for deterministic assignment
  * @returns {object[]}
  */
-export function createAIs(numPlayers, assignment = 'diverse', rng) {
+export function createAIs(numPlayers, assignment = 'diverse', rng, options = {}) {
   if (assignment === 'diverse') {
-    return createAIPool(numPlayers, rng);
+    return createAIPool(numPlayers, rng, options);
   }
   if (assignment === 'random') {
     // Random selection for each seat
     return Array.from({ length: numPlayers }, (_, i) => {
       if (rng) {
         const name = AI_NAMES[rng.nextInt(AI_NAMES.length)];
-        return getAI(name);
+        return getAI(name, options);
       }
       // Deterministic fallback when no rng available
       const name = AI_NAMES[i % AI_NAMES.length];
-      return getAI(name);
+      return getAI(name, options);
     });
   }
   if (assignment.startsWith('all-')) {
     const aiName = assignment.slice(4);
-    return Array.from({ length: numPlayers }, () => getAI(aiName));
+    return Array.from({ length: numPlayers }, () => getAI(aiName, options));
   }
   // Default to diverse
-  return createAIPool(numPlayers, rng);
+  return createAIPool(numPlayers, rng, options);
 }
 
 export { RandomAI, BuilderAI, AggressorAI, CelestialAI, ControllerAI, OpportunistAI, PassiveAI, TacticianAI, CollectorAI, ScoringAI, MctsAI };

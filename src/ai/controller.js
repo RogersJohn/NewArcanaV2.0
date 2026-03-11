@@ -9,19 +9,32 @@
 
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
-import { chooseActionByScore, CONTROLLER_WEIGHTS } from './personality.js';
+import { chooseActionByScore, CONTROLLER_WEIGHTS, createLearnableWeights } from './personality.js';
 import { aceBlockValue, checkCelestialThreat } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
 export class ControllerAI extends RandomAI {
-  constructor() {
+  constructor({ learning = false } = {}) {
     super();
     this.name = 'Controller';
+
+    if (learning) {
+      const { weights, learn } = createLearnableWeights(CONTROLLER_WEIGHTS);
+      this._weights = weights;
+      this._learn = learn;
+    } else {
+      this._weights = CONTROLLER_WEIGHTS;
+      this._learn = null;
+    }
   }
 
   chooseAction(state, legalActions, playerIndex) {
-    return chooseActionByScore(state, legalActions, playerIndex, CONTROLLER_WEIGHTS);
+    return chooseActionByScore(state, legalActions, playerIndex, this._weights);
+  }
+
+  learn(gameResult, myIndex, state) {
+    if (this._learn) this._learn(gameResult, myIndex, state);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {

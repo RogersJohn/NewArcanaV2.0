@@ -284,6 +284,122 @@ export function chooseActionByScore(state, legalActions, playerIndex, weights) {
   return scored[0]?.action || legalActions[0];
 }
 
+/**
+ * Create a learnable weight profile. Returns a mutable copy of the initial weights
+ * and a learn function that adjusts weights based on game outcomes.
+ *
+ * @param {object} initialWeights - Starting weight profile (e.g. OPPORTUNIST_WEIGHTS)
+ * @param {object} [options]
+ * @param {number} [options.learningRate=0.02] - How fast weights change (0.01=slow, 0.05=fast)
+ * @param {number} [options.minWeight=0.05] - Floor for any weight (prevents zeroing out)
+ * @param {number} [options.maxWeight=3.0] - Ceiling for any weight
+ * @returns {{ weights: object, learn: function }}
+ */
+export function createLearnableWeights(initialWeights, options = {}) {
+  const {
+    learningRate = 0.02,
+    minWeight = 0.05,
+    maxWeight = 3.0,
+  } = options;
+
+  // Mutable copy of the weights
+  const weights = { ...initialWeights };
+
+  // Track action type frequencies across recent games for baseline comparison
+  const recentGames = []; // sliding window of last N games
+  const windowSize = 50;
+
+  /**
+   * Learn from a completed game.
+   *
+   * @param {object} gameResult - From extractGameResult()
+   * @param {number} myIndex - This AI's player index
+   * @param {object} state - Final game state
+   */
+  function learn(gameResult, myIndex, state) {
+    const won = gameResult.winner.playerIndex === myIndex;
+    const myVp = gameResult.players[myIndex].vp;
+    const winnerVp = gameResult.winner.vp;
+
+    // Count my action types from the game log
+    const actionCounts = { SET: 0, WILD: 0, ROYAL: 0, BUY: 0, TOME: 0, ACTION: 0, PASS: 0 };
+    const myName = state.players[myIndex].name;
+    let totalActions = 0;
+
+    for (const line of state.log) {
+      if (!line.includes('[DEBUG] ' + myName + ' chose:')) continue;
+      totalActions++;
+      if (line.includes('chose: PLAY_SET')) actionCounts.SET++;
+      else if (line.includes('chose: PLAY_WILD')) actionCounts.WILD++;
+      else if (line.includes('chose: PLAY_ROYAL')) actionCounts.ROYAL++;
+      else if (line.includes('chose: BUY')) actionCounts.BUY++;
+      else if (line.includes('chose: PLAY_MAJOR_TOME')) actionCounts.TOME++;
+      else if (line.includes('chose: PLAY_MAJOR_ACTION')) actionCounts.ACTION++;
+      else if (line.includes('chose: PASS')) actionCounts.PASS++;
+    }
+
+    if (totalActions === 0) return;
+
+    // Calculate action type percentages for this game
+    const pcts = {};
+    for (const [k, v] of Object.entries(actionCounts)) {
+      pcts[k] = v / totalActions;
+    }
+
+    // Store in sliding window
+    recentGames.push({ pcts, won, vpRatio: myVp / Math.max(winnerVp, 1) });
+    if (recentGames.length > windowSize) recentGames.shift();
+
+    // Don't start learning until we have enough data
+    if (recentGames.length < 10) return;
+
+    // Calculate win-correlated action frequencies
+    const winGames = recentGames.filter(g => g.won);
+    const lossGames = recentGames.filter(g => !g.won);
+
+    if (winGames.length < 3 || lossGames.length < 3) return;
+
+    const winAvg = { SET: 0, WILD: 0, ROYAL: 0, BUY: 0, TOME: 0, ACTION: 0, PASS: 0 };
+    const lossAvg = { SET: 0, WILD: 0, ROYAL: 0, BUY: 0, TOME: 0, ACTION: 0, PASS: 0 };
+
+    for (const g of winGames) {
+      for (const k of Object.keys(winAvg)) winAvg[k] += g.pcts[k];
+    }
+    for (const g of lossGames) {
+      for (const k of Object.keys(lossAvg)) lossAvg[k] += g.pcts[k];
+    }
+    for (const k of Object.keys(winAvg)) {
+      winAvg[k] /= winGames.length;
+      lossAvg[k] /= lossGames.length;
+    }
+
+    // Nudge weights: if an action type is more common in wins than losses,
+    // increase its weight. If more common in losses, decrease it.
+    const weightMap = {
+      SET: 'setMulti',
+      WILD: 'wild',
+      ROYAL: 'attack',
+      BUY: 'buy',
+      TOME: 'tome',
+      ACTION: 'action',
+      PASS: 'pass',
+    };
+
+    for (const [actionType, weightKey] of Object.entries(weightMap)) {
+      if (typeof weights[weightKey] !== 'number') continue;
+
+      const delta = winAvg[actionType] - lossAvg[actionType];
+      // delta > 0 means this action is more common in wins → increase weight
+      // delta < 0 means this action is more common in losses → decrease weight
+
+      const adjustment = delta * learningRate;
+      weights[weightKey] = Math.max(minWeight, Math.min(maxWeight, weights[weightKey] + adjustment));
+    }
+  }
+
+  return { weights, learn };
+}
+
 /** Check if an action disrupts a celestial threat. */
 function targetsCelestialThreat(action, state, threatPlayer) {
   if (action.type === 'PLAY_MAJOR_ACTION' && action.card) {

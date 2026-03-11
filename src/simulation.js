@@ -4,8 +4,9 @@
 
 import { createInitialState } from './state.js';
 import { setup, playGame } from './engine.js';
-import { createAIs } from './ai/index.js';
+import { createAIs, getAllAINames, getAI } from './ai/index.js';
 import { createRNG } from './rng.js';
+import { shuffle } from './cards.js';
 
 /**
  * Run a batch simulation.
@@ -28,10 +29,22 @@ export function runSimulation(config) {
     verbose = false,
     seed,
     cardConfig,
+    learning = false,
   } = config;
 
   // Create master RNG for deriving per-game seeds
   const masterRng = seed !== undefined ? createRNG(seed) : null;
+
+  // In learning mode: create a persistent pool of AI instances
+  // Each AI TYPE gets one instance that persists across all games
+  let persistentAIs = null;
+  if (learning && aiAssignment === 'diverse') {
+    const nonRandom = getAllAINames().filter(n => n !== 'random' && n !== 'mcts');
+    persistentAIs = {};
+    for (const name of nonRandom) {
+      persistentAIs[name] = getAI(name, { learning: true });
+    }
+  }
 
   const results = [];
   let errors = 0;
@@ -44,7 +57,20 @@ export function runSimulation(config) {
         : undefined;
 
       const state = createInitialState(players, extended, gameSeed, cardConfig);
-      const ais = createAIs(players, aiAssignment, state.rng);
+
+      let ais;
+      if (persistentAIs) {
+        // Learning mode: pick from persistent pool, shuffle into seats
+        const names = Object.keys(persistentAIs);
+        const shuffled = shuffle([...names], state.rng);
+        ais = [];
+        for (let pi = 0; pi < players; pi++) {
+          ais.push(persistentAIs[shuffled[pi % names.length]]);
+        }
+        shuffle(ais, state.rng);
+      } else {
+        ais = createAIs(players, aiAssignment, state.rng, { learning });
+      }
 
       // Name players with their AI type
       for (let pi = 0; pi < players; pi++) {
@@ -57,6 +83,15 @@ export function runSimulation(config) {
       const gameResult = extractGameResult(state, ais);
       results.push(gameResult);
 
+      // Learning: let each AI learn from this game
+      if (learning) {
+        for (let pi = 0; pi < players; pi++) {
+          if (ais[pi].learn) {
+            ais[pi].learn(gameResult, pi, state);
+          }
+        }
+      }
+
       if (verbose) {
         logGameResult(i + 1, gameResult);
       }
@@ -68,11 +103,21 @@ export function runSimulation(config) {
     }
   }
 
+  // In learning mode, include final weights in output
+  let learnedWeights = null;
+  if (persistentAIs) {
+    learnedWeights = {};
+    for (const [name, ai] of Object.entries(persistentAIs)) {
+      learnedWeights[name] = { ...ai._weights };
+    }
+  }
+
   return {
-    config: { games, players, extended, aiAssignment, seed: masterRng ? seed : undefined, hasCustomConfig: !!cardConfig },
+    config: { games, players, extended, aiAssignment, seed: masterRng ? seed : undefined, hasCustomConfig: !!cardConfig, learning },
     results,
     errors,
     completedGames: results.length,
+    learnedWeights,
   };
 }
 

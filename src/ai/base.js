@@ -192,4 +192,16 @@ export class RandomAI {
     if (hand.length === 0) return -1;
     return state.rng.nextInt(hand.length);
   }
+
+  /**
+   * Learn from a completed game's outcome. Called after each game in learning mode.
+   * Override in subclasses to implement weight adaptation.
+   *
+   * @param {object} gameResult - The result from extractGameResult()
+   * @param {number} myIndex - This AI's player index in the completed game
+   * @param {object} state - The final game state (has log, events, history, players)
+   */
+  learn(gameResult, myIndex, state) {
+    // No-op for RandomAI and MCTS — they don't use personality weights
+  }
 }

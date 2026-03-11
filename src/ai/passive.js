@@ -4,18 +4,31 @@
  */
 
 import { RandomAI } from './base.js';
-import { chooseActionByScore, PASSIVE_WEIGHTS } from './personality.js';
+import { chooseActionByScore, PASSIVE_WEIGHTS, createLearnableWeights } from './personality.js';
 import { aceBlockValue } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class PassiveAI extends RandomAI {
-  constructor() {
+  constructor({ learning = false } = {}) {
     super();
     this.name = 'Passive';
+
+    if (learning) {
+      const { weights, learn } = createLearnableWeights(PASSIVE_WEIGHTS);
+      this._weights = weights;
+      this._learn = learn;
+    } else {
+      this._weights = PASSIVE_WEIGHTS;
+      this._learn = null;
+    }
   }
 
   chooseAction(state, legalActions, playerIndex) {
-    return chooseActionByScore(state, legalActions, playerIndex, PASSIVE_WEIGHTS);
+    return chooseActionByScore(state, legalActions, playerIndex, this._weights);
+  }
+
+  learn(gameResult, myIndex, state) {
+    if (this._learn) this._learn(gameResult, myIndex, state);
   }
 
   chooseDiscard(state, playerIndex, numToDiscard) {
