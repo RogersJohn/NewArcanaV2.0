@@ -1,13 +1,14 @@
-# New Arcana v2.0
+# New Arcana v2.1
 
-A statistical simulation engine and playable browser game for **New Arcana**, the tarot card game designed by Danny Rafferty.
+A statistical simulation engine, playable browser game, and card editor for **New Arcana**, the tarot card game designed by Danny Rafferty.
 
-Two main tools:
+Three tools:
 
 - **Game Client** — Play New Arcana in your browser against AI opponents
-- **Stats Engine** — Run thousands of simulated games to analyze card balance, AI performance, and game dynamics
+- **Card Editor** — Edit card definitions, game rules, and run simulations
+- **Stats Engine** — Run thousands of simulated games to analyze card balance and game dynamics
 
-Built with Node.js, React + Vite (client), and pure JavaScript (engine).
+Built with Node.js, React + Vite (client and editor), and pure JavaScript (engine).
 
 ---
 
@@ -27,12 +28,11 @@ cd NewArcanaV2.0
 npm install
 ```
 
-For the game client:
+For the game client and editor:
 
 ```bash
-cd client
-npm install
-cd ..
+cd client && npm install && cd ..
+cd editor && npm install && cd ..
 ```
 
 ---
@@ -50,10 +50,10 @@ Then open **http://localhost:5173** in your browser.
 
 ### How to play
 
-1. **Start screen** — Choose number of players (3-5) and AI difficulty:
+1. **Start screen** — Choose number of players (3–5) and AI difficulty:
    - Easy = random decisions
-   - Medium = diverse AI personalities
-   - Hard = scoring-based AI
+   - Medium = diverse AI personalities (9 types with weighted scoring)
+   - Hard = scoring-focused AI
 2. **Your turn** — Click cards in your hand, then choose an action from the action panel on the right
 3. **Blocking** — When an opponent attacks you or plays a Major Arcana, a block prompt appears automatically if you have an Ace or King
 4. **Tooltips** — Hover over any card to see its name, value, and rules text
@@ -104,8 +104,8 @@ node index.js --games 1000 --players 4
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--games N` | Number of games to simulate | 1000 |
-| `--players N` | Number of players (2-6) | 4 |
-| `--ai TYPE` | AI assignment: diverse, all-random, all-scoring, all-builder, all-aggressor, etc. | diverse |
+| `--players N` | Number of players (2–6) | 4 |
+| `--ai TYPE` | AI assignment: `diverse`, `all-random`, `all-scoring`, `all-builder`, `all-aggressor`, `all-celestial`, `all-collector`, `all-controller`, `all-tactician`, `all-passive`, `all-opportunist`, `all-mcts` | diverse |
 | `--seed N` | Seed for reproducible results | random |
 | `--verbose` | Show detailed per-game logging | off |
 | `--single` | Run one game with full verbose output | off |
@@ -142,67 +142,32 @@ node index.js --compare data/cards.json data/cards-test.json
 
 # All-aggressor AI test
 node index.js --games 500 --players 4 --ai all-aggressor
+
+# MCTS AI (strongest, slower)
+node index.js --games 50 --players 4 --ai all-mcts
 ```
 
 ---
 
-## Reports
+## AI System
 
-The stats engine generates reports directly via CLI flags. Pre-generated reports are in the `results/` directory — open any `.html` file in your browser.
+The AI uses a **unified personality-weighted scoring system** (`src/ai/personality.js`). Every legal action is scored, and the highest-scoring action is chosen (with small controlled randomness for human-like variance). Personality comes from weight profiles that bias each AI toward different play styles.
 
-### Card Balance Report
+### AI Personalities
 
-```bash
-node index.js --games 1000 --players 4 --card-balance
-```
-
-Generates `results/card-balance-report.html` with per-card metrics and anomaly flags.
-
-### A/B Comparison Report
-
-```bash
-node index.js --compare data/cards.json data/cards-modified.json
-```
-
-Generates `results/compare.html` showing win rate deltas, VP shifts, and statistical significance between two card configurations.
-
-### What the reports include
-
-- Game length distribution (rounds per game, turns per round)
-- Game end reasons (Death revealed, purchased, Celestial win, etc.)
-- VP distribution across all players and winners
-- AI personality performance (win rates, average VP)
-- Seat position advantage analysis
-- Pot-winning hand types (Three-of-a-Kind, Two Pair, etc.)
-- Celestial card scoring breakdown
-- Action counts (sets played, Royal attacks, Ace blocks, King blocks, etc.)
-- Full Major Arcana card statistics — how often each card was bought, played to Tome, played as Action, played as Wild, Ace-blocked, bonus fire rate, bonus VP, and total usage
-
----
-
-## Changing Card Values
-
-All card definitions live in `data/cards.json`. You can change values and rerun simulations without editing any code.
-
-Examples of what you can tweak:
-
-- **Scoring**: Change `celestialVp` from 2 to 1, adjust `plagueVp`, modify pot growth
-- **Game rules**: Change `handSizeLimit`, `maxRealmSize`, `turnsPerRoundCap`
-- **Buy prices**: Adjust costs for draw pile, display slots, and discard pile
-- **Bonus cards**: Change VP awards, suit requirements, tie rules
-- **Protection cards**: Reassign which suits are protected by which Major Arcana
-
-After editing, test the impact:
-
-```bash
-# Run with your modified config
-node index.js --games 1000 --players 4 --config data/cards-modified.json
-
-# Or compare original vs modified side by side
-node index.js --compare data/cards.json data/cards-modified.json
-```
-
-See `archive/DANNY_README.md` for a focused quick-start guide on card tweaking.
+| AI | Style | Key Trait |
+|----|-------|-----------|
+| Opportunist | Balanced evaluator | Adapts to game state, moderate on all axes |
+| Passive | Pure builder | Never attacks, focuses on realm completion |
+| Builder | Strong hands | Prioritizes multi-card sets, minimal attacks |
+| Aggressor | Disruptive | High attack rate, targets leaders |
+| Celestial | Alternate win | Pursues 3-Celestial victory, buys Celestials aggressively |
+| Controller | Defensive | Holds Aces, blocks readily, protects realm |
+| Collector | Card hoarder | Buys Major Arcana frequently, uses Wheel of Fortune |
+| Tactician | Round timer | Strategic Judgement usage, attacks marker holders |
+| Scoring | Analytical | Position-aware evaluation, low variance |
+| MCTS | Monte Carlo | Tree search with rollouts — strongest but slowest |
+| Random | Baseline | Pure random choices (used for "Easy" difficulty) |
 
 ---
 
@@ -213,7 +178,7 @@ npm install    # if not already done
 npx vitest run
 ```
 
-The full test suite runs ~170 tests and takes about 10-40 seconds. Statistical regression tests simulate hundreds of games so they account for most of the time.
+The full test suite runs 329 tests across 14 files and takes about 60–90 seconds. Statistical regression tests and the poker cross-validation account for most of the time.
 
 To run a single test file:
 
@@ -226,39 +191,97 @@ npx vitest run test/poker.test.js
 ## Project Structure
 
 ```
-src/                  # Engine source code
-  engine.js           # Game loop orchestration
-  actions.js          # Legal action enumeration
-  scoring.js          # Round-end and game-end scoring
-  poker.js            # Hand evaluation
-  cards.js            # Card creation and constants
-  state.js            # Game state management
-  effects.js          # Card effects (Royals, Aces, Major Arcana)
-  ai/                 # AI personalities (9 types)
-  game-controller.js  # Async interface for client
-client/               # React game client
-  src/components/     # UI components
-  src/hooks/          # Game controller hook
-  src/utils/          # Formatting and tooltips
-  src/styles/         # CSS
-data/cards.json       # Card definitions (editable)
-test/                 # Test suite (170 tests)
-results/              # Simulation output data and HTML reports
-RULES.md              # Full game rules
-CARDS.md              # Card reference
-CLAUDE.md             # Development guide
-archive/              # Planning docs, prompts, designer quick-start
+src/                    # Engine source code
+  engine.js             # Game loop orchestration (generator-based)
+  actions.js            # Legal action enumeration
+  scoring.js            # Round-end and game-end scoring + AI driver
+  poker.js              # Poker hand evaluation
+  cards.js              # Card creation and constants
+  state.js              # Game state management
+  effects.js            # Card effects (Royals, Aces, Major Arcana)
+  effect-resolver.js    # Data-driven effect resolution
+  game-controller.js    # Async interface for browser client
+  simulation.js         # Monte Carlo simulation runner
+  stats.js              # Statistics aggregation and reporting
+  card-balance.js       # Card balance analysis
+  compare.js            # A/B config comparison
+  config.js             # Config loader (Node.js, reads from disk)
+  config-core.js        # Config merger (no filesystem dependency)
+  rng.js                # Seeded PRNG (xoshiro128**)
+  history.js            # Decision history recording and replay
+  ai/
+    personality.js      # Unified scoring function + weight profiles
+    base.js             # RandomAI base class (API contract)
+    awareness.js        # Shared utilities (threats, hand potential, VP urgency)
+    card-value.js       # Config-aware Major Arcana valuation
+    card-tracker.js     # Bayesian card counting
+    opportunist.js      # Balanced evaluator
+    passive.js          # Pure builder, no attacks
+    builder.js          # Strong hand builder
+    aggressive.js       # Disruptive attacker
+    celestial.js        # Alternate win condition pursuer
+    controller.js       # Defensive, protection-focused
+    collector.js        # Major Arcana hoarder
+    tactician.js        # Round-timing specialist
+    scoring.js          # Analytical position evaluator
+    mcts.js             # Monte Carlo Tree Search AI
+    index.js            # AI registry, factory, assignment
+client/                 # React game client (Vite)
+  src/components/       # UI components
+  src/hooks/            # Game controller hook
+  src/utils/            # Formatting, tooltips, state snapshots
+  src/styles/           # CSS
+editor/                 # React card editor (Vite)
+  src/components/       # Editor UI components
+  src/worker/           # Simulation web worker
+  src/utils/            # Config defaults
+desktop/                # Electron desktop app wrapper
+  main.js               # Electron main process
+  build.js              # Builds client + editor for packaging
+  launcher/             # Launcher HTML page
+data/
+  cards.json            # Card definitions and game rules (editable)
+test/                   # Test suite (329 tests, 14 files)
+scripts/                # Utility scripts
+RULES.md                # Full game rules (by Danny Rafferty)
+CARDS.md                # Card reference
+CLAUDE.md               # Development guide
+```
+
+---
+
+## Changing Card Values
+
+All card definitions live in `data/cards.json`. You can change values and rerun simulations without editing any code.
+
+Examples of what you can tweak:
+
+- **Scoring**: Change `celestialVp`, `plagueVp`, `potGrowth`, `potInitialPerPlayer`
+- **Game rules**: Change `handSizeLimit`, `tomeCapacity`, `realmTrigger`, `maxTurnsPerRound`
+- **Buy prices**: Adjust `draw`, `display0`–`display2`, `discard`
+- **Bonus cards**: Change VP awards, suit requirements, tie rules
+- **Protection cards**: Reassign which suits are protected by which Major Arcana
+- **Variants**: Toggle `aceHigh`, `charityEnabled`, `vaultEnabled`, `extendedArcana`
+
+After editing, test the impact:
+
+```bash
+# Run with your modified config
+node index.js --games 1000 --players 4 --config data/cards-modified.json
+
+# Or compare original vs modified side by side
+node index.js --compare data/cards.json data/cards-modified.json
 ```
 
 ---
 
 ## Desktop App (Windows)
 
-Download `NewArcana.exe` from the Releases page. Double-click to run — no installation needed.
+Download `NewArcana.exe` from the [Releases page](https://github.com/RogersJohn/NewArcanaV2.0/releases). Double-click to run — no installation needed.
 
 The app includes:
-- **Card Editor** — edit cards, rules, run simulations, compare configs
 - **Play Game** — play New Arcana against AI opponents
+- **Card Editor** — edit cards, rules, run simulations, compare configs
 - **Quick Sim** — run balance tests with your current card config
 
 ### Building from Source
@@ -266,15 +289,24 @@ The app includes:
 ```bash
 cd desktop
 npm install
-node build.js           # Build React apps
+node build.js           # Build React apps into desktop/build/
 npx electron-builder    # Package into NewArcana.exe (in desktop/dist/)
 ```
+
+Requires a Windows environment for the final packaging step. See `.github/workflows/build-exe.yml` for automated CI builds.
+
+---
+
+## Configuration Notes
+
+The current `data/cards.json` ships with `aceHigh: true`, meaning Aces are ranked above Kings (value 15). This is the Ace High variant described in RULES.md. To play with Aces low (rank 1, below 2), set `aceHigh: false`.
+
+Display buy prices in the default config: slot 0 (leftmost, newest card) = 9, slot 1 = 8, slot 2 (rightmost, oldest) = 7. Draw pile = 6. Discard pile = 10.
 
 ---
 
 ## Known Issues
 
-- Celestial AI personality is overpowered (~58% win rate vs expected ~25%) and needs rebalancing
-- Collector AI personality wins 0% of games and needs rebalancing
 - Pot ties award to the first player found rather than splitting
-- Some rule ambiguities are documented in `archive/questions-for-danny.md` awaiting designer decisions
+- Some rule ambiguities are documented awaiting designer decisions
+- The MCTS AI is significantly slower than heuristic AIs (~20s per game vs <0.1s)
