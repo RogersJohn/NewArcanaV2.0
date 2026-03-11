@@ -49,9 +49,15 @@ export function estimateCardValue(state, playerIndex, card, context) {
     case 'tome':
       // Full value for playing to tome
       break;
-    case 'buy':
+    case 'buy': {
       value *= 0.7; // Discount — costs payment cards
+
+      // Wild card floor: every Major Arcana can be played as a wild.
+      // Don't let the buy value drop below the card's wild utility.
+      const wildFloor = estimateWildValue(state, playerIndex);
+      value = Math.max(value, wildFloor * 0.7);
       break;
+    }
     case 'discard':
       // Inverted: high value = keep, return as-is (caller uses for retention)
       break;
@@ -218,6 +224,22 @@ function scoreTomeValue(effect, card, player, state, playerIndex) {
   }
 
   return value;
+}
+
+/**
+ * Estimate the value of playing any Major Arcana as a wild card.
+ * Based on game state: more valuable when realm is small (need to fill it)
+ * or close to 5 (triggers round-end marker).
+ */
+function estimateWildValue(state, playerIndex) {
+  const player = state.players[playerIndex];
+  const realmSize = player.realm.length;
+
+  // Wild is most valuable when it can reach realm=5 (trigger round-end)
+  if (realmSize === 4) return 18; // Completing realm
+  if (realmSize === 3) return 12; // Getting close
+  if (realmSize <= 2) return 8;   // Early game — still useful for realm building
+  return 6; // realm already 5+ (rare), less useful
 }
 
 // --- Helpers ---

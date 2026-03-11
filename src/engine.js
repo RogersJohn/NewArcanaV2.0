@@ -541,7 +541,7 @@ function* executeMajorTomeGen(state, playerIndex, action) {
   player.tome.push(card);
   log(state, `${player.name} plays ${cardName(card)} to Tome`);
   recordEvent(state, 'CARD_TO_TOME', {
-    cardNumber: card.number, cardName: card.name, player: playerIndex,
+    cardNumber: card.number, cardName: cardName(card), player: playerIndex,
   });
 
   // Apply on-play Tome effects
@@ -575,7 +575,7 @@ function* executeMajorActionGen(state, playerIndex, action) {
   player.hand.splice(cardIdx, 1);
   state.pit.push(card);
   recordEvent(state, 'CARD_ACTION_PLAYED', {
-    cardNumber: card.number, cardName: card.name, player: playerIndex,
+    cardNumber: card.number, cardName: cardName(card), player: playerIndex,
   });
 
   const handler = getActionHandler(state, card);
@@ -892,7 +892,7 @@ function* executeWildGen(state, playerIndex, action) {
 
   log(state, `${player.name} plays ${cardName(card)} as wild to Realm`);
   recordEvent(state, 'CARD_WILD_PLAYED', {
-    cardNumber: card.number, cardName: card.name,
+    cardNumber: card.number, cardName: cardName(card),
     player: playerIndex, companionCount: withCards.length,
   });
 }
@@ -933,7 +933,7 @@ function executeBuy(state, playerIndex, action) {
       player.hand.push(bought);
       log(state, `${player.name} buys ${cardName(bought)} from ${source}`);
       recordEvent(state, 'CARD_PURCHASED', {
-        cardNumber: bought.number, cardName: bought.name,
+        cardNumber: bought.number, cardName: cardName(bought),
         player: playerIndex, source,
         paymentValue: payment.reduce((s, c) => s + (c.purchaseValue || 0), 0),
       });
@@ -955,7 +955,7 @@ function executeBuy(state, playerIndex, action) {
     player.hand.push(bought);
     log(state, `${player.name} buys ${cardName(bought)} from ${source}`);
     recordEvent(state, 'CARD_PURCHASED', {
-      cardNumber: bought.number, cardName: bought.name,
+      cardNumber: bought.number, cardName: cardName(bought),
       player: playerIndex, source,
       paymentValue: payment.reduce((s, c) => s + (c.purchaseValue || 0), 0),
     });
