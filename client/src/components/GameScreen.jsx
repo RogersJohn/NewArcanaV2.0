@@ -9,6 +9,7 @@ import PlayerTome from './PlayerTome.jsx';
 import PlayerHand from './PlayerHand.jsx';
 import RoundTransition from './RoundTransition.jsx';
 import AIThinkingIndicator from './AIThinkingIndicator.jsx';
+import MinorPiles from './MinorPiles.jsx';
 
 export default function GameScreen({ controller }) {
   const {
@@ -51,7 +52,15 @@ export default function GameScreen({ controller }) {
         </div>
 
         <div className="middle-row">
-          <MajorDisplay display={gameState.display} majorDeckCount={gameState.majorDeckCount} />
+          <div className="display-column">
+            <MajorDisplay display={gameState.display} majorDeckCount={gameState.majorDeckCount} />
+            <MinorPiles
+              minorDeckCount={gameState.minorDeckCount}
+              minorDiscardCount={gameState.minorDiscardCount}
+              minorDiscardTop={gameState.minorDiscardTop}
+              pitCount={gameState.pitCount}
+            />
+          </div>
 
           <div className="action-area">
             {isAIThinking && decision ? (
