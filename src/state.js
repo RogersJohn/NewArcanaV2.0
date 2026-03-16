@@ -43,6 +43,27 @@ export function createInitialState(numPlayers, extended = false, seed, cardConfi
 
   const rng = createRNG(seed);
 
+  // Build major deck, then filter Jesters based on config/player count
+  let majorDeck = createMajorDeck(extended, config.majorArcana);
+  const jesterSetting = config.gameRules?.jesterCount;
+  let jestersToInclude;
+  if (jesterSetting != null && jesterSetting !== 'auto' && jesterSetting !== 0) {
+    jestersToInclude = jesterSetting;
+  } else if (jesterSetting === 'auto') {
+    jestersToInclude = numPlayers >= 6 ? 2 : numPlayers >= 5 ? 1 : 0;
+  } else {
+    jestersToInclude = 0;
+  }
+  const jesterNumbers = new Set([27, 28]);
+  let jestersKept = 0;
+  majorDeck = majorDeck.filter(c => {
+    if (jesterNumbers.has(c.number)) {
+      if (jestersKept < jestersToInclude) { jestersKept++; return true; }
+      return false;
+    }
+    return true;
+  });
+
   return {
     players,
     rng,
@@ -50,7 +71,7 @@ export function createInitialState(numPlayers, extended = false, seed, cardConfi
     minorDeck: createMinorDeck(),
     minorDiscard: [],
     pit: [],
-    majorDeck: createMajorDeck(extended, config.majorArcana),
+    majorDeck,
     majorDiscard: [],
     display: [null, null, null],
     pot: 0,

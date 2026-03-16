@@ -47,6 +47,9 @@ export const MAJOR_ARCANA_DEFS = [
   { number: 24, name: 'The Universe',         category: 'celestial',   keywords: ['celestial'],      suit: null,     effect: { type: 'celestial', vpAtGameEnd: 2, winConditionGroup: 'celestial' } },
   { number: 25, name: 'Prudence',             category: 'tome',        keywords: ['tome', 'bonus'],  suit: 'COINS',  effect: { type: 'tome', onPlay: { action: 'PROTECT_SUIT', suit: 'COINS' }, bonus: { bonusType: 'noSuitInRealm', suit: 'COINS', vp: 1 } } },
   { number: 26, name: 'Plague',               category: 'action',      keywords: ['action'],         suit: null,     effect: { type: 'action', action: 'PLAGUE_TO_TOME', vpPenalty: -3 } },
+  // Jester cards (included based on player count / config)
+  { number: 27, name: 'Jester A',             category: 'action',      keywords: ['action', 'jester'], suit: null,   effect: { type: 'jester', playsAsAce: true, purchaseValue: 0, tiebreakerValue: 0 } },
+  { number: 28, name: 'Jester B',             category: 'action',      keywords: ['action', 'jester'], suit: null,   effect: { type: 'jester', playsAsAce: true, purchaseValue: 0, tiebreakerValue: 0 } },
 ];
 
 /** Protection card mapping: card number -> suit it protects */
@@ -125,7 +128,7 @@ export function createMajorDeck(extended = false, majorDefs) {
   const defs = majorDefs || MAJOR_ARCANA_DEFS;
   const maxNumber = extended ? 26 : 21;
   return defs
-    .filter(def => def.number <= maxNumber)
+    .filter(def => def.number <= maxNumber || def.keywords?.includes('jester'))
     .map(def => createMajorCard(def.number, def.name, def.category, def.keywords));
 }
 
@@ -160,6 +163,15 @@ export function isRoyal(card) {
  */
 export function isCelestial(card) {
   return card.type === 'major' && card.category === 'celestial';
+}
+
+/**
+ * Check if a card is a Jester.
+ * @param {object} card
+ * @returns {boolean}
+ */
+export function isJester(card) {
+  return card?.type === 'major' && card?.keywords?.includes('jester');
 }
 
 /**

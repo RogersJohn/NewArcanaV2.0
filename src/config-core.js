@@ -25,6 +25,7 @@ export function getDefaultConfig() {
       extendedArcana: false,
       vaultEnabled: false,
       celestialPossessionIncludesHand: false,
+      jesterCount: 0,
     },
     buyPrices: {
       draw: 6,
@@ -70,6 +71,8 @@ export function getDefaultConfig() {
       { number: 24, name: 'The Universe',         category: 'celestial',   keywords: ['celestial'], suit: null, effect: { type: 'celestial', vpAtGameEnd: 2, winConditionGroup: 'celestial' } },
       { number: 25, name: 'Prudence',             category: 'tome',        keywords: ['tome', 'bonus'], suit: 'COINS', effect: { type: 'tome', onPlay: { action: 'PROTECT_SUIT', suit: 'COINS' }, bonus: { bonusType: 'noSuitInRealm', suit: 'COINS', vp: 1 } } },
       { number: 26, name: 'Plague',               category: 'action',      keywords: ['action'],    suit: null, effect: { type: 'action', action: 'PLAGUE_TO_TOME', vpPenalty: -3 } },
+      { number: 27, name: 'Jester A',             category: 'action',      keywords: ['action', 'jester'], suit: null, effect: { type: 'jester', playsAsAce: true, purchaseValue: 0, tiebreakerValue: 0 } },
+      { number: 28, name: 'Jester B',             category: 'action',      keywords: ['action', 'jester'], suit: null, effect: { type: 'jester', playsAsAce: true, purchaseValue: 0, tiebreakerValue: 0 } },
     ],
   };
 }

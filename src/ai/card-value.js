@@ -37,6 +37,9 @@ export function estimateCardValue(state, playerIndex, card, context) {
     case 'tome':
       value = scoreTomeValue(effect, card, player, state, playerIndex);
       break;
+    case 'jester':
+      value = 18; // Valuable as both a blocking card and a wild
+      break;
     case 'game_end_trigger':
       value = 0; // Death — never desirable to hold
       break;

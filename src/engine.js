@@ -976,7 +976,10 @@ function* checkAceBlockGen(state, actorIndex, action) {
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === actorIndex) continue;
     const playerHand = state.players[pi].hand;
-    const aceIdx = playerHand.findIndex(c => c.type === 'minor' && c.rank === 'ACE');
+    const aceIdx = playerHand.findIndex(c =>
+      (c.type === 'minor' && c.rank === 'ACE') ||
+      (c.type === 'major' && c.keywords?.includes('jester'))
+    );
     if (aceIdx === -1) continue;
 
     const aceBlockChoice = yield {
