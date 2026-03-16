@@ -15,14 +15,17 @@ function buildDefaultEffect(category) {
 
 export default function CardEditor({ card, allCards, onChange, onDelete }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     setShowDeleteConfirm(false);
-  }, [card]);
+    setTouched(false);
+  }, [card?.number]);
 
   const errors = validateCard(card, allCards);
 
   const update = (key, val) => {
+    if (!touched) setTouched(true);
     const next = { ...card, [key]: val };
     if (key === 'category' && val !== card.category) {
       next.effect = buildDefaultEffect(val);
@@ -68,7 +71,7 @@ export default function CardEditor({ card, allCards, onChange, onDelete }) {
         </div>
       </div>
 
-      {errors.length > 0 && (
+      {touched && errors.length > 0 && (
         <div className="bg-red-900/30 border border-red-800 rounded p-3">
           {errors.map((e, i) => (
             <p key={i} className="text-sm text-red-300">{e}</p>
