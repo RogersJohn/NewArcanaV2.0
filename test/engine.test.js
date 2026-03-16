@@ -281,3 +281,29 @@ describe('Chariot Destination Variant (Issue #5)', () => {
     }
   });
 });
+
+describe('Tower Targets All Variant (Issue #4)', () => {
+  it('towerTargetsAll: true, game completes without errors', { timeout: 15000 }, () => {
+    for (let i = 0; i < 10; i++) {
+      const state = createInitialState(4, false, 300 + i, {
+        gameRules: { towerTargetsAll: true },
+      });
+      const ais = makeAIs(4);
+      setup(state, ais);
+      const result = playGame(state, ais);
+      expect(result.gameEnded).toBe(true);
+    }
+  });
+
+  it('towerTargetsAll: false (default), game completes without errors', { timeout: 15000 }, () => {
+    for (let i = 0; i < 10; i++) {
+      const state = createInitialState(4, false, 300 + i, {
+        gameRules: { towerTargetsAll: false },
+      });
+      const ais = makeAIs(4);
+      setup(state, ais);
+      const result = playGame(state, ais);
+      expect(result.gameEnded).toBe(true);
+    }
+  });
+});

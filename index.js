@@ -91,6 +91,9 @@ function parseArgs(argv) {
       case '--chariot-hand':
         args.chariotHand = true;
         break;
+      case '--tower-all':
+        args.towerAll = true;
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -111,7 +114,8 @@ Usage: node index.js [options]
   --pot-initial N Set absolute starting pot value (overrides per-player calculation)
   --pot-growth N  Set pot growth increment per round (default: 1)
   --celestial-hand  Include hand in Celestial win possession check
-  --chariot-hand    Chariot sends Celestial to hand instead of tome`);
+  --chariot-hand    Chariot sends Celestial to hand instead of tome
+  --tower-all       Tower targets all opponent tomes (not just larger ones)`);
         process.exit(0);
     }
   }
@@ -144,6 +148,11 @@ if (args.chariotHand) {
   cardConfig = cardConfig || {};
   cardConfig.gameRules = cardConfig.gameRules || {};
   cardConfig.gameRules.chariotDestination = 'hand';
+}
+if (args.towerAll) {
+  cardConfig = cardConfig || {};
+  cardConfig.gameRules = cardConfig.gameRules || {};
+  cardConfig.gameRules.towerTargetsAll = true;
 }
 
 if (args.compare) {

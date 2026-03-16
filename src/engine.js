@@ -791,7 +791,11 @@ function* resolveTowerGen(state, playerIndex, targets) {
 
   for (let pi = 0; pi < state.players.length; pi++) {
     if (pi === playerIndex) continue;
-    if (state.players[pi].tome.length > myTomeSize && state.players[pi].tome.length > 0) {
+    const targetsAll = state.config?.gameRules?.towerTargetsAll ?? false;
+    const isTarget = targetsAll
+      ? state.players[pi].tome.length > 0
+      : state.players[pi].tome.length > myTomeSize && state.players[pi].tome.length > 0;
+    if (isTarget) {
       // Tower player chooses which card to destroy
       const tomeIdx = yield {
         type: DECISION_TYPES.TOWER_CHOOSE,
