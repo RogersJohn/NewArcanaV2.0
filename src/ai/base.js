@@ -45,10 +45,11 @@ export class RandomAI {
    */
   shouldBlockWithAce(state, playerIndex, action) {
     // Random: 20% chance to block
-    const hasAce = state.players[playerIndex].hand.some(
-      c => c.type === 'minor' && c.rank === 'ACE'
+    const hasBlocker = state.players[playerIndex].hand.some(
+      c => (c.type === 'minor' && c.rank === 'ACE') ||
+           (c.type === 'major' && c.keywords?.includes('jester'))
     );
-    return hasAce && state.rng.next() < 0.2;
+    return hasBlocker && state.rng.next() < 0.2;
   }
 
   /**

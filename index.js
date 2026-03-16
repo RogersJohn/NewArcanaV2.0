@@ -35,7 +35,7 @@ function parseArgs(argv) {
     cardBalance: false,
     config: null,
     compare: null, // [configA, configB] paths
-    learn: false,
+    learn: true,
   };
 
   for (let i = 2; i < argv.length; i++) {

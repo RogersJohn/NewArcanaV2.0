@@ -25,7 +25,7 @@ export function getDefaultConfig() {
       extendedArcana: false,
       vaultEnabled: false,
       celestialPossessionIncludesHand: false,
-      jesterCount: 0,
+      jesterCount: 'auto',
       chariotDestination: 'tome',
       towerTargetsAll: false,
     },

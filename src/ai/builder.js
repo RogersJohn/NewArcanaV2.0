@@ -9,7 +9,7 @@
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { chooseActionByScore, BUILDER_WEIGHTS, createLearnableWeights } from './personality.js';
-import { checkCelestialThreat } from './awareness.js';
+import { checkCelestialThreat, hasBlockingCard } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class BuilderAI extends RandomAI {
@@ -42,6 +42,7 @@ export class BuilderAI extends RandomAI {
     // Score each card by how much it contributes to potential hands
     const scores = hand.map((card, i) => {
       if (card.rank === 'ACE') return { index: i, score: 100 }; // Keep aces
+      if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 100 };
       if (card.rank === 'KING') return { index: i, score: 90 }; // Keep kings
 
       // Check if card matches realm ranks
@@ -63,7 +64,7 @@ export class BuilderAI extends RandomAI {
     }
     // Only block if attack targets our realm
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
-      return state.players[playerIndex].hand.some(c => c.type === 'minor' && c.rank === 'ACE');
+      return hasBlockingCard(state, playerIndex);
     }
     return false;
   }

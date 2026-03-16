@@ -8,7 +8,7 @@
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { chooseActionByScore, AGGRESSOR_WEIGHTS, createLearnableWeights } from './personality.js';
-import { aceBlockValue, checkCelestialThreat } from './awareness.js';
+import { aceBlockValue, checkCelestialThreat, hasBlockingCard } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 
 export class AggressorAI extends RandomAI {
@@ -40,6 +40,7 @@ export class AggressorAI extends RandomAI {
       // Keep attack cards (Royals)
       if (card.isRoyal) return { index: i, score: 100 };
       if (card.rank === 'ACE') return { index: i, score: 95 };
+      if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 95 };
       if (card.type === 'major') return { index: i, score: 90 };
       return { index: i, score: card.numericRank || 0 };
     });

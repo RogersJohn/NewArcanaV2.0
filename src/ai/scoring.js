@@ -40,6 +40,7 @@ export class ScoringAI extends RandomAI {
     const scores = hand.map((card, i) => {
       if (card.type === 'major' && isCelestial(card)) return { index: i, score: 200 };
       if (card.rank === 'ACE') return { index: i, score: 150 };
+      if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 150 };
       if (card.type === 'major') return { index: i, score: 100 };
       if (card.rank === 'KING') return { index: i, score: 90 };
 

@@ -343,3 +343,30 @@ export function shouldSkipBuying(state, playerIndex) {
 
   return false;
 }
+
+/**
+ * Check if a player has any blocking card (Ace or Jester).
+ * Use this instead of checking only for Aces — Jesters can block too.
+ * @param {object} state
+ * @param {number} playerIndex
+ * @returns {boolean}
+ */
+export function hasBlockingCard(state, playerIndex) {
+  return state.players[playerIndex].hand.some(
+    c => (c.type === 'minor' && c.rank === 'ACE') ||
+         (c.type === 'major' && c.keywords?.includes('jester'))
+  );
+}
+
+/**
+ * Count blocking cards (Aces + Jesters) in a player's hand.
+ * @param {object} state
+ * @param {number} playerIndex
+ * @returns {number}
+ */
+export function countBlockingCards(state, playerIndex) {
+  return state.players[playerIndex].hand.filter(
+    c => (c.type === 'minor' && c.rank === 'ACE') ||
+         (c.type === 'major' && c.keywords?.includes('jester'))
+  ).length;
+}

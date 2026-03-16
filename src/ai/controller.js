@@ -10,7 +10,7 @@
 import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { chooseActionByScore, CONTROLLER_WEIGHTS, createLearnableWeights } from './personality.js';
-import { aceBlockValue, checkCelestialThreat } from './awareness.js';
+import { aceBlockValue, checkCelestialThreat, countBlockingCards } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
 import { getMajorDef } from '../effect-resolver.js';
 
@@ -43,6 +43,7 @@ export class ControllerAI extends RandomAI {
 
     const scores = hand.map((card, i) => {
       if (card.rank === 'ACE') return { index: i, score: 200 }; // Never discard aces
+      if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 200 };
       if (card.rank === 'KING') return { index: i, score: 150 };
       if (card.type === 'major') return { index: i, score: 120 };
 
@@ -67,12 +68,11 @@ export class ControllerAI extends RandomAI {
       if (threat.threatening) return true;
     }
     const threat = aceBlockValue(state, playerIndex, action);
-    const aceCount = state.players[playerIndex].hand.filter(
-      c => c.type === 'minor' && c.rank === 'ACE'
-    ).length;
+    // Count all blocking cards (Aces + Jesters)
+    const blockerCount = countBlockingCards(state, playerIndex);
     // Controller is conservative: only block high threats, keep reserve
-    if (aceCount >= 2) return threat >= 30;
-    return threat >= 60; // With 1 ace, only block critical threats
+    if (blockerCount >= 2) return threat >= 30;
+    return threat >= 60; // With 1 blocker, only block critical threats
   }
 
   shouldBlockWithKing(state, playerIndex) {

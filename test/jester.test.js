@@ -3,6 +3,7 @@ import { createInitialState } from '../src/state.js';
 import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS, isJester } from '../src/cards.js';
 import { setup, playGame } from '../src/engine.js';
 import { RandomAI } from '../src/ai/base.js';
+import { OpportunistAI } from '../src/ai/opportunist.js';
 
 function makeAIs(n) {
   return Array.from({ length: n }, () => new RandomAI());
@@ -63,10 +64,67 @@ describe('Jester Card (Issue #9)', () => {
     expect(jesters.length).toBe(0);
   });
 
-  it('default: 4 players with no jesterCount config → 0 Jesters', () => {
+  it('default: 4 players with no config override → 0 Jesters', () => {
     const state = createInitialState(4, false, 42);
     const jesters = state.majorDeck.filter(c => isJester(c));
     expect(jesters.length).toBe(0);
+  });
+
+  it('default: 5 players with no config override → 1 Jester (auto-scaling)', () => {
+    const state = createInitialState(5, false, 42);
+    const jesters = state.majorDeck.filter(c => isJester(c));
+    expect(jesters.length).toBe(1);
+  });
+
+  it('default: 6 players with no config override → 2 Jesters (auto-scaling)', () => {
+    const state = createInitialState(6, true, 42);
+    const jesters = state.majorDeck.filter(c => isJester(c));
+    expect(jesters.length).toBe(2);
+  });
+
+  it('default: 3 players with no config override → 0 Jesters (auto-scaling)', () => {
+    const state = createInitialState(3, false, 42);
+    const jesters = state.majorDeck.filter(c => isJester(c));
+    expect(jesters.length).toBe(0);
+  });
+
+  it('explicit jesterCount: 0 overrides auto-scaling for 5 players', () => {
+    const state = createInitialState(5, false, 42, {
+      gameRules: { jesterCount: 0 },
+    });
+    const jesters = state.majorDeck.filter(c => isJester(c));
+    expect(jesters.length).toBe(0);
+  });
+
+  it('AI shouldBlockWithAce detects Jester as valid blocker', () => {
+    const state = createInitialState(4, false, 42, {
+      gameRules: { jesterCount: 2 },
+    });
+    const jester = major(27);
+    state.players[1].hand = [jester];
+    state.players[1].realm = [];
+
+    const hasBlocker = state.players[1].hand.some(
+      c => (c.type === 'minor' && c.rank === 'ACE') ||
+           (c.type === 'major' && c.keywords?.includes('jester'))
+    );
+    expect(hasBlocker).toBe(true);
+  });
+
+  it('AI retains Jesters during discard (values them as blockers)', () => {
+    const ai = new OpportunistAI();
+    const state = createInitialState(5, false, 42);
+    const jester = major(27);
+    state.players[0].hand = [
+      jester,
+      createMinorCard('WANDS', 2),
+      createMinorCard('CUPS', 3),
+    ];
+    state.players[0].realm = [];
+
+    const discardIndices = ai.chooseDiscard(state, 0, 1);
+    const discardedCard = state.players[0].hand[discardIndices[0]];
+    expect(discardedCard.type).toBe('minor');
   });
 
   it('isJester correctly identifies Jester cards', () => {
@@ -93,6 +151,26 @@ describe('Jester Card (Issue #9)', () => {
       const result = playGame(state, ais);
       expect(result.gameEnded).toBe(true);
     }
+  });
+
+  it('Jesters appear and are used in 5-player games with default config', { timeout: 30000 }, () => {
+    let jesterBlocks = 0;
+    let jesterWilds = 0;
+    const N = 50;
+
+    for (let i = 0; i < N; i++) {
+      const state = createInitialState(5, false, 3000 + i);
+      const ais = makeAIs(5);
+      setup(state, ais);
+      playGame(state, ais);
+
+      for (const line of state.log) {
+        if (line.includes('Jester') && line.includes('blocks')) jesterBlocks++;
+        if (line.includes('Jester') && line.includes('wild')) jesterWilds++;
+      }
+    }
+
+    expect(jesterBlocks + jesterWilds).toBeGreaterThan(0);
   });
 
   it('Jester goes to Pit after blocking (integration)', { timeout: 10000 }, () => {

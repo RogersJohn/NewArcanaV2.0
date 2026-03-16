@@ -36,6 +36,7 @@ export class PassiveAI extends RandomAI {
     const realm = state.players[playerIndex].realm;
 
     const scores = hand.map((card, i) => {
+      if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 120 };
       if (card.type === 'major') return { index: i, score: 120 };
       if (card.rank === 'ACE') return { index: i, score: 50 }; // Less value on aces (no attacks to block)
       if (card.rank === 'KING') return { index: i, score: 40 };

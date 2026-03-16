@@ -41,6 +41,7 @@ export class CollectorAI extends RandomAI {
 
     const scores = hand.map((card, i) => {
       if (card.type === 'major' && isCelestial(card)) return { index: i, score: 200 };
+      if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 140 };
       if (card.type === 'major') return { index: i, score: 130 }; // Collector values all majors highly
       if (card.rank === 'ACE') return { index: i, score: 140 };
       if (card.rank === 'KING') return { index: i, score: 90 };
