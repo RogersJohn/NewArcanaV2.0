@@ -115,9 +115,14 @@ export function* setupGen(state) {
     state.minorDiscard.push(state.minorDeck.pop());
   }
 
-  // Set initial pot (potInitialPerPlayer vp per player)
-  const potPerPlayer = state.config?.scoring?.potInitialPerPlayer ?? 1;
-  state.pot = state.players.length * potPerPlayer;
+  // Set initial pot (absolute value or potInitialPerPlayer * numPlayers)
+  const absolutePot = state.config?.scoring?.potInitialAbsolute;
+  if (absolutePot != null && absolutePot >= 0) {
+    state.pot = absolutePot;
+  } else {
+    const potPerPlayer = state.config?.scoring?.potInitialPerPlayer ?? 1;
+    state.pot = state.players.length * potPerPlayer;
+  }
   state.roundNumber = 1;
   state.lastPotAmount = state.pot;
 

@@ -79,6 +79,9 @@ function parseArgs(argv) {
       case '--learn':
         args.learn = true;
         break;
+      case '--pot-initial':
+        args.potInitial = parseFloat(argv[++i]);
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -95,7 +98,8 @@ Usage: node index.js [options]
   --card-balance  Run card balance analysis (5 metrics with anomaly flags)
   --config FILE   Path to card/game config JSON (overrides defaults)
   --compare A B   A/B comparison mode: run same games under two config files
-  --learn         Enable cross-game weight adaptation (AIs learn from outcomes)`);
+  --learn         Enable cross-game weight adaptation (AIs learn from outcomes)
+  --pot-initial N Set absolute starting pot value (overrides per-player calculation)`);
         process.exit(0);
     }
   }
@@ -106,7 +110,14 @@ Usage: node index.js [options]
 const args = parseArgs(process.argv);
 
 // Load card/game config if specified
-const cardConfig = args.config ? loadConfig(args.config) : undefined;
+let cardConfig = args.config ? loadConfig(args.config) : undefined;
+
+// Apply CLI overrides to config
+if (args.potInitial != null) {
+  cardConfig = cardConfig || {};
+  cardConfig.scoring = cardConfig.scoring || {};
+  cardConfig.scoring.potInitialAbsolute = args.potInitial;
+}
 
 if (args.compare) {
   // A/B Comparison mode

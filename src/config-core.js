@@ -38,6 +38,7 @@ export function getDefaultConfig() {
       plagueVp: -3,
       celestialWinCount: 3,
       potInitialPerPlayer: 1,
+      potInitialAbsolute: null,
       potGrowth: 1,
     },
     majorArcana: [

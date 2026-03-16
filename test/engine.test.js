@@ -234,3 +234,24 @@ describe('Full Game', () => {
     }
   });
 });
+
+describe('Absolute Starting Pot (Issue #2)', () => {
+  it('potInitialAbsolute overrides per-player calculation', () => {
+    const state = createInitialState(4, false, 42, {
+      scoring: { potInitialAbsolute: 10 },
+    });
+    const ais = makeAIs(4);
+    setup(state, ais);
+    // Pot should be 10, not 4 (4 players * 1)
+    expect(state.pot).toBe(10);
+  });
+
+  it('default behavior unchanged when potInitialAbsolute is null', () => {
+    const state = createInitialState(4, false, 42, {
+      scoring: { potInitialAbsolute: null },
+    });
+    const ais = makeAIs(4);
+    setup(state, ais);
+    expect(state.pot).toBe(4);
+  });
+});
