@@ -172,7 +172,30 @@ function extractGameResult(state, ais) {
     players: playerResults,
     vpDistribution: state.players.map(p => p.vp),
     cardEvents: summarizeCardEvents(state.events, winnerPi),
+    vpSources: summarizeVPSources(state.events, state.players),
   };
+}
+
+/**
+ * Summarize VP sources from events and final state.
+ * @param {object[]} events - Raw events from state.events
+ * @param {object[]} players - Final player states
+ * @returns {object} VP breakdown by source
+ */
+function summarizeVPSources(events, players) {
+  let potVp = 0, bonusVp = 0, celestialVp = 0;
+  for (const e of events) {
+    if (e.type === 'POT_AWARDED') potVp += e.amount || 0;
+    if (e.type === 'BONUS_SCORED') bonusVp += e.vp || 0;
+  }
+  for (const p of players) {
+    for (const c of [...p.tome, ...p.realm, ...p.vault]) {
+      if (c.type === 'major' && c.keywords?.includes('celestial')) {
+        celestialVp += 2;
+      }
+    }
+  }
+  return { potVp, bonusVp, celestialVp };
 }
 
 /**

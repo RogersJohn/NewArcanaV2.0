@@ -3,6 +3,7 @@ import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS } from '../src/card
 import { createInitialState } from '../src/state.js';
 import { scoreRoundEnd, scoreGameEnd, checkCelestialWin, resolveBonus, resolveFool } from '../src/scoring.js';
 import { RandomAI } from '../src/ai/base.js';
+import { runSimulation } from '../src/simulation.js';
 
 function mc(suit, rank) { return createMinorCard(suit, rank); }
 function major(number) {
@@ -382,5 +383,21 @@ describe('Fix #8: Final round scoring when Death ends the game', () => {
     // Call again for the same round — should be a no-op
     scoreRoundEnd(state, ais);
     expect(state.players[0].vp).toBe(vpAfterFirst);
+  });
+});
+
+describe('VP Source Reporting (Issue #10)', () => {
+  it('simulation results include vpSources with pot, bonus, and celestial VP', { timeout: 30000 }, () => {
+    const sim = runSimulation({
+      games: 50, players: 4, seed: 99, aiAssignment: 'diverse',
+    });
+    expect(sim.results.length).toBe(50);
+    for (const game of sim.results) {
+      expect(game.vpSources).toBeDefined();
+      expect(typeof game.vpSources.potVp).toBe('number');
+      expect(typeof game.vpSources.bonusVp).toBe('number');
+      expect(typeof game.vpSources.celestialVp).toBe('number');
+      expect(game.vpSources.potVp).toBeGreaterThanOrEqual(0);
+    }
   });
 });

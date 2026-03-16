@@ -25,6 +25,7 @@ export function aggregateStats(simResults) {
     firstPlayerAdvantage: computeFirstPlayerAdvantage(results),
     strategyEffectiveness: computeStrategyEffectiveness(results),
     cardStats: computeCardStats(results),
+    vpSources: computeVPSources(results),
   };
 }
 
@@ -246,6 +247,27 @@ function computeCardStats(results) {
   }
 
   return cards;
+}
+
+/**
+ * Compute VP source breakdown across all games.
+ */
+function computeVPSources(results) {
+  let totalPot = 0, totalBonus = 0, totalCelestial = 0;
+  for (const game of results) {
+    if (game.vpSources) {
+      totalPot += game.vpSources.potVp;
+      totalBonus += game.vpSources.bonusVp;
+      totalCelestial += game.vpSources.celestialVp;
+    }
+  }
+  const total = totalPot + totalBonus + totalCelestial;
+  const n = results.length || 1;
+  return {
+    pot: { total: totalPot, perGame: Math.round((totalPot / n) * 100) / 100, pct: total > 0 ? Math.round((totalPot / total) * 1000) / 1000 : 0 },
+    bonus: { total: totalBonus, perGame: Math.round((totalBonus / n) * 100) / 100, pct: total > 0 ? Math.round((totalBonus / total) * 1000) / 1000 : 0 },
+    celestial: { total: totalCelestial, perGame: Math.round((totalCelestial / n) * 100) / 100, pct: total > 0 ? Math.round((totalCelestial / total) * 1000) / 1000 : 0 },
+  };
 }
 
 /**
@@ -575,6 +597,16 @@ export function formatReport(stats) {
   }
 
   lines.push('');
+
+  // VP Sources
+  if (stats.vpSources) {
+    const vp = stats.vpSources;
+    lines.push('--- VP SOURCES ---');
+    lines.push(`  Pot:       ${vp.pot.perGame.toFixed(1)} per game (${(vp.pot.pct * 100).toFixed(1)}%)`);
+    lines.push(`  Bonus:     ${vp.bonus.perGame.toFixed(1)} per game (${(vp.bonus.pct * 100).toFixed(1)}%)`);
+    lines.push(`  Celestial: ${vp.celestial.perGame.toFixed(1)} per game (${(vp.celestial.pct * 100).toFixed(1)}%)`);
+    lines.push('');
+  }
 
   // Major Arcana Card Stats
   if (stats.cardStats && Object.keys(stats.cardStats).length > 0) {
