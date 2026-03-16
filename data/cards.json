@@ -47,7 +47,7 @@
     { "number": 5,  "name": "The Hierophant",       "category": "tome",        "keywords": ["tome"],      "suit": null,
       "effect": { "type": "tome", "onPlay": null, "bonus": { "bonusType": "hierophant_blessing" } } },
     { "number": 6,  "name": "The Lovers",           "category": "bonus-round", "keywords": ["bonus"],     "suit": null,
-      "effect": { "type": "bonus", "bonus": { "bonusType": "pairCounting", "vpPerPair": 1 } } },
+      "effect": { "type": "bonus", "bonus": { "bonusType": "pairCounting", "vpPerPair": 1, "countsFullHouse": true } } },
     { "number": 7,  "name": "The Chariot",          "category": "action",      "keywords": ["action"],    "suit": null,
       "effect": { "type": "action", "action": "MOVE_CELESTIAL_TO_TOME" } },
     { "number": 8,  "name": "Strength",             "category": "action",      "keywords": ["action"],    "suit": null,

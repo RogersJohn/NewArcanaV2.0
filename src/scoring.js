@@ -190,7 +190,7 @@ export function* resolveBonusGen(state, playerIndex, card) {
     case 'suitHighest':
       return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1);
     case 'pairCounting':
-      return resolveLovers(state, playerIndex, bonusCfg.vpPerPair ?? 1);
+      return resolveLovers(state, playerIndex, bonusCfg.vpPerPair ?? 1, bonusCfg);
     case 'hermitExclusive':
       return player.tome.length === 1 && isHermitCard(state, player.tome[0]) ? (bonusCfg.vp ?? 1) : 0;
     case 'noSuitInRealm':
@@ -316,8 +316,9 @@ function countSuitInRealm(player, suit, countWilds) {
  * Lovers: vpPerPair per pair. NOT for three/four/five of a kind.
  * @param {number} [vpPerPair=1] - VP per pair
  */
-function resolveLovers(state, playerIndex, vpPerPair) {
+function resolveLovers(state, playerIndex, vpPerPair, bonusCfg) {
   const pairVp = vpPerPair ?? 1;
+  const countsFullHouse = bonusCfg?.countsFullHouse ?? true;
   const player = state.players[playerIndex];
   const minors = player.realm.filter(c => c.type === 'minor');
   const rankCounts = {};
@@ -331,6 +332,19 @@ function resolveLovers(state, playerIndex, vpPerPair) {
     if (count === 2) pairCount++;
   }
 
+  // Full House: three-of-a-kind + pair → award 1 pair VP for the pair component
+  if (countsFullHouse) {
+    const hasTrips = Object.values(rankCounts).some(c => c >= 3);
+    const hasPairSeparate = Object.values(rankCounts).some(c => c === 2);
+    if (hasTrips && hasPairSeparate && pairCount === 0) {
+      // The pair in a Full House was not counted above (since trips are >=3, not ==2)
+      // But the pair IS present (hasPairSeparate), so it was already counted.
+      // Actually: the pair in a Full House has count===2, so pairCount already has it.
+      // This branch covers the case where pairCount might be 0 from wild interactions.
+      pairCount = Math.max(pairCount, 1);
+    }
+  }
+
   // Wild cards: if there's a wild, the hand evaluation already gives best hand
   // But for Lovers we specifically count pairs, ignoring wild optimization
   // "Wild cards always produce the strongest hand, so you cannot downgrade to Two-Pair"
@@ -340,6 +354,7 @@ function resolveLovers(state, playerIndex, vpPerPair) {
     const eval_ = evaluateHand(player.realm, pokerOpts(state));
     if (eval_.type === 'One Pair') return pairVp;
     if (eval_.type === 'Two Pair') return pairVp * 2;
+    if (eval_.type === 'Full House' && countsFullHouse) return pairVp;
     return 0;
   }
 

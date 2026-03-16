@@ -48,7 +48,7 @@ export function getDefaultConfig() {
       { number: 3,  name: 'The Empress',          category: 'bonus-round', keywords: ['bonus'],     suit: 'CUPS', effect: { type: 'bonus', bonus: { bonusType: 'suitHighest', suit: 'CUPS', countWilds: false, allowTie: true, vp: 1 } } },
       { number: 4,  name: 'The Emperor',          category: 'bonus-round', keywords: ['bonus'],     suit: 'COINS', effect: { type: 'bonus', bonus: { bonusType: 'suitHighest', suit: 'COINS', countWilds: false, allowTie: true, vp: 1 } } },
       { number: 5,  name: 'The Hierophant',       category: 'tome',        keywords: ['tome'],      suit: null, effect: { type: 'tome', onPlay: null, bonus: { bonusType: 'hierophant_blessing' } } },
-      { number: 6,  name: 'The Lovers',           category: 'bonus-round', keywords: ['bonus'],     suit: null, effect: { type: 'bonus', bonus: { bonusType: 'pairCounting', vpPerPair: 1 } } },
+      { number: 6,  name: 'The Lovers',           category: 'bonus-round', keywords: ['bonus'],     suit: null, effect: { type: 'bonus', bonus: { bonusType: 'pairCounting', vpPerPair: 1, countsFullHouse: true } } },
       { number: 7,  name: 'The Chariot',          category: 'action',      keywords: ['action'],    suit: null, effect: { type: 'action', action: 'MOVE_CELESTIAL_TO_TOME' } },
       { number: 8,  name: 'Strength',             category: 'action',      keywords: ['action'],    suit: null, effect: { type: 'action', action: 'MOVE_MAJOR_TO_REALM' } },
       { number: 9,  name: 'The Hermit',           category: 'tome',        keywords: ['tome', 'bonus'], suit: null, effect: { type: 'tome', onPlay: { action: 'TOME_CARDS_TO_HAND' }, bonus: { bonusType: 'hermitExclusive', vp: 1 } } },

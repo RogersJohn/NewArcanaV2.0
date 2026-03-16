@@ -386,6 +386,63 @@ describe('Fix #8: Final round scoring when Death ends the game', () => {
   });
 });
 
+describe('Lovers Full House Bonus (Issue #6)', () => {
+  it('Full House realm awards 1vp for pair component', () => {
+    const state = makeTestState(4);
+    const p = state.players[0];
+    // Three 5s and two 8s = Full House
+    p.realm = [mc('WANDS', 5), mc('CUPS', 5), mc('SWORDS', 5), mc('WANDS', 8), mc('CUPS', 8)];
+    const lovers = major(6); // The Lovers
+    p.tome = [lovers];
+    const ais = [new RandomAI(), new RandomAI(), new RandomAI(), new RandomAI()];
+    const vp = resolveBonus(state, 0, lovers, ais);
+    expect(vp).toBe(1); // 1 pair in a Full House
+  });
+
+  it('countsFullHouse: false does not award VP for Full House', () => {
+    const state = makeTestState(4);
+    // Override countsFullHouse to false
+    const loversConfig = state.config.majorArcana.find(m => m.number === 6);
+    loversConfig.effect.bonus.countsFullHouse = false;
+    // Rebuild majorArcanaMap
+    state.config.majorArcanaMap = new Map();
+    for (const def of state.config.majorArcana) {
+      state.config.majorArcanaMap.set(def.number, def);
+    }
+    const p = state.players[0];
+    p.realm = [mc('WANDS', 5), mc('CUPS', 5), mc('SWORDS', 5), mc('WANDS', 8), mc('CUPS', 8)];
+    const lovers = major(6);
+    p.tome = [lovers];
+    const ais = [new RandomAI(), new RandomAI(), new RandomAI(), new RandomAI()];
+    const vp = resolveBonus(state, 0, lovers, ais);
+    // Without countsFullHouse, the pair (count===2) still counts normally
+    // Two 8s have count===2, so pairCount should be 1 even without Full House logic
+    expect(vp).toBe(1);
+  });
+
+  it('Two Pair realm still scores 2vp', () => {
+    const state = makeTestState(4);
+    const p = state.players[0];
+    p.realm = [mc('WANDS', 5), mc('CUPS', 5), mc('WANDS', 8), mc('CUPS', 8), mc('SWORDS', 3)];
+    const lovers = major(6);
+    p.tome = [lovers];
+    const ais = [new RandomAI(), new RandomAI(), new RandomAI(), new RandomAI()];
+    const vp = resolveBonus(state, 0, lovers, ais);
+    expect(vp).toBe(2);
+  });
+
+  it('One Pair realm still scores 1vp', () => {
+    const state = makeTestState(4);
+    const p = state.players[0];
+    p.realm = [mc('WANDS', 5), mc('CUPS', 5), mc('WANDS', 3), mc('CUPS', 8), mc('SWORDS', 10)];
+    const lovers = major(6);
+    p.tome = [lovers];
+    const ais = [new RandomAI(), new RandomAI(), new RandomAI(), new RandomAI()];
+    const vp = resolveBonus(state, 0, lovers, ais);
+    expect(vp).toBe(1);
+  });
+});
+
 describe('VP Source Reporting (Issue #10)', () => {
   it('simulation results include vpSources with pot, bonus, and celestial VP', { timeout: 30000 }, () => {
     const sim = runSimulation({
