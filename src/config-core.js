@@ -26,6 +26,7 @@ export function getDefaultConfig() {
       vaultEnabled: false,
       celestialPossessionIncludesHand: false,
       jesterCount: 0,
+      chariotDestination: 'tome',
     },
     buyPrices: {
       draw: 6,

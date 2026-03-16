@@ -255,3 +255,29 @@ describe('Absolute Starting Pot (Issue #2)', () => {
     expect(state.pot).toBe(4);
   });
 });
+
+describe('Chariot Destination Variant (Issue #5)', () => {
+  it('chariotDestination hand: game completes without errors', { timeout: 15000 }, () => {
+    for (let i = 0; i < 10; i++) {
+      const state = createInitialState(4, false, 200 + i, {
+        gameRules: { chariotDestination: 'hand' },
+      });
+      const ais = makeAIs(4);
+      setup(state, ais);
+      const result = playGame(state, ais);
+      expect(result.gameEnded).toBe(true);
+    }
+  });
+
+  it('chariotDestination tome: game completes without errors (default)', { timeout: 15000 }, () => {
+    for (let i = 0; i < 10; i++) {
+      const state = createInitialState(4, false, 200 + i, {
+        gameRules: { chariotDestination: 'tome' },
+      });
+      const ais = makeAIs(4);
+      setup(state, ais);
+      const result = playGame(state, ais);
+      expect(result.gameEnded).toBe(true);
+    }
+  });
+});

@@ -634,24 +634,30 @@ function* resolveChariotGen(state, playerIndex, targets) {
   }
 
   if (celestial) {
-    // Check tome overflow BEFORE pushing (matches executeMajorTomeGen pattern)
-    if (player.tome.length >= 3) {
-      const discardIdx = yield {
-        type: DECISION_TYPES.TOME_DISCARD,
-        playerIndex,
-        state,
-      };
-      recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
-      if (discardIdx >= 0 && discardIdx < player.tome.length) {
-        const discarded = player.tome.splice(discardIdx, 1)[0];
-        state.pit.push(discarded);
-        if (getProtection(state, discarded.number)) {
-          player.tomeProtections.delete(getProtection(state, discarded.number));
+    const destination = state.config?.gameRules?.chariotDestination ?? 'tome';
+    if (destination === 'hand') {
+      player.hand.push(celestial);
+      log(state, `${player.name} takes ${cardName(celestial)} into hand via Chariot`);
+    } else {
+      // Check tome overflow BEFORE pushing (matches executeMajorTomeGen pattern)
+      if (player.tome.length >= 3) {
+        const discardIdx = yield {
+          type: DECISION_TYPES.TOME_DISCARD,
+          playerIndex,
+          state,
+        };
+        recordDecision(state, DECISION_TYPES.TOME_DISCARD, playerIndex, discardIdx);
+        if (discardIdx >= 0 && discardIdx < player.tome.length) {
+          const discarded = player.tome.splice(discardIdx, 1)[0];
+          state.pit.push(discarded);
+          if (getProtection(state, discarded.number)) {
+            player.tomeProtections.delete(getProtection(state, discarded.number));
+          }
         }
       }
+      player.tome.push(celestial);
+      log(state, `${player.name} takes ${cardName(celestial)} via Chariot`);
     }
-    player.tome.push(celestial);
-    log(state, `${player.name} takes ${cardName(celestial)} via Chariot`);
   }
 }
 
