@@ -82,6 +82,9 @@ function parseArgs(argv) {
       case '--pot-initial':
         args.potInitial = parseFloat(argv[++i]);
         break;
+      case '--pot-growth':
+        args.potGrowth = parseFloat(argv[++i]);
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -99,7 +102,8 @@ Usage: node index.js [options]
   --config FILE   Path to card/game config JSON (overrides defaults)
   --compare A B   A/B comparison mode: run same games under two config files
   --learn         Enable cross-game weight adaptation (AIs learn from outcomes)
-  --pot-initial N Set absolute starting pot value (overrides per-player calculation)`);
+  --pot-initial N Set absolute starting pot value (overrides per-player calculation)
+  --pot-growth N  Set pot growth increment per round (default: 1)`);
         process.exit(0);
     }
   }
@@ -117,6 +121,11 @@ if (args.potInitial != null) {
   cardConfig = cardConfig || {};
   cardConfig.scoring = cardConfig.scoring || {};
   cardConfig.scoring.potInitialAbsolute = args.potInitial;
+}
+if (args.potGrowth != null) {
+  cardConfig = cardConfig || {};
+  cardConfig.scoring = cardConfig.scoring || {};
+  cardConfig.scoring.potGrowth = args.potGrowth;
 }
 
 if (args.compare) {
