@@ -118,7 +118,7 @@ export function useGameController() {
   /**
    * Start a new game.
    */
-  const startGame = useCallback(({ playerCount, aiDifficulty, seed }) => {
+  const startGame = useCallback(({ playerCount, aiDifficulty, seed, buyPrices }) => {
     // Clean up any pending AI timeout
     if (abortRef.current) {
       abortRef.current();
@@ -130,6 +130,7 @@ export function useGameController() {
       humanPlayers: [0],
       aiAssignment: difficultyToAssignment(aiDifficulty),
       seed,
+      cardConfig: buyPrices ? { buyPrices } : undefined,
       yieldAll: true,
     });
 

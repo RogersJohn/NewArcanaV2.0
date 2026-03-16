@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 
+const DEFAULT_PRICES = { draw: 6, display0: 9, display1: 8, display2: 7, discard: 10 };
+
 export default function StartScreen({ onStart }) {
   const [playerCount, setPlayerCount] = useState(4);
   const [aiDifficulty, setAiDifficulty] = useState('medium');
   const [seed, setSeed] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [buyPrices, setBuyPrices] = useState({ ...DEFAULT_PRICES });
+
+  const updatePrice = (key, val) => {
+    setBuyPrices(prev => ({ ...prev, [key]: Number(val) || 0 }));
+  };
+
+  const hasCustomPrices = Object.keys(DEFAULT_PRICES).some(k => buyPrices[k] !== DEFAULT_PRICES[k]);
 
   const handleStart = () => {
     onStart({
       playerCount,
       aiDifficulty,
       seed: seed ? Number(seed) : undefined,
+      buyPrices: hasCustomPrices ? buyPrices : undefined,
     });
   };
 
@@ -61,6 +72,41 @@ export default function StartScreen({ onStart }) {
             />
           </label>
         </div>
+
+        <button
+          className="advanced-toggle"
+          onClick={() => setShowAdvanced(prev => !prev)}
+        >
+          {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
+        </button>
+
+        {showAdvanced && (
+          <div className="advanced-settings">
+            <div className="advanced-label">Major Arcana Buy Prices</div>
+            <div className="price-grid">
+              <label className="price-label">
+                Draw Pile
+                <input type="number" value={buyPrices.draw} onChange={e => updatePrice('draw', e.target.value)} className="start-input price-input" />
+              </label>
+              <label className="price-label">
+                Display 0
+                <input type="number" value={buyPrices.display0} onChange={e => updatePrice('display0', e.target.value)} className="start-input price-input" />
+              </label>
+              <label className="price-label">
+                Display 1
+                <input type="number" value={buyPrices.display1} onChange={e => updatePrice('display1', e.target.value)} className="start-input price-input" />
+              </label>
+              <label className="price-label">
+                Display 2
+                <input type="number" value={buyPrices.display2} onChange={e => updatePrice('display2', e.target.value)} className="start-input price-input" />
+              </label>
+              <label className="price-label">
+                Discard Pile
+                <input type="number" value={buyPrices.discard} onChange={e => updatePrice('discard', e.target.value)} className="start-input price-input" />
+              </label>
+            </div>
+          </div>
+        )}
 
         <button className="start-button" onClick={handleStart}>
           Start Game
