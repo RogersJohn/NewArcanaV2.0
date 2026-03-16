@@ -24,6 +24,7 @@ export function getDefaultConfig() {
       twoPlayerVariant: false,
       extendedArcana: false,
       vaultEnabled: false,
+      celestialPossessionIncludesHand: false,
     },
     buyPrices: {
       draw: 6,

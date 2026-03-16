@@ -443,6 +443,39 @@ describe('Lovers Full House Bonus (Issue #6)', () => {
   });
 });
 
+describe('Celestial Possession Includes Hand (Issue #8)', () => {
+  it('default: 3 Celestials in hand does NOT trigger win', () => {
+    const state = makeTestState(4);
+    const p = state.players[0];
+    p.hand = [major(17), major(18), major(19)]; // Star, Moon, Sun
+    expect(checkCelestialWin(state)).toBe(-1);
+  });
+
+  it('with flag: 3 Celestials in hand triggers win', () => {
+    const state = makeTestState(4);
+    state.config.gameRules.celestialPossessionIncludesHand = true;
+    const p = state.players[0];
+    p.hand = [major(17), major(18), major(19)];
+    expect(checkCelestialWin(state)).toBe(0);
+  });
+
+  it('with flag: 2 in tome + 1 in hand triggers win', () => {
+    const state = makeTestState(4);
+    state.config.gameRules.celestialPossessionIncludesHand = true;
+    const p = state.players[0];
+    p.tome = [major(17), major(18)];
+    p.hand = [major(19)];
+    expect(checkCelestialWin(state)).toBe(0);
+  });
+
+  it('3 Celestials in tome wins regardless of flag', () => {
+    const state = makeTestState(4);
+    const p = state.players[0];
+    p.tome = [major(17), major(18), major(19)];
+    expect(checkCelestialWin(state)).toBe(0);
+  });
+});
+
 describe('VP Source Reporting (Issue #10)', () => {
   it('simulation results include vpSources with pot, bonus, and celestial VP', { timeout: 30000 }, () => {
     const sim = runSimulation({

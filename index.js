@@ -85,6 +85,9 @@ function parseArgs(argv) {
       case '--pot-growth':
         args.potGrowth = parseFloat(argv[++i]);
         break;
+      case '--celestial-hand':
+        args.celestialHand = true;
+        break;
       case '--help':
         console.log(`New Arcana Stats Engine v2
 
@@ -103,7 +106,8 @@ Usage: node index.js [options]
   --compare A B   A/B comparison mode: run same games under two config files
   --learn         Enable cross-game weight adaptation (AIs learn from outcomes)
   --pot-initial N Set absolute starting pot value (overrides per-player calculation)
-  --pot-growth N  Set pot growth increment per round (default: 1)`);
+  --pot-growth N  Set pot growth increment per round (default: 1)
+  --celestial-hand  Include hand in Celestial win possession check`);
         process.exit(0);
     }
   }
@@ -126,6 +130,11 @@ if (args.potGrowth != null) {
   cardConfig = cardConfig || {};
   cardConfig.scoring = cardConfig.scoring || {};
   cardConfig.scoring.potGrowth = args.potGrowth;
+}
+if (args.celestialHand) {
+  cardConfig = cardConfig || {};
+  cardConfig.gameRules = cardConfig.gameRules || {};
+  cardConfig.gameRules.celestialPossessionIncludesHand = true;
 }
 
 if (args.compare) {

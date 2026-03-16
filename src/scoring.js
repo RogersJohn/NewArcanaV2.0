@@ -428,9 +428,12 @@ export function scoreGameEnd(state) {
  */
 export function checkCelestialWin(state) {
   const winCount = state.config?.scoring?.celestialWinCount ?? 3;
+  const includeHand = state.config?.gameRules?.celestialPossessionIncludesHand ?? false;
   for (let pi = 0; pi < state.players.length; pi++) {
     const p = state.players[pi];
-    const celestials = [...p.tome, ...p.realm, ...p.vault].filter(c => isCelestial(c));
+    const sources = [...p.tome, ...p.realm, ...p.vault];
+    if (includeHand) sources.push(...p.hand);
+    const celestials = sources.filter(c => isCelestial(c));
     if (celestials.length >= winCount) return pi;
   }
   return -1;
