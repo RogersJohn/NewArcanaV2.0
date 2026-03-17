@@ -161,3 +161,8 @@ Take possession of the Round-End Marker. Round ends immediately and is scored. I
 Play into ANY player's Tome. If Tome is full, remove a card of your choice to Pit.
 **Game End**: -3vp if still in a player's Tome.
 Highest numerical value of all cards (tiebreaker relevance).
+
+### 27 - Jester A / 28 - Jester B
+**Action (Jester)**
+Plays as an Ace for blocking purposes. Can block Royal attacks, Major Arcana actions, wild card plays, and other blocking actions, just like a regular Ace. Purchase value: 0. Tiebreaker value: 0.
+Auto-scaling: included automatically based on player count when `jesterCount` is set to `'auto'` (the default). 5 players → 1 Jester, 6+ players → 2 Jesters, ≤4 players → 0 Jesters. Can also be set to a fixed number (0, 1, or 2) via config.

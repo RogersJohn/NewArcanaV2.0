@@ -1,4 +1,4 @@
-# New Arcana v2.1
+# New Arcana v2.2
 
 A statistical simulation engine, playable browser game, and card editor for **New Arcana**, the tarot card game designed by Danny Rafferty.
 
@@ -115,6 +115,13 @@ node index.js --games 1000 --players 4
 | `--extended` | Use 6-player Major Arcana set (26 cards) | off |
 | `--config FILE` | Use a custom card definitions file | data/cards.json |
 | `--compare A B` | A/B comparison: run games under two configs using same seeds | none |
+| `--learn` | Enable cross-game weight adaptation (AIs learn from outcomes) | on |
+| `--pot-initial N` | Set absolute starting pot value (overrides per-player calculation) | none |
+| `--pot-growth N` | Set pot growth increment per round | 1 |
+| `--celestial-hand` | Include hand in Celestial win possession check | off |
+| `--chariot-hand` | Chariot sends Celestial to hand instead of tome | off |
+| `--tower-all` | Tower targets all opponent tomes (not just larger ones) | off |
+| `--help` | Show help text and exit | - |
 
 ### Examples
 
@@ -178,7 +185,7 @@ npm install    # if not already done
 npx vitest run
 ```
 
-The full test suite runs 329 tests across 14 files and takes about 60–90 seconds. Statistical regression tests and the poker cross-validation account for most of the time.
+The full test suite runs 362 tests across 15 files and takes about 60–90 seconds. Statistical regression tests and the poker cross-validation account for most of the time.
 
 To run a single test file:
 
@@ -241,7 +248,7 @@ desktop/                # Electron desktop app wrapper
   launcher/             # Launcher HTML page
 data/
   cards.json            # Card definitions and game rules (editable)
-test/                   # Test suite (329 tests, 14 files)
+test/                   # Test suite (362 tests, 15 files)
 scripts/                # Utility scripts
 RULES.md                # Full game rules (by Danny Rafferty)
 CARDS.md                # Card reference

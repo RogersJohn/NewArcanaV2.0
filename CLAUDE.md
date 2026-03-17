@@ -1,4 +1,4 @@
-# CLAUDE.md — New Arcana v2.1
+# CLAUDE.md — New Arcana v2.2
 
 ## Project Overview
 
@@ -72,7 +72,7 @@ editor/                 # React card editor (Vite, @engine alias → ../src)
 desktop/                # Electron wrapper (loads built client + editor)
 data/
 └── cards.json          # Card definitions and game rules (editable by designer)
-test/                   # 329 tests across 14 files
+test/                   # 362 tests across 15 files
 scripts/                # Utility scripts
 RULES.md                # Full game rules (by Danny Rafferty)
 CARDS.md                # All card definitions and effects
@@ -214,7 +214,7 @@ These rules were wrong in the old project and must stay correct. Read RULES.md a
 - Each test should verify a RULE, not an implementation detail
 - Descriptive test names: `"Ace blocks Queen attack and both go to Pit"`
 - Statistical regression tests: run seeded games, assert key metrics within expected ranges
-- 329 tests across 14 files
+- 362 tests across 15 files
 
 ## Common Pitfalls
 
