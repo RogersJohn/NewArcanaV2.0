@@ -23,7 +23,7 @@ function flagClass(flag) {
   return '';
 }
 
-export default function SimOverview({ results, cardBalance }) {
+export default function SimOverview({ results, cardBalance, cardAnalytics }) {
   const [sortCol, setSortCol] = useState('purchased');
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -48,12 +48,15 @@ export default function SimOverview({ results, cardBalance }) {
       // Winner affinity from cardBalance
       const wa = cardBalance?.metrics?.winnerAffinity?.find(c => c.number === n);
 
+      const rawCard = cardAnalytics?.rawCards?.[n];
       cardRows.push({
         number: n,
         name: data.name || `Card ${n}`,
         purchased: data.purchased || 0,
-        winnerTome: data.inWinnerTome || 0,
-        winnerTomePct: totalGames > 0 ? (data.inWinnerTome || 0) / totalGames : 0,
+        placedByWinner: data.toTomeByWinner || 0,
+        placedByWinnerPct: totalGames > 0 ? (data.toTomeByWinner || 0) / totalGames : 0,
+        inWinnerTome: rawCard?.inWinnerTome || 0,
+        inWinnerTomePct: totalGames > 0 ? (rawCard?.inWinnerTome || 0) / totalGames : 0,
         bonusRate,
         avgBonusVp,
         wildPlayed: data.wildPlayed || 0,
@@ -81,7 +84,8 @@ export default function SimOverview({ results, cardBalance }) {
   const columns = [
     { key: 'name', label: 'Card', text: true },
     { key: 'purchased', label: 'Purchased' },
-    { key: 'winnerTome', label: 'Winner Tome' },
+    { key: 'placedByWinner', label: 'Placed by Winner' },
+    { key: 'inWinnerTome', label: 'In Winner Tome' },
     { key: 'bonusRate', label: 'Bonus Rate' },
     { key: 'avgBonusVp', label: 'Avg Bonus VP' },
     { key: 'wildPlayed', label: 'Wild Uses' },
@@ -123,7 +127,10 @@ export default function SimOverview({ results, cardBalance }) {
                 </td>
                 <td className="py-1.5 px-2 text-gray-300">{row.purchased}</td>
                 <td className="py-1.5 px-2 text-gray-300">
-                  {row.winnerTome} ({formatPct(row.winnerTomePct)})
+                  {row.placedByWinner} ({formatPct(row.placedByWinnerPct)})
+                </td>
+                <td className="py-1.5 px-2 text-gray-300">
+                  {row.inWinnerTome} ({formatPct(row.inWinnerTomePct)})
                 </td>
                 <td className="py-1.5 px-2 text-gray-300">
                   {row.bonusRate != null ? formatPct(row.bonusRate) : '-'}

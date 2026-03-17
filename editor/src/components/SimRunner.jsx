@@ -122,7 +122,7 @@ export default function SimRunner({ config }) {
             {(tab) => {
               switch (tab) {
                 case 'Overview':
-                  return <SimOverview results={results} cardBalance={results.cardBalance} />;
+                  return <SimOverview results={results} cardBalance={results.cardBalance} cardAnalytics={results.cardAnalytics} />;
                 case 'Power Rankings':
                   return <SimPowerRankings
                     cardAnalytics={results.cardAnalytics}

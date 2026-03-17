@@ -50,7 +50,9 @@ export default function SimBonuses({ cardAnalytics, results, config }) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {bonusRates.map(c => {
         const cs = cardStats[c.number];
-        const winnerTome = cs?.inWinnerTome || 0;
+        const placedByWinner = cs?.toTomeByWinner || 0;
+        const rawCard = cardAnalytics?.rawCards?.[c.number];
+        const inWinnerTome = rawCard?.inWinnerTome || 0;
         const bt = bonusTypeMap[c.number];
         const label = bt ? getBonusLabel(bt.bonusType, bt.suit) : 'Bonus card';
         const total = c.scored + c.failed;
@@ -84,8 +86,12 @@ export default function SimBonuses({ cardAnalytics, results, config }) {
                 <span className="text-gray-200">{c.totalVp}</span>
               </div>
               <div>
-                <span className="text-gray-400">In winner tomes:</span>{' '}
-                <span className="text-gray-200">{winnerTome}{totalGames > 0 ? ` (${formatPct(winnerTome / totalGames)})` : ''}</span>
+                <span className="text-gray-400">Placed by winner:</span>{' '}
+                <span className="text-gray-200">{placedByWinner}{totalGames > 0 ? ` (${formatPct(placedByWinner / totalGames)})` : ''}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">In winner tome:</span>{' '}
+                <span className="text-gray-200">{inWinnerTome}{totalGames > 0 ? ` (${formatPct(inWinnerTome / totalGames)})` : ''}</span>
               </div>
             </div>
 
