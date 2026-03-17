@@ -1,0 +1,91 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx vitest run
+
+  build-exe:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Install root deps (needed for engine source that client/editor import)
+      - run: npm install
+
+      # Build client and editor static sites into desktop/build/
+      - run: node build.js
+        working-directory: desktop
+
+      # Install electron and electron-builder
+      - run: npm install
+        working-directory: desktop
+
+      # Build the exe
+      - run: npx electron-builder --win portable
+        working-directory: desktop
+
+      # Upload exe as artifact (available on every build)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NewArcana-exe
+          path: desktop/dist/NewArcana.exe
+
+      # Also update the "latest" GitHub Release
+      # This creates/updates a release tagged "latest" with the new exe
+      - name: Update latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          body: |
+            Automatically built from commit ${{ github.sha }}.
+
+            Download `NewArcana.exe` below — double-click to run, no installation needed.
+          files: desktop/dist/NewArcana.exe
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node build.js
+        working-directory: desktop
+      - run: npm install
+        working-directory: desktop
+      - run: npx electron-builder --win portable
+        working-directory: desktop
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/dist/NewArcana.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
