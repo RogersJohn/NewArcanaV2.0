@@ -38,18 +38,30 @@ export class RandomAI {
 
   /**
    * Decide whether to block with an Ace.
+   * Uses threat vs retention analysis for informed decisions.
    * @param {object} state
    * @param {number} playerIndex
    * @param {object} action - The action being taken
    * @returns {boolean}
    */
   shouldBlockWithAce(state, playerIndex, action) {
-    // Random: 20% chance to block
     const hasBlocker = state.players[playerIndex].hand.some(
       c => (c.type === 'minor' && c.rank === 'ACE') ||
            (c.type === 'major' && c.keywords?.includes('jester'))
     );
-    return hasBlocker && state.rng.next() < 0.2;
+    if (!hasBlocker) return false;
+
+    // Compute threat value inline (avoid circular import of awareness.js)
+    const threatValue = _computeThreatValue(state, playerIndex, action);
+
+    // Compute ace retention value: how valuable is keeping this blocker?
+    const blockerCount = state.players[playerIndex].hand.filter(
+      c => (c.type === 'minor' && c.rank === 'ACE') ||
+           (c.type === 'major' && c.keywords?.includes('jester'))
+    ).length;
+    const retentionValue = blockerCount <= 1 ? 50 : blockerCount === 2 ? 30 : 15;
+
+    return threatValue > retentionValue;
   }
 
   /**
@@ -205,4 +217,57 @@ export class RandomAI {
   learn(gameResult, myIndex, state) {
     // No-op for RandomAI and MCTS — they don't use personality weights
   }
+}
+
+/**
+ * Compute how threatening an action is (simplified, no external imports).
+ * Inlined version of aceBlockValue from awareness.js.
+ */
+function _computeThreatValue(state, playerIndex, action) {
+  const player = state.players[playerIndex];
+  const potRatio = Math.max(0.2, Math.min(2.0, (state.pot || 0) / Math.max(state.players.length, 1)));
+
+  // Royal attack targeting our realm
+  if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {
+    const realmSize = player.realm.length;
+    let score = realmSize * 12;
+    if (action.card?.rank === 'QUEEN') score += 15;
+    else if (action.card?.rank === 'KNIGHT') score += 8;
+    return Math.min(100, score * potRatio);
+  }
+
+  // Wild card play that gives opponent 4+ realm
+  if (action.type === 'PLAY_WILD') {
+    const actorPi = action.playerIndex;
+    const actorRealm = (actorPi != null && state.players[actorPi]?.realm) || [];
+    const newSize = actorRealm.length + 1 + (action.withCards?.length || 0);
+    if (newSize >= 5) return 50 * potRatio;
+    if (newSize >= 4) return 30 * potRatio;
+    return 10;
+  }
+
+  // Celestial to Tome
+  if (action.type === 'PLAY_MAJOR_TOME') {
+    if (action.card?.keywords?.includes('celestial')) {
+      const actorPi = action.playerIndex;
+      if (actorPi != null && state.players[actorPi]) {
+        const celestials = [...state.players[actorPi].tome, ...state.players[actorPi].realm]
+          .filter(c => c.keywords?.includes('celestial')).length;
+        if (celestials >= 2) return 95;
+        if (celestials >= 1) return 55;
+      }
+      return 25;
+    }
+    return 10;
+  }
+
+  // Major Arcana action
+  if (action.type === 'PLAY_MAJOR_ACTION') {
+    if (action.description?.includes('Judgement') || action.description?.includes('Round-End')) {
+      return 40 * potRatio;
+    }
+    return 15;
+  }
+
+  return 5;
 }

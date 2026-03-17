@@ -5,10 +5,11 @@
  * Returns scores for all legal actions, with optional noise for human-like variance.
  */
 
-import { evaluateHand } from '../poker.js';
+import { evaluateHand, compareHands } from '../poker.js';
 import { isCelestial } from '../cards.js';
-import { analyzeHandPotential, vpUrgency, checkCelestialThreat, getHandRanking } from './awareness.js';
+import { analyzeHandPotential, vpUrgency, checkCelestialThreat, getHandRanking, estimateRemainingRounds } from './awareness.js';
 import { estimateCardValue } from './card-value.js';
+import { createCardTracker } from './card-tracker.js';
 import { getMajorDef } from '../effect-resolver.js';
 
 /**
@@ -105,6 +106,7 @@ export const TACTICIAN_WEIGHTS = {
   action: 0.9,
   attack: 0.3,
   noise: 0.1,
+  useLookahead: true,
 };
 
 export const OPPORTUNIST_WEIGHTS = {
@@ -115,6 +117,7 @@ export const OPPORTUNIST_WEIGHTS = {
   action: 0.6,
   noise: 0.08,
   rushWhenAhead: true,
+  useLookahead: true,
 };
 
 export const SCORING_WEIGHTS = {
@@ -125,6 +128,7 @@ export const SCORING_WEIGHTS = {
   tome: 0.35,
   noise: 0.05,
   rushWhenAhead: true,
+  useLookahead: true,
 };
 
 /**
@@ -181,7 +185,6 @@ export function scoreAction(state, playerIndex, action, weights) {
       const companions = (action.withCards || []).length;
       const closingRealm = newRealm.length >= 5 ? 25 : newRealm.length >= 4 ? 10 : 0;
 
-      // Only attractive when it fills realm to 5 or hand has no minor pairs
       let baseScore = 10 + improvement + companions * 3 + closingRealm;
 
       // Penalize wild if player has a playable pair in hand (pairs are better)
@@ -190,8 +193,15 @@ export function scoreAction(state, playerIndex, action, weights) {
       for (const c of minors) rankGroups[c.numericRank] = (rankGroups[c.numericRank] || 0) + 1;
       const hasPair = Object.values(rankGroups).some(v => v >= 2);
       if (hasPair && newRealm.length < 5) {
-        baseScore *= 0.3; // Heavily penalize wild when a pair is available
+        baseScore *= 0.3;
       }
+
+      // Opportunity cost: card's alternative value as Tome play
+      const alternativeValue = estimateCardValue(state, playerIndex, action.card, 'tome');
+      const remaining = estimateRemainingRounds(state);
+      // Late game: opportunity cost drops (no time to use Tome effect)
+      const opportunityWeight = remaining <= 2 ? 0.2 : remaining <= 4 ? 0.5 : 0.8;
+      baseScore = Math.max(1, baseScore - alternativeValue * opportunityWeight * 0.15);
 
       return baseScore * weights.wild * rush;
     }
@@ -199,17 +209,49 @@ export function scoreAction(state, playerIndex, action, weights) {
     case 'PLAY_ROYAL': {
       const targetPi = action.target?.playerIndex;
       if (targetPi === playerIndex) return -5;
-      const targetVp = state.players[targetPi]?.vp || 0;
-      const targetRealmSize = state.players[targetPi]?.realm.length || 0;
-      const targetIsLeader = targetVp >= Math.max(...state.players.map(p => p.vp)) - 1;
+      const targetPlayer = state.players[targetPi];
+      if (!targetPlayer) return -5;
+      const targetRealmSize = targetPlayer.realm.length;
+      if (targetRealmSize === 0) return -2;
 
-      let baseScore = 5;
-      if (targetIsLeader) baseScore += 5;
-      if (targetRealmSize >= 4) baseScore += 8;
-      if (action.card?.rank === 'QUEEN') baseScore += 5;
-      else if (action.card?.rank === 'KNIGHT') baseScore += 3;
+      // 1. Compute impact: how much does removing target card hurt them?
+      const targetRealm = targetPlayer.realm;
+      const targetCard = targetRealm[action.target.realmIndex];
+      const targetEval = evaluateHand(targetRealm, opts);
+      const diminishedRealm = targetRealm.filter((_, i) => i !== action.target.realmIndex);
+      const diminishedEval = evaluateHand(diminishedRealm, opts);
+      const rankDelta = targetEval.rank - diminishedEval.rank;
 
-      return baseScore * weights.attack;
+      // 2. Pot denial: are they winning the pot? How much does this hurt them?
+      const targetRanking = getHandRanking(state, targetPi);
+      let potDenial = rankDelta * 3;
+      if (targetRanking.winning) potDenial += (state.pot || 0) * 0.3;
+      if (targetRealmSize >= 5) potDenial += 8; // Disrupting a complete realm
+
+      // 3. Card type value: what does the attacker gain?
+      let cardGainValue = 0;
+      if (action.card?.rank === 'KNIGHT' && targetCard) {
+        // Knight steals card to hand — valuable if card is useful
+        cardGainValue = (targetCard.purchaseValue || 5) * 0.3;
+      } else if (action.card?.rank === 'QUEEN' && targetCard) {
+        // Queen moves card to our realm — very strong
+        const newRealm = [...player.realm, targetCard];
+        const newEval = evaluateHand(newRealm, opts);
+        const currentEval = evaluateHand(player.realm, opts);
+        cardGainValue = (newEval.rank - currentEval.rank) * 5 + 3;
+      }
+      // Page: both destroyed, no gain
+
+      // 4. Ace block probability
+      let blockProb = 0;
+      try {
+        const tracker = createCardTracker(state, playerIndex);
+        blockProb = tracker.probHasAce(targetPi);
+      } catch (_e) { /* ignore tracker errors */ }
+
+      // 5. Final score
+      const rawScore = potDenial + cardGainValue + 2; // base of 2
+      return rawScore * (1 - blockProb * 0.7) * weights.attack;
     }
 
     case 'PLAY_MAJOR_TOME': {
@@ -240,9 +282,21 @@ export function scoreAction(state, playerIndex, action, weights) {
         if (card) cardValue = estimateCardValue(state, playerIndex, card, 'buy');
       }
 
-      const netValue = cardValue - paymentTotal * 0.5;
-      // REMOVED: realmPenalty — buying should happen whenever no pair is available,
-      // regardless of realm size. It depletes the Major deck which brings Death closer.
+      // Hand damage: are payment cards part of a developing set?
+      const handWithPayment = player.hand.filter(c => c.type === 'minor');
+      const handWithout = handWithPayment.filter(c =>
+        !action.payment.some(p => p.id === c.id)
+      );
+      const potentialWith = analyzeHandPotential(handWithPayment, player.realm);
+      const potentialWithout = analyzeHandPotential(handWithout, player.realm);
+      const handDamage = (potentialWith.holdScore - potentialWithout.holdScore) * 0.03;
+
+      // Display timing urgency: slot 2 ages off next round
+      let urgency = 1.0;
+      if (action.source === 'display2') urgency = 1.3;
+      else if (action.source === 'display0') urgency = 0.85;
+
+      const netValue = (cardValue * urgency - paymentTotal * 0.5 - handDamage);
       return netValue * weights.buy;
     }
 
@@ -261,6 +315,40 @@ export function scoreAction(state, playerIndex, action, weights) {
  * @returns {object} Chosen action
  */
 export function chooseActionByScore(state, legalActions, playerIndex, weights) {
+  // Use lookahead for eligible AIs with enough actions to warrant it
+  if (weights.useLookahead && legalActions.length > 2) {
+    try {
+      const mod = _getLookahead();
+      if (mod?.chooseBestWithLookahead) {
+        return mod.chooseBestWithLookahead(state, legalActions, playerIndex, weights);
+      }
+    } catch (_e) { /* fallback to heuristic scoring */ }
+  }
+
+  return _scoreAndChoose(state, legalActions, playerIndex, weights);
+}
+
+// Lazy-loaded lookahead module (resolved on first use, after all modules loaded)
+var _lookaheadModule = null;
+function _getLookahead() {
+  if (!_lookaheadModule) {
+    _lookaheadModule = _registeredLookahead || {};
+  }
+  return _lookaheadModule;
+}
+
+// Allow lookahead module to register itself (avoids circular import)
+// Uses `var` to avoid TDZ issues when called during module initialization
+var _registeredLookahead = null;
+export function registerLookahead(mod) {
+  _registeredLookahead = mod;
+  _lookaheadModule = mod;
+}
+
+/**
+ * Core scoring + selection logic (extracted for reuse by lookahead).
+ */
+export function _scoreAndChoose(state, legalActions, playerIndex, weights) {
   const threat = weights.celestialAware ? checkCelestialThreat(state, playerIndex) : null;
 
   const scored = legalActions.map(action => {

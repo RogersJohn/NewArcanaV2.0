@@ -6,6 +6,7 @@
 
 import { isCelestial } from '../cards.js';
 import { getCardEffect } from '../effect-resolver.js';
+import { estimateRemainingRounds } from './awareness.js';
 
 /**
  * Estimate the strategic value of a Major Arcana card.
@@ -82,54 +83,83 @@ export function estimateCardValue(state, playerIndex, card, context) {
 function scoreBonusValue(bonus, player, state, playerIndex) {
   if (!bonus) return 5;
 
+  const remainingRounds = estimateRemainingRounds(state);
+
+  // Compute per-round probability and VP, then multiply by remaining rounds
+  let probPerRound = 0;
+  let vpPerTrigger = 1;
+
   switch (bonus.bonusType) {
-    case 'foolDuplicate':
-      // Value depends on opponents having bonus cards
-      return 12;
+    case 'foolDuplicate': {
+      // Check if opponents have bonus cards in their tomes
+      const opponentBonuses = state.players
+        .filter((_, i) => i !== playerIndex)
+        .reduce((sum, p) => sum + p.tome.filter(c => c.keywords?.includes('bonus')).length, 0);
+      probPerRound = opponentBonuses >= 2 ? 0.7 : opponentBonuses >= 1 ? 0.5 : 0.15;
+      vpPerTrigger = bonus.vp || 1;
+      break;
+    }
 
     case 'suitMajority': {
-      const vp = bonus.vp || 1;
-      return vp * 15;
+      vpPerTrigger = bonus.vp || 1;
+      // Magician: need strictly MORE of named suit than any opponent — harder
+      const suit = bonus.suit;
+      const myCount = countSuitInRealm(player, suit);
+      probPerRound = myCount >= 3 ? 0.6 : myCount >= 2 ? 0.35 : myCount >= 1 ? 0.15 : 0.05;
+      break;
     }
 
     case 'suitHighest': {
-      const vp = bonus.vp || 1;
+      vpPerTrigger = bonus.vp || 1;
       const suit = bonus.suit;
       const myCount = countSuitInRealm(player, suit);
-      const likelihood = myCount >= 2 ? 0.7 : myCount >= 1 ? 0.4 : 0.15;
-      return vp * 15 * likelihood;
+      // Allows ties — easier to trigger
+      probPerRound = myCount >= 3 ? 0.8 : myCount >= 2 ? 0.6 : myCount >= 1 ? 0.35 : 0.1;
+      break;
     }
 
     case 'pairCounting': {
-      const vpPerPair = bonus.vpPerPair || 1;
+      vpPerTrigger = bonus.vpPerPair || 1;
       const pairCount = countPairsInRealm(player);
-      const expected = Math.max(pairCount, 0.5); // At least some expected value
-      return vpPerPair * expected * 12;
+      // Expected pairs scales with realm size
+      const expectedPairs = Math.max(pairCount, 0.5);
+      return vpPerTrigger * expectedPairs * remainingRounds * 2.5;
     }
 
     case 'hermitExclusive': {
-      const vp = bonus.vp || 1;
+      vpPerTrigger = bonus.vp || 1;
       const tomeSize = player.tome.length;
-      // Only good if tome is empty or has 1 card
-      const likelihood = tomeSize <= 1 ? 0.6 : 0.1;
-      return vp * 10 * likelihood;
+      // Only triggers if Hermit is alone in Tome
+      probPerRound = tomeSize <= 1 ? 0.6 : 0.05;
+      break;
     }
 
     case 'noSuitInRealm': {
-      const vp = bonus.vp || 1;
+      vpPerTrigger = bonus.vp || 1;
       const suit = bonus.suit;
       const myCount = countSuitInRealm(player, suit);
-      const likelihood = myCount === 0 ? 0.8 : 0.2;
-      return vp * 12 * likelihood;
+      probPerRound = myCount === 0 ? 0.75 : 0.15;
+      break;
     }
 
-    case 'hierophant_blessing':
-      // Value increases with more bonus cards in tome
-      return 15 + player.tome.filter(c => c.keywords?.includes('bonus')).length * 5;
+    case 'hierophant_blessing': {
+      // Value scales with bonus cards in tome × remaining rounds
+      const bonusCount = player.tome.filter(c => c.keywords?.includes('bonus')).length;
+      return (10 + bonusCount * 5) * Math.min(remainingRounds, 5) * 0.6;
+    }
 
     default:
       return 8;
   }
+
+  // Cumulative expected VP = probability × VP × remaining rounds
+  const cumulativeVP = probPerRound * vpPerTrigger * remainingRounds;
+
+  // Opportunity cost: using as wild could win the pot instead
+  const potValue = state.pot || 0;
+  const opportunityCost = potValue * 0.15; // rough estimate of pot-win probability
+
+  return Math.max(3, cumulativeVP * 5 - opportunityCost);
 }
 
 function scoreActionValue(effect, player, state, playerIndex) {
@@ -237,12 +267,18 @@ function scoreTomeValue(effect, card, player, state, playerIndex) {
 function estimateWildValue(state, playerIndex) {
   const player = state.players[playerIndex];
   const realmSize = player.realm.length;
+  const remaining = estimateRemainingRounds(state);
 
   // Wild is most valuable when it can reach realm=5 (trigger round-end)
-  if (realmSize === 4) return 18; // Completing realm
-  if (realmSize === 3) return 12; // Getting close
-  if (realmSize <= 2) return 8;   // Early game — still useful for realm building
-  return 6; // realm already 5+ (rare), less useful
+  let base;
+  if (realmSize === 4) base = 18; // Completing realm
+  else if (realmSize === 3) base = 12; // Getting close
+  else if (realmSize <= 2) base = 8;   // Early game
+  else base = 6; // realm already 5+
+
+  // Late game: wild is more valuable (no time for Tome effects)
+  if (remaining <= 2) base *= 1.3;
+  return base;
 }
 
 // --- Helpers ---

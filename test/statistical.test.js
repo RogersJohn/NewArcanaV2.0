@@ -73,6 +73,47 @@ describe('Statistical Regression', () => {
     expect(minVP).toBeGreaterThan(-50);
   }, 120000);
 
+  it('AI improvements regression: 200 games verify metric shifts', () => {
+    const sim = runSimulation({ games: 200, players: 4, seed: 5000 });
+
+    expect(sim.errors).toBe(0);
+    expect(sim.completedGames).toBe(200);
+
+    // Count wins by AI type
+    const wins = {};
+    const appearances = {};
+    for (const game of sim.results) {
+      for (const player of game.players) {
+        appearances[player.aiType] = (appearances[player.aiType] || 0) + 1;
+      }
+      wins[game.winner.aiType] = (wins[game.winner.aiType] || 0) + 1;
+    }
+
+    // No AI type should dominate excessively
+    for (const [ai, w] of Object.entries(wins)) {
+      const n = appearances[ai] || 1;
+      const rate = w / n;
+      expect(rate).toBeLessThanOrEqual(0.55);
+    }
+
+    // Average rounds should be reasonable
+    const totalRounds = sim.results.reduce((s, r) => s + r.roundsPlayed, 0);
+    const avgRounds = totalRounds / sim.results.length;
+    expect(avgRounds).toBeGreaterThanOrEqual(2);
+    expect(avgRounds).toBeLessThanOrEqual(12);
+  }, 300000);
+
+  it('Performance regression: 50 games under 30 seconds', () => {
+    const start = performance.now();
+    const sim = runSimulation({ games: 50, players: 4, seed: 9999 });
+    const elapsed = performance.now() - start;
+
+    expect(sim.errors).toBe(0);
+    expect(sim.completedGames).toBe(50);
+    // Lookahead adds overhead but should stay under 30 seconds
+    expect(elapsed).toBeLessThan(30000);
+  }, 60000);
+
   it('All 10 decision types recorded across batch', () => {
     // Run a batch and collect all decision types from game histories
     const allDecisionTypes = new Set();

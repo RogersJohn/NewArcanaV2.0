@@ -7,6 +7,23 @@ import { evaluateHand, compareHands } from '../poker.js';
 import { getCardEffect } from '../effect-resolver.js';
 
 /**
+ * Estimate how many rounds remain before Death ends the game.
+ * Death is in the bottom 3 cards of the major deck (setup rule).
+ * Each round consumes ~1.5 cards from the major deck (aging + buys).
+ *
+ * @param {object} state - Game state
+ * @returns {number} Estimated remaining rounds, clamped to [1, 10]
+ */
+export function estimateRemainingRounds(state) {
+  const deckSize = state.majorDeck.length;
+  // Death is in the bottom 3, so we need to consume deckSize - 2 cards minimum
+  // to reach the danger zone. Each round: ~1 card ages off display, ~0.5 bought.
+  const cardsPerRound = 1.5;
+  const estimate = Math.round(deckSize / cardsPerRound);
+  return Math.max(1, Math.min(10, estimate));
+}
+
+/**
  * Check if any opponent is close to a Celestial win.
  * @param {object} state
  * @param {number} playerIndex - The AI making the decision
@@ -208,6 +225,21 @@ export function aceBlockValue(state, playerIndex, action) {
   if (action.type === 'KING_BLOCK') return 30;
 
   return 5; // Default low
+}
+
+/**
+ * Compute how valuable it is to retain an Ace/blocker for future use.
+ * Higher = more valuable to keep, harder to justify spending.
+ * @param {object} state
+ * @param {number} playerIndex
+ * @returns {number} Retention value 0-60
+ */
+export function aceRetentionValue(state, playerIndex) {
+  const blockerCount = countBlockingCards(state, playerIndex);
+  // Last blocker is very valuable
+  if (blockerCount <= 1) return 50;
+  if (blockerCount === 2) return 30;
+  return 15; // 3+ blockers — can afford to spend one
 }
 
 /**

@@ -14,6 +14,8 @@ import { CollectorAI } from './collector.js';
 import { ScoringAI } from './scoring.js';
 import { MctsAI } from './mcts.js';
 import { shuffle } from '../cards.js';
+// Import lookahead to trigger registration with personality.js
+import './lookahead.js';
 
 const AI_CLASSES = {
   'random': RandomAI,

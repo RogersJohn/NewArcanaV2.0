@@ -13,11 +13,11 @@
 import { ScoringAI } from './scoring.js';
 import { RandomAI } from './base.js';
 import { cloneState } from '../state.js';
-import { playGame } from '../engine.js';
 import { createRNG } from '../rng.js';
 import { createCardTracker } from './card-tracker.js';
 import { isCelestial } from '../cards.js';
 import { scoreAction, SCORING_WEIGHTS } from './personality.js';
+import { evaluatePosition, applyActionSimplified, simulateOpponentTurn } from './lookahead.js';
 
 // Rollout policy AI — reuse a single instance
 const rolloutAI = new ScoringAI();
@@ -32,7 +32,7 @@ export class MctsAI extends RandomAI {
   constructor(options = {}) {
     super();
     this.name = 'MCTS';
-    this.rolloutsPerAction = options.rolloutsPerAction ?? 10;
+    this.rolloutsPerAction = options.rolloutsPerAction ?? 20;
     this.maxCandidates = options.maxCandidates ?? 8;
     this.verbose = options.verbose ?? false;
 
@@ -81,88 +81,42 @@ export class MctsAI extends RandomAI {
   }
 
   /**
-   * Run a single rollout: clone state, apply action, simulate to game end,
-   * return VP delta for the MCTS player.
+   * Run a single rollout: clone state, apply action, simulate one round,
+   * evaluate position. Much faster than full-game rollouts.
    *
    * @param {object} state - Current game state
    * @param {number} playerIndex - MCTS player's index
    * @param {object} action - The action to evaluate
    * @param {number} rolloutIndex - Used to seed the rollout RNG
-   * @returns {number} VP delta (positive = good for MCTS player)
+   * @returns {number} Position score (higher = better for MCTS player)
    */
   _runRollout(state, playerIndex, action, rolloutIndex) {
-    // Clone the state for this rollout
-    const clone = cloneState(state);
-
-    // Give the clone a fresh RNG so rollouts don't affect the real game
-    // Seed from current state seed + rollout index for variety
-    const rolloutSeed = ((state.seed || 0) * 1000 + rolloutIndex * 7 + playerIndex * 31) | 0;
-    clone.rng = createRNG(rolloutSeed);
-
-    // Suppress logging in rollouts
-    clone.log = { push() {} };
-    clone.events = { push() {} };
-
-    const vpBefore = clone.players[playerIndex].vp;
-
-    // Build AI array for the rollout: ScoringAI for all players
-    const ais = clone.players.map(() => rolloutAI);
-
-    // Now simulate: we need to apply the chosen action and then continue.
-    // The simplest approach: drive playGameGen with a modified AI that
-    // returns our chosen action on the first ACTION decision for playerIndex,
-    // then delegates to ScoringAI for everything after.
-    //
-    // We use the sync playGame which drives via driveWithAIs.
-    // To inject our action, we create a wrapper AI.
-    let injected = false;
-    const injectorAI = {
-      ...rolloutAI,
-      name: 'MCTS-Injector',
-      chooseAction(s, actions, pi) {
-        if (!injected && pi === playerIndex) {
-          injected = true;
-          // Find the matching action in the clone's legal actions
-          // Match by type + description since card IDs differ in clone
-          const match = actions.find(a =>
-            a.type === action.type && a.description === action.description
-          );
-          if (match) return match;
-          // Fallback: match by type only
-          const typeMatch = actions.find(a => a.type === action.type);
-          if (typeMatch) return typeMatch;
-        }
-        return rolloutAI.chooseAction(s, actions, pi);
-      },
-      // Delegate all other decisions to ScoringAI
-      chooseDiscard: (...args) => rolloutAI.chooseDiscard(...args),
-      shouldBlockWithAce: (...args) => rolloutAI.shouldBlockWithAce(...args),
-      shouldBlockWithKing: (...args) => rolloutAI.shouldBlockWithKing(...args),
-      chooseMajorKeep: (...args) => rolloutAI.chooseMajorKeep(...args),
-      chooseRealmDiscard: (...args) => rolloutAI.chooseRealmDiscard(...args),
-      chooseTomeDiscard: (...args) => rolloutAI.chooseTomeDiscard(...args),
-      chooseWheelSources: (...args) => rolloutAI.chooseWheelSources(...args),
-      chooseWheelKeep: (...args) => rolloutAI.chooseWheelKeep(...args),
-      chooseMagicianSuit: (...args) => rolloutAI.chooseMagicianSuit(...args),
-      chooseFoolTarget: (...args) => rolloutAI.chooseFoolTarget(...args),
-      chooseHermitCards: (...args) => rolloutAI.chooseHermitCards(...args),
-      chooseTowerTarget: (...args) => rolloutAI.chooseTowerTarget(...args),
-      chooseCharityCard: (...args) => rolloutAI.chooseCharityCard(...args),
-    };
-
-    // Replace the MCTS player's AI with the injector
-    ais[playerIndex] = injectorAI;
-
-    // Play the game to completion
     try {
-      playGame(clone, ais);
+      const clone = cloneState(state);
+
+      // Give the clone a fresh RNG for variety across rollouts
+      const rolloutSeed = ((state.seed || 0) * 1000 + rolloutIndex * 7 + playerIndex * 31) | 0;
+      clone.rng = createRNG(rolloutSeed);
+
+      // Suppress logging
+      clone.log = { push() {} };
+      clone.events = { push() {} };
+
+      // Apply our chosen action
+      applyActionSimplified(clone, playerIndex, action);
+
+      // Simulate a full round: each opponent takes a turn
+      const numPlayers = clone.players.length;
+      for (let i = 1; i < numPlayers; i++) {
+        const opIdx = (playerIndex + i) % numPlayers;
+        simulateOpponentTurn(clone, opIdx);
+      }
+
+      // Evaluate the resulting position
+      return evaluatePosition(clone, playerIndex);
     } catch (_e) {
-      // Rollout failed — return neutral
       return 0;
     }
-
-    const vpAfter = clone.players[playerIndex].vp;
-    return vpAfter - vpBefore;
   }
 
   // --- Non-ACTION decisions: delegate to ScoringAI with card-tracker enhancement ---
