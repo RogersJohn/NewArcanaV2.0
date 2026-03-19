@@ -22,8 +22,16 @@
       "icon": "icons/icon.ico",
       "signAndEditExecutable": false
     },
+    "linux": {
+      "target": "AppImage",
+      "category": "Game",
+      "icon": "icons"
+    },
     "portable": {
       "artifactName": "NewArcana.exe"
+    },
+    "appImage": {
+      "artifactName": "NewArcana.AppImage"
     },
     "files": [
       "main.js",

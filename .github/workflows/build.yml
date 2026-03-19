@@ -43,33 +43,16 @@ jobs:
       - run: npx electron-builder --win portable
         working-directory: desktop
 
-      # Upload exe as artifact (available on every build)
+      # Upload exe as artifact
       - uses: actions/upload-artifact@v5
         with:
           name: NewArcana-exe
           path: desktop/dist/NewArcana.exe
 
-      # Also update the "latest" GitHub Release
-      # This creates/updates a release tagged "latest" with the new exe
-      - name: Update latest release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest Build
-          body: |
-            Automatically built from commit ${{ github.sha }}.
-
-            Download `NewArcana.exe` below — double-click to run, no installation needed.
-          files: desktop/dist/NewArcana.exe
-          prerelease: true
-          make_latest: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release:
+  build-appimage:
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: windows-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -80,12 +63,89 @@ jobs:
         working-directory: desktop
       - run: npm install
         working-directory: desktop
-      - run: npx electron-builder --win portable
+      - run: npx electron-builder --linux AppImage
         working-directory: desktop
+      - uses: actions/upload-artifact@v5
+        with:
+          name: NewArcana-appimage
+          path: desktop/dist/NewArcana.AppImage
+
+  publish-latest:
+    needs: [build-exe, build-appimage]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: NewArcana-exe
+          path: dist/
+      - uses: actions/download-artifact@v5
+        with:
+          name: NewArcana-appimage
+          path: dist/
+      - name: Update latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          body: |
+            Automatically built from the latest commit.
+
+            **Windows:** Download `NewArcana.exe` — double-click to run, no installation needed.
+            **Linux:** Download `NewArcana.AppImage` — make executable (`chmod +x`) and run.
+          files: |
+            dist/NewArcana.exe
+            dist/NewArcana.AppImage
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            build-flag: --win portable
+            artifact: desktop/dist/NewArcana.exe
+          - os: ubuntu-latest
+            build-flag: --linux AppImage
+            artifact: desktop/dist/NewArcana.AppImage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node build.js
+        working-directory: desktop
+      - run: npm install
+        working-directory: desktop
+      - run: npx electron-builder ${{ matrix.build-flag }}
+        working-directory: desktop
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-${{ matrix.os }}
+          path: ${{ matrix.artifact }}
+
+  publish-release:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist/
+          merge-multiple: true
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: desktop/dist/NewArcana.exe
+          files: |
+            dist/NewArcana.exe
+            dist/NewArcana.AppImage
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
