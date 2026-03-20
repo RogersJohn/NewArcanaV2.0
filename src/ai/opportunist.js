@@ -79,6 +79,17 @@ export class OpportunistAI extends RandomAI {
     return values[0].i;
   }
 
+  chooseDrawSource(state, playerIndex, topDiscardCard) {
+    if (!topDiscardCard || topDiscardCard.type !== 'minor') return 'deck';
+    const hand = state.players[playerIndex].hand;
+    const realm = state.players[playerIndex].realm;
+    // Take from discard if it matches a rank in hand (pair) or fills a suit gap in realm
+    const matchesHand = hand.some(c => c.type === 'minor' && c.numericRank === topDiscardCard.numericRank);
+    const matchesRealm = realm.some(c => c.type === 'minor' && c.numericRank === topDiscardCard.numericRank);
+    if (matchesHand || matchesRealm) return 'discard';
+    return 'deck';
+  }
+
   chooseMagicianSuit(state, playerIndex) {
     const realm = state.players[playerIndex].realm;
     const counts = {};

@@ -36,6 +36,8 @@ function autoResolveDecision(decision) {
       return ai.chooseTowerTarget(decision.state, decision.playerIndex, decision.targetPlayerIndex);
     case DECISION_TYPES.CHARITY_CHOOSE:
       return ai.chooseCharityCard(decision.state, decision.playerIndex);
+    case DECISION_TYPES.DRAW_SOURCE:
+      return ai.chooseDrawSource(decision.state, decision.playerIndex, decision.topDiscardCard);
     default:
       throw new Error(`Unknown decision type: ${decision.type}`);
   }

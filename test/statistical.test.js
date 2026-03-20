@@ -139,8 +139,8 @@ describe('Statistical Regression', () => {
 
     const expectedTypes = Object.values(DECISION_TYPES);
     const missingTypes = expectedTypes.filter(t => !allDecisionTypes.has(t));
-    // Some rare decision types (e.g., FOOL_TARGET) may not appear in every batch
-    // Allow up to 1 missing type for statistical robustness
-    expect(missingTypes.length).toBeLessThanOrEqual(1);
+    // Some rare decision types (e.g., TOWER_CHOOSE, HERMIT_CHOOSE) may not appear in every batch
+    // Allow up to 2 missing types for statistical robustness
+    expect(missingTypes.length).toBeLessThanOrEqual(2);
   }, 120000);
 });

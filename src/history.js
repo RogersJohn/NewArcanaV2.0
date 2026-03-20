@@ -22,6 +22,7 @@ export const DECISION_TYPES = {
   HERMIT_CHOOSE: 'HERMIT_CHOOSE',
   TOWER_CHOOSE: 'TOWER_CHOOSE',
   CHARITY_CHOOSE: 'CHARITY_CHOOSE',
+  DRAW_SOURCE: 'DRAW_SOURCE',
 };
 
 /**
@@ -105,6 +106,10 @@ export function createReplayAI(history, cursor) {
 
     chooseMagicianSuit(state, playerIndex) {
       return nextDecision(DECISION_TYPES.MAGICIAN_SUIT);
+    },
+
+    chooseDrawSource(state, playerIndex, topDiscardCard) {
+      return nextDecision(DECISION_TYPES.DRAW_SOURCE);
     },
 
     chooseFoolTarget(state, playerIndex, options) {

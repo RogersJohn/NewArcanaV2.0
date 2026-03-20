@@ -207,6 +207,17 @@ export class RandomAI {
   }
 
   /**
+   * Choose draw source: 'deck' or 'discard'.
+   * @param {object} state
+   * @param {number} playerIndex
+   * @param {object} topDiscardCard - The visible top card of the discard pile
+   * @returns {string} 'deck' or 'discard'
+   */
+  chooseDrawSource(state, playerIndex, topDiscardCard) {
+    return 'deck';
+  }
+
+  /**
    * Learn from a completed game's outcome. Called after each game in learning mode.
    * Override in subclasses to implement weight adaptation.
    *
