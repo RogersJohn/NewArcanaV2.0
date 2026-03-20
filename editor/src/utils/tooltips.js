@@ -75,6 +75,7 @@ export const SCORING = {
   plagueVp: 'VP penalty per Plague card in Tome at game end. Should be negative. Default: -3.',
   celestialWinCount: 'Number of Celestial cards needed to trigger an instant win. Default: 3.',
   potInitialPerPlayer: 'VP added to the pot at game start per player. Default: 1.',
+  potInitialAbsolute: 'Fixed starting pot VP, overriding the per-player calculation. Leave empty to use (players - 1) x potInitialPerPlayer.',
   potGrowth: 'VP added to the pot at the start of each new round. Default: 1.',
   maxPaymentCards: 'Maximum number of minor cards that can be used as payment in a single buy action. Default: 3.',
 };

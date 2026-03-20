@@ -118,19 +118,24 @@ export function useGameController() {
   /**
    * Start a new game.
    */
-  const startGame = useCallback(({ playerCount, aiDifficulty, seed, buyPrices }) => {
+  const startGame = useCallback(({ playerCount, aiDifficulty, seed, buyPrices, scoring }) => {
     // Clean up any pending AI timeout
     if (abortRef.current) {
       abortRef.current();
       abortRef.current = null;
     }
 
+    const cardConfig = {};
+    if (buyPrices) cardConfig.buyPrices = buyPrices;
+    if (scoring) cardConfig.scoring = scoring;
+    const hasConfig = Object.keys(cardConfig).length > 0;
+
     const ctrl = new GameController({
       players: playerCount,
       humanPlayers: [0],
       aiAssignment: difficultyToAssignment(aiDifficulty),
       seed,
-      cardConfig: buyPrices ? { buyPrices } : undefined,
+      cardConfig: hasConfig ? cardConfig : undefined,
       yieldAll: true,
     });
 

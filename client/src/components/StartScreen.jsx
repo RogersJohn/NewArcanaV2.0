@@ -8,6 +8,7 @@ export default function StartScreen({ onStart }) {
   const [seed, setSeed] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [buyPrices, setBuyPrices] = useState({ ...DEFAULT_PRICES });
+  const [startingPot, setStartingPot] = useState('');
 
   const updatePrice = (key, val) => {
     setBuyPrices(prev => ({ ...prev, [key]: Number(val) || 0 }));
@@ -16,11 +17,13 @@ export default function StartScreen({ onStart }) {
   const hasCustomPrices = Object.keys(DEFAULT_PRICES).some(k => buyPrices[k] !== DEFAULT_PRICES[k]);
 
   const handleStart = () => {
+    const scoring = startingPot !== '' ? { potInitialAbsolute: Number(startingPot) } : undefined;
     onStart({
       playerCount,
       aiDifficulty,
       seed: seed ? Number(seed) : undefined,
       buyPrices: hasCustomPrices ? buyPrices : undefined,
+      scoring,
     });
   };
 
@@ -105,6 +108,18 @@ export default function StartScreen({ onStart }) {
                 <input type="number" value={buyPrices.discard} onChange={e => updatePrice('discard', e.target.value)} className="start-input price-input" />
               </label>
             </div>
+            <div className="advanced-label" style={{ marginTop: '12px' }}>Starting Pot</div>
+            <label className="price-label">
+              Starting Pot (absolute)
+              <input
+                type="number"
+                value={startingPot}
+                onChange={e => setStartingPot(e.target.value)}
+                placeholder="Default (per-player)"
+                className="start-input price-input"
+                min="0"
+              />
+            </label>
           </div>
         )}
 

@@ -35,6 +35,7 @@ const SCORING_FIELDS = [
   { key: 'plagueVp', label: 'Plague VP' },
   { key: 'celestialWinCount', label: 'Celestial Win Count' },
   { key: 'potInitialPerPlayer', label: 'Pot Initial Per Player' },
+  { key: 'potInitialAbsolute', label: 'Starting Pot (absolute)' },
   { key: 'potGrowth', label: 'Pot Growth Per Round' },
 ];
 
