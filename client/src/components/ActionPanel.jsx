@@ -6,6 +6,8 @@ import BlockChoice from './actions/BlockChoice.jsx';
 import WheelSourceChoice from './actions/WheelSourceChoice.jsx';
 import WheelKeepChoice from './actions/WheelKeepChoice.jsx';
 import SuitChoice from './actions/SuitChoice.jsx';
+import CharityChoice from './actions/CharityChoice.jsx';
+import DrawSourceChoice from './actions/DrawSourceChoice.jsx';
 
 export default function ActionPanel({ decision, gameState, onSubmit }) {
   if (!decision) return null;
@@ -30,6 +32,10 @@ export default function ActionPanel({ decision, gameState, onSubmit }) {
       return <WheelKeepChoice decision={decision} onSubmit={onSubmit} />;
     case 'MAGICIAN_SUIT':
       return <SuitChoice decision={decision} onSubmit={onSubmit} />;
+    case 'CHARITY_CHOOSE':
+      return <CharityChoice decision={decision} onSubmit={onSubmit} />;
+    case 'DRAW_SOURCE':
+      return <DrawSourceChoice decision={decision} onSubmit={onSubmit} />;
     default:
       return <div className="action-panel">Unknown decision: {type}</div>;
   }
