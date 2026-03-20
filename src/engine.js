@@ -121,7 +121,7 @@ export function* setupGen(state) {
     state.pot = absolutePot;
   } else {
     const potPerPlayer = state.config?.scoring?.potInitialPerPlayer ?? 1;
-    state.pot = state.players.length * potPerPlayer;
+    state.pot = (state.players.length - 1) * potPerPlayer;
   }
   state.roundNumber = 1;
   state.lastPotAmount = state.pot;
@@ -241,7 +241,7 @@ function* playTurnGen(state, playerIndex) {
   log(state, `--- ${player.name}'s turn (hand: ${player.hand.length}, realm: ${player.realm.length}, tome: ${player.tome.length}, vp: ${player.vp}) ---`);
 
   // Draw phase
-  drawPhase(state, playerIndex);
+  yield* drawPhaseGen(state, playerIndex);
 
   if (state.gameEnded) return;
 
@@ -271,21 +271,40 @@ function* playTurnGen(state, playerIndex) {
 }
 
 /**
- * Draw phase: draw up to hand size limit, minimum 1.
- * (No decision points — stays synchronous.)
+ * Draw phase (generator version): draw up to hand size limit, minimum 1.
+ * Yields DRAW_SOURCE decisions when the discard pile is non-empty.
  * @param {object} state
  * @param {number} playerIndex
+ * @yields {{ type: string, playerIndex: number, state: object, topDiscardCard: object }}
  */
-export function drawPhase(state, playerIndex) {
+export function* drawPhaseGen(state, playerIndex) {
   const player = state.players[playerIndex];
   const limit = getEffectiveHandLimit(player, state.config);
   const currentSize = getHandSize(player);
   const toDraw = Math.max(1, limit - currentSize);
 
   for (let i = 0; i < toDraw; i++) {
-    const card = drawMinorCard(state);
+    let card;
+    if (state.minorDiscard.length > 0) {
+      const topDiscardCard = state.minorDiscard[state.minorDiscard.length - 1];
+      const source = yield {
+        type: DECISION_TYPES.DRAW_SOURCE,
+        playerIndex,
+        state,
+        topDiscardCard,
+        drawNumber: i + 1,
+        totalDraws: toDraw,
+      };
+      recordDecision(state, DECISION_TYPES.DRAW_SOURCE, playerIndex, source);
+      if (source === 'discard') {
+        card = state.minorDiscard.pop();
+      } else {
+        card = drawMinorCard(state);
+      }
+    } else {
+      card = drawMinorCard(state);
+    }
     if (!card) {
-      // No cards left even after reshuffling discard
       state.gameEnded = true;
       state.gameEndReason = 'deck_exhaustion';
       log(state, 'Game ended: not enough Minor Arcana cards to draw');
@@ -295,6 +314,26 @@ export function drawPhase(state, playerIndex) {
   }
 
   log(state, `${player.name} drew ${toDraw} cards`);
+}
+
+/**
+ * Draw phase (sync wrapper — backward compatible).
+ * When called without ais, auto-draws from deck (legacy behavior).
+ * @param {object} state
+ * @param {number} playerIndex
+ * @param {object[]} [ais]
+ */
+export function drawPhase(state, playerIndex, ais) {
+  if (ais) {
+    driveWithAIs(drawPhaseGen(state, playerIndex), ais);
+  } else {
+    // Legacy: auto-draw from deck without AI decisions
+    const gen = drawPhaseGen(state, playerIndex);
+    let result = gen.next();
+    while (!result.done) {
+      result = gen.next('deck');
+    }
+  }
 }
 
 /**

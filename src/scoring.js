@@ -87,17 +87,21 @@ export function* scoreRoundEndGen(state) {
       }
     }
 
-    // Hermit bonus: 1vp if Hermit is the only card in Tome (separate check)
-    if (hasRealmCards) {
-      const hermit = player.tome.find(c => isHermitCard(state, c));
+    // Hermit bonus: realmVp if any realm cards + exclusiveVp if sole card in Tome
+    const hermit = player.tome.find(c => isHermitCard(state, c));
+    if (hermit) {
       const hermitEffect = getCardEffect(state, hermit);
-      const hermitCfg = hermitEffect?.bonus || state.config?.bonusCards?.[hermit.number];
-      const hermitVp = hermitCfg?.vp ?? 1;
-      if (hermit && player.tome.length === 1) {
-        player.vp += hermitVp;
-        log(state, `${player.name} earns ${hermitVp}vp from Hermit (only card in Tome)`);
+      const hermitCfg = hermitEffect?.bonus || state.config?.bonusCards?.[hermit?.number];
+      const realmVp = hermitCfg?.realmVp ?? 0;
+      const excVp = hermitCfg?.exclusiveVp ?? (hermitCfg?.vp ?? 1);
+      let hermitTotal = 0;
+      if (hasRealmCards && realmVp > 0) hermitTotal += realmVp;
+      if (player.tome.length === 1) hermitTotal += excVp;
+      if (hermitTotal > 0) {
+        player.vp += hermitTotal;
+        log(state, `${player.name} earns ${hermitTotal}vp from Hermit`);
         recordEvent(state, 'BONUS_SCORED', {
-          cardNumber: 9, cardName: 'The Hermit', player: pi, vp: hermitVp, hierophant: false,
+          cardNumber: 9, cardName: 'The Hermit', player: pi, vp: hermitTotal, hierophant: false,
         });
       }
     }
@@ -188,11 +192,18 @@ export function* resolveBonusGen(state, playerIndex, card) {
     case 'suitMajority':
       return yield* resolveMagicianGen(state, playerIndex);
     case 'suitHighest':
-      return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1);
+      return resolveSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.countWilds ?? false, bonusCfg.allowTie ?? true, bonusCfg.vp ?? 1, bonusCfg);
     case 'pairCounting':
       return resolveLovers(state, playerIndex, bonusCfg.vpPerPair ?? 1, bonusCfg);
-    case 'hermitExclusive':
-      return player.tome.length === 1 && isHermitCard(state, player.tome[0]) ? (bonusCfg.vp ?? 1) : 0;
+    case 'hermitExclusive': {
+      // Two-tier: realmVp if any realm cards, +exclusiveVp if sole card in tome
+      const realmVp = bonusCfg.realmVp ?? 0;
+      const excVp = bonusCfg.exclusiveVp ?? (bonusCfg.vp ?? 1);
+      let total = 0;
+      if (player.realm.length > 0 && realmVp > 0) total += realmVp;
+      if (player.tome.length === 1 && isHermitCard(state, player.tome[0])) total += excVp;
+      return total;
+    }
     case 'noSuitInRealm':
       return resolveNoneOfSuitBonus(state, playerIndex, bonusCfg.suit, bonusCfg.vp ?? 1);
     case 'hierophant_blessing':
@@ -277,15 +288,36 @@ function* resolveMagicianGen(state, playerIndex) {
 
 /**
  * Suit bonus: vp for having the highest count of a suit.
+ * Supports two-tier scoring: floorVp for having ANY of the suit,
+ * plus exclusiveVp for having the highest count (ties allowed).
+ * Falls back to legacy single-vp mode if floorVp not set.
  * @param {boolean} countWilds - Whether to count wild cards
  * @param {boolean} allowTie - Whether ties still score
- * @param {number} [vp=1] - VP to award
+ * @param {number} [vp=1] - VP to award (legacy mode)
+ * @param {object} [bonusCfg] - Full bonus config (for floorVp/exclusiveVp)
  */
-function resolveSuitBonus(state, playerIndex, suit, countWilds, allowTie, vp) {
-  const award = vp ?? 1;
+function resolveSuitBonus(state, playerIndex, suit, countWilds, allowTie, vp, bonusCfg) {
   const myCount = countSuitInRealm(state.players[playerIndex], suit, countWilds);
   if (myCount === 0) return 0;
 
+  // Two-tier mode: floorVp + exclusiveVp
+  if (bonusCfg?.floorVp != null) {
+    let total = bonusCfg.floorVp;
+    // Check if player has the highest count (ties OK)
+    let isHighest = true;
+    for (let pi = 0; pi < state.players.length; pi++) {
+      if (pi === playerIndex) continue;
+      const otherCount = countSuitInRealm(state.players[pi], suit, countWilds);
+      if (otherCount > myCount) { isHighest = false; break; }
+    }
+    if (isHighest && bonusCfg.exclusiveVp) {
+      total += bonusCfg.exclusiveVp;
+    }
+    return total;
+  }
+
+  // Legacy single-vp mode
+  const award = vp ?? 1;
   let highest = myCount;
   let tied = false;
 
@@ -479,6 +511,8 @@ export function resolveWithAI(ai, request) {
       return ai.chooseTowerTarget(request.state, request.playerIndex, request.targetPlayerIndex);
     case DECISION_TYPES.CHARITY_CHOOSE:
       return ai.chooseCharityCard(request.state, request.playerIndex);
+    case DECISION_TYPES.DRAW_SOURCE:
+      return ai.chooseDrawSource(request.state, request.playerIndex, request.topDiscardCard);
     default:
       throw new Error(`Unknown decision type: ${request.type}`);
   }

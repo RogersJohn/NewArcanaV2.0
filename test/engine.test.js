@@ -26,8 +26,8 @@ describe('Engine Setup', () => {
     // Display should have 3 cards
     expect(state.display.filter(c => c !== null).length).toBe(3);
 
-    // Pot should be player count
-    expect(state.pot).toBe(4);
+    // Pot should be (player count - 1) * potInitialPerPlayer
+    expect(state.pot).toBe(3);
 
     // Round should be 1
     expect(state.roundNumber).toBe(1);
@@ -71,7 +71,7 @@ describe('Engine Setup', () => {
     const state = createInitialState(3);
     const ais = makeAIs(3);
     setup(state, ais);
-    expect(state.pot).toBe(3);
+    expect(state.pot).toBe(2); // (3-1) * 1
     if (!state.gameEnded) {
       expect(state.players.length).toBe(3);
     }
@@ -252,7 +252,7 @@ describe('Absolute Starting Pot (Issue #2)', () => {
     });
     const ais = makeAIs(4);
     setup(state, ais);
-    expect(state.pot).toBe(4);
+    expect(state.pot).toBe(3); // (4-1) * 1
   });
 });
 
