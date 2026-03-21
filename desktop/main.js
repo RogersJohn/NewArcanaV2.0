@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Suppress harmless libva/VAAPI warnings on Linux with older Intel GPUs
+app.commandLine.appendSwitch('disable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
+
 let mainWindow;
 
 function createWindow() {
