@@ -110,14 +110,14 @@ describe('Regression Tests (FIXES.md)', () => {
     expect(blockLog).toContain('Play The Star (17) to Tome');
   });
 
-  it('Fix #5: Wild card actions pruned (≤4 per Major: alone + top 3 combos)', () => {
+  it('Fix #5: Wild card actions include all single-companion combos', () => {
     const state = createInitialState(2, false, 42);
     state.minorDeck = [];
     state.majorDeck = [];
     state.display = [null, null, null];
     state.roundNumber = 1;
 
-    // Give player a Major + 6 minors
+    // Give player a Major + 6 minors (all different ranks)
     state.players[0].hand = [
       makeMajor(17), // wild candidate
       mc('WANDS', 2), mc('CUPS', 3), mc('SWORDS', 4),
@@ -128,9 +128,13 @@ describe('Regression Tests (FIXES.md)', () => {
     const actions = getLegalActions(state, 0);
     const wildActions = actions.filter(a => a.type === 'PLAY_WILD');
 
-    // Should be: 1 (alone) + 3 (best combos) = 4 max per Major
-    expect(wildActions.length).toBeLessThanOrEqual(4);
-    expect(wildActions.length).toBeGreaterThanOrEqual(1);
+    // Should include: 1 (alone) + 6 (all single-companion pairs) + up to 3 multi-card combos
+    // Single-companion combos are no longer pruned (fix #19)
+    const singles = wildActions.filter(a => a.withCards.length === 1);
+    const alone = wildActions.filter(a => a.withCards.length === 0);
+    expect(alone.length).toBe(1);
+    expect(singles.length).toBe(6); // Every minor gets a pair option
+    expect(wildActions.length).toBeGreaterThanOrEqual(7);
   });
 
   it('Fix #6: Card statistics present in report output', () => {

@@ -502,33 +502,46 @@ function addWildActions(state, playerIndex, actions) {
       }
     }
 
-    // Score all valid combos and keep the top 3
-    const scored = validCombos.map(({ combo, desc }) => {
-      const testRealm = [...player.realm, ...combo, { type: 'major' }];
-      const score = evaluateHand(testRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
-      return { combo, desc, score };
-    });
-    scored.sort((a, b) => compareHands(b.score, a.score));
-
-    // Deduplicate by card IDs
-    const seen = new Set();
-    const top = [];
-    for (const entry of scored) {
-      const key = entry.combo.map(c => c.id).sort().join(',');
-      if (!seen.has(key)) {
-        seen.add(key);
-        top.push(entry);
-      }
-      if (top.length >= 3) break;
-    }
-
-    for (const { combo } of top) {
+    // Single-companion combos (wild + 1 minor): always include all of them
+    const singles = validCombos.filter(c => c.combo.length === 1);
+    for (const { combo } of singles) {
       actions.push({
         type: 'PLAY_WILD',
         card,
         withCards: combo,
         description: `Play ${cardName(card)} as wild with ${combo.map(cardName).join(', ')}`,
       });
+    }
+
+    // Multi-companion combos (wild + 2+ minors): score and keep top 3
+    const multiCombos = validCombos.filter(c => c.combo.length >= 2);
+    if (multiCombos.length > 0) {
+      const scored = multiCombos.map(({ combo, desc }) => {
+        const testRealm = [...player.realm, ...combo, { type: 'major' }];
+        const score = evaluateHand(testRealm, { aceHigh: state.config?.gameRules?.aceHigh ?? false });
+        return { combo, desc, score };
+      });
+      scored.sort((a, b) => compareHands(b.score, a.score));
+
+      const seen = new Set();
+      const top = [];
+      for (const entry of scored) {
+        const key = entry.combo.map(c => c.id).sort().join(',');
+        if (!seen.has(key)) {
+          seen.add(key);
+          top.push(entry);
+        }
+        if (top.length >= 3) break;
+      }
+
+      for (const { combo } of top) {
+        actions.push({
+          type: 'PLAY_WILD',
+          card,
+          withCards: combo,
+          description: `Play ${cardName(card)} as wild with ${combo.map(cardName).join(', ')}`,
+        });
+      }
     }
   }
 }
@@ -604,11 +617,20 @@ function addBuyActions(state, playerIndex, actions) {
     );
     const topPayments = payments.slice(0, 3);
     for (const payment of topPayments) {
+      let sourceDesc = source;
+      if (source.startsWith('display')) {
+        const slot = parseInt(source.slice(-1));
+        const displayCard = state.display[slot];
+        if (displayCard) sourceDesc = `${cardName(displayCard)} from ${source}`;
+      } else if (source === 'discard' && state.majorDiscard.length > 0) {
+        const topCard = state.majorDiscard[state.majorDiscard.length - 1];
+        sourceDesc = `${cardName(topCard)} from discard`;
+      }
       actions.push({
         type: 'BUY',
         source,
         payment,
-        description: `Buy from ${source} (cost ${price}) paying with ${payment.map(cardName).join(', ')}`,
+        description: `Buy ${sourceDesc} (cost ${price}) paying with ${payment.map(cardName).join(', ')}`,
       });
     }
   }
