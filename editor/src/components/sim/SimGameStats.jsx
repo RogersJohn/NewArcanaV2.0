@@ -62,7 +62,7 @@ export default function SimGameStats({ results, compareResults }) {
         </div>
         <div>
           <span className="text-gray-400">Death ends:</span>{' '}
-          <span className="text-gray-200">{s.gameEndReasons?.death != null ? formatPct(s.gameEndReasons.death / totalGames) : '?'}</span>
+          <span className="text-gray-200">{(() => { const d = (s.gameEndReasons?.death_revealed ?? 0) + (s.gameEndReasons?.death_purchased ?? 0); return d > 0 ? formatPct(d / totalGames) : '0%'; })()}</span>
           {s.celestialWinRate?.rate != null && (
             <>
               <span className="text-gray-400 ml-3">Celestial wins:</span>{' '}

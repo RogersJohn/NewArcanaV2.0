@@ -30,8 +30,8 @@ export default function SimOverview({ results, cardBalance, cardAnalytics }) {
   const s = results.stats;
   const totalGames = results.completedGames || s.totalGames || 0;
 
-  const deathEnds = s.gameEndReasons?.death != null
-    ? formatPct(s.gameEndReasons.death / totalGames) : '?';
+  const deathTotal = (s.gameEndReasons?.death_revealed ?? 0) + (s.gameEndReasons?.death_purchased ?? 0);
+  const deathEnds = deathTotal > 0 ? formatPct(deathTotal / totalGames) : '0%';
   const celestialRate = s.celestialWinRate?.rate != null
     ? formatPct(s.celestialWinRate.rate) : '?';
 
@@ -84,8 +84,8 @@ export default function SimOverview({ results, cardBalance, cardAnalytics }) {
   const columns = [
     { key: 'name', label: 'Card', text: true },
     { key: 'purchased', label: 'Purchased' },
-    { key: 'placedByWinner', label: 'Placed by Winner' },
-    { key: 'inWinnerTome', label: 'In Winner Tome' },
+    { key: 'placedByWinner', label: 'Winner Played to Tome', title: 'Times the game winner actively played this card to their Tome during the game' },
+    { key: 'inWinnerTome', label: 'In Winner Tome at End', title: 'Times this card was in the winner\'s Tome when the game ended (includes stolen cards via Hanged Man)' },
     { key: 'bonusRate', label: 'Bonus Rate' },
     { key: 'avgBonusVp', label: 'Avg Bonus VP' },
     { key: 'wildPlayed', label: 'Wild Uses' },
@@ -101,6 +101,23 @@ export default function SimOverview({ results, cardBalance, cardAnalytics }) {
         <SummaryCard value={celestialRate} label="Celestial wins" />
       </div>
 
+      {s.vpSources && (
+        <div className="grid grid-cols-3 gap-3">
+          <SummaryCard
+            value={`${(s.vpSources.pot.pct * 100).toFixed(1)}%`}
+            label={`Pot VP (${s.vpSources.pot.perGame.toFixed(1)}/game)`}
+          />
+          <SummaryCard
+            value={`${(s.vpSources.bonus.pct * 100).toFixed(1)}%`}
+            label={`Bonus VP (${s.vpSources.bonus.perGame.toFixed(1)}/game)`}
+          />
+          <SummaryCard
+            value={`${(s.vpSources.celestial.pct * 100).toFixed(1)}%`}
+            label={`Celestial VP (${s.vpSources.celestial.perGame.toFixed(1)}/game)`}
+          />
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -110,6 +127,7 @@ export default function SimOverview({ results, cardBalance, cardAnalytics }) {
                   key={c.key}
                   onClick={() => handleSort(c.key)}
                   className="py-2 px-2 cursor-pointer hover:text-gray-200 select-none whitespace-nowrap"
+                  title={c.title || ''}
                 >
                   {c.label}{arrow(c.key)}
                 </th>
