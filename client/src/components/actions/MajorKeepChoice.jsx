@@ -11,7 +11,7 @@ export default function MajorKeepChoice({ decision, onSubmit }) {
       </div>
       <div className="major-keep-cards">
         {cards.map((card, i) => (
-          <div key={card.id || i} className="major-keep-option" onClick={() => onSubmit(card)}>
+          <div key={card.id || i} className="major-keep-option" onClick={() => onSubmit(i)}>
             <Card card={card} />
             <button className="action-button keep-button">Keep</button>
           </div>
