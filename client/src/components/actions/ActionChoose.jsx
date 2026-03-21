@@ -78,7 +78,9 @@ export default function ActionChoose({ decision, onSubmit }) {
         {renderCategory('Wild', categories.wild, 'cat-wild')}
         {renderCategory('Attack', categories.attack, 'cat-attack')}
         {renderCategory('Major Arcana', categories.major, 'cat-major')}
-        {renderCategory('Buy', categories.buy, 'cat-buy')}
+        {renderCategory('Buy from Display', categories.buy.filter(a => a.source?.startsWith('display')), 'cat-buy')}
+        {renderCategory('Buy from Draw Pile', categories.buy.filter(a => a.source === 'draw'), 'cat-buy')}
+        {renderCategory('Buy from Discard', categories.buy.filter(a => a.source === 'discard'), 'cat-buy')}
         {renderCategory('Other', categories.other, 'cat-other')}
         {renderCategory('', categories.pass, 'cat-pass')}
       </div>
