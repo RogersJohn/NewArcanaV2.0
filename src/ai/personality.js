@@ -199,9 +199,19 @@ export function scoreAction(state, playerIndex, action, weights) {
       // Opportunity cost: card's alternative value as Tome play
       const alternativeValue = estimateCardValue(state, playerIndex, action.card, 'tome');
       const remaining = estimateRemainingRounds(state);
-      // Late game: opportunity cost drops (no time to use Tome effect)
+      // Late game: opportunity cost drops (fewer rounds to benefit from tome effect)
       const opportunityWeight = remaining <= 2 ? 0.2 : remaining <= 4 ? 0.5 : 0.8;
-      baseScore = Math.max(1, baseScore - alternativeValue * opportunityWeight * 0.15);
+      const scaledAlt = alternativeValue * opportunityWeight;
+
+      // If the card's cumulative tome value substantially exceeds this wild play's value,
+      // heavily penalize — burning a 24VP bonus card as a wild for +5 realm improvement is wrong
+      if (scaledAlt > baseScore * 1.5) {
+        baseScore *= 0.1;
+      } else if (scaledAlt > baseScore) {
+        baseScore *= 0.3;
+      } else {
+        baseScore = Math.max(1, baseScore - scaledAlt * 0.4);
+      }
 
       return baseScore * weights.wild * rush;
     }
@@ -259,8 +269,11 @@ export function scoreAction(state, playerIndex, action, weights) {
       if (action.card && isCelestial(action.card)) {
         return cardVal * weights.tomecelestial;
       }
-      // Scale down tome plays when realm is small
-      const realmPenalty = player.realm.length < 3 ? 0.4 : 1.0;
+      // Bonus cards should not be penalized for small realm — they score every round
+      // regardless of when they're placed. Non-bonus cards (e.g., Devil for draw limit)
+      // are less useful without a realm to support.
+      const hasBonus = action.card?.keywords?.includes('bonus');
+      const realmPenalty = hasBonus ? 1.0 : (player.realm.length < 3 ? 0.4 : 1.0);
       return cardVal * weights.tome * realmPenalty;
     }
 

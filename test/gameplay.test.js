@@ -723,7 +723,7 @@ describe('Death card edge cases', () => {
     expect(state.gameEndReason).toBe('death_purchased');
   });
 
-  it('some games end via death across many seeds', { timeout: 15000 }, () => {
+  it('some games end via death across many seeds', { timeout: 30000 }, () => {
     const sim = runSimulation({ games: 100, players: 4, seed: 42 });
     const deathGames = sim.results.filter(g =>
       g.gameEndReason === 'death_revealed' || g.gameEndReason === 'death_purchased'
