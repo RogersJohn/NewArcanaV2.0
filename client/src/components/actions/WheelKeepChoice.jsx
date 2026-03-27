@@ -9,7 +9,7 @@ export default function WheelKeepChoice({ decision, onSubmit }) {
       <div className="action-title">Wheel of Fortune — Choose a card to keep</div>
       <div className="wheel-keep-cards">
         {cards.map((card, i) => (
-          <div key={card.id || i} className="wheel-keep-option" onClick={() => onSubmit(card)}>
+          <div key={card.id || i} className="wheel-keep-option" onClick={() => onSubmit(i)}>
             <Card card={card} />
             <button className="action-button keep-button">Keep</button>
           </div>
