@@ -210,7 +210,9 @@ function computeCardStats(results) {
           name: events.name,
           purchased: 0, purchasedByWinner: 0,
           toTome: 0, toTomeByWinner: 0,
-          actionPlayed: 0, wildPlayed: 0,
+          actionPlayed: 0, actionPlayedByWinner: 0,
+          wildPlayed: 0,
+          usedForEffect: 0, usedForEffectByWinner: 0,
           bonusScored: 0, bonusFailed: 0, bonusVpTotal: 0,
           bonusScoredByWinner: 0,
           gamesAppearing: 0,
@@ -222,7 +224,10 @@ function computeCardStats(results) {
       c.toTome += events.toTome;
       c.toTomeByWinner += events.toTomeByWinner;
       c.actionPlayed += events.actionPlayed;
+      c.actionPlayedByWinner += events.actionPlayedByWinner || 0;
       c.wildPlayed += events.wildPlayed;
+      c.usedForEffect += events.usedForEffect || 0;
+      c.usedForEffectByWinner += events.usedForEffectByWinner || 0;
       c.bonusScored += events.bonusScored;
       c.bonusFailed += events.bonusFailed;
       c.bonusVpTotal += events.bonusVpTotal;
@@ -238,8 +243,8 @@ function computeCardStats(results) {
     c.bonusSuccessRate = c.bonusScored + c.bonusFailed > 0
       ? c.bonusScored / (c.bonusScored + c.bonusFailed)
       : null;
-    c.winnerAffinity = c.purchased > 0
-      ? c.purchasedByWinner / c.purchased
+    c.winnerAffinity = c.usedForEffect > 0
+      ? c.usedForEffectByWinner / c.usedForEffect
       : null;
     c.avgBonusVp = c.bonusScored > 0
       ? c.bonusVpTotal / c.bonusScored

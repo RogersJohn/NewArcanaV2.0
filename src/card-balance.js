@@ -31,7 +31,10 @@ export function analyzeCardBalance(results) {
       agg[num] = {
         name: cardNameMap[num] || `Card ${num}`, number: num,
         purchased: 0, purchasedByWinner: 0,
-        actionPlayed: 0, aceBlocked: 0, kingBlocked: 0,
+        actionPlayed: 0, actionPlayedByWinner: 0,
+        toTome: 0, toTomeByWinner: 0,
+        usedForEffect: 0, usedForEffectByWinner: 0,
+        aceBlocked: 0, kingBlocked: 0,
         bonusScoredReal: 0, bonusScoredHierophant: 0, bonusFailed: 0,
         displayAppearances: 0, agedOff: 0,
         vpDeltaSum: 0, vpDeltaCount: 0,
@@ -49,6 +52,11 @@ export function analyzeCardBalance(results) {
         c.purchased += data.purchased || 0;
         c.purchasedByWinner += data.purchasedByWinner || 0;
         c.actionPlayed += data.actionPlayed || 0;
+        c.actionPlayedByWinner += data.actionPlayedByWinner || 0;
+        c.toTome += data.toTome || 0;
+        c.toTomeByWinner += data.toTomeByWinner || 0;
+        c.usedForEffect += data.usedForEffect || 0;
+        c.usedForEffectByWinner += data.usedForEffectByWinner || 0;
         c.aceBlocked += data.aceBlocked || 0;
         c.kingBlocked += data.kingBlocked || 0;
         c.bonusScoredReal += data.bonusScoredReal || 0;
@@ -86,10 +94,13 @@ export function analyzeCardBalance(results) {
   // --- Metric 1: Winner Affinity ---
   const winnerAffinity = [];
   for (const c of Object.values(agg)) {
-    if (c.purchased < 5) continue;
-    const rate = c.purchasedByWinner / c.purchased;
+    const effectUses = (c.usedForEffect || (c.toTome || 0) + (c.actionPlayed || 0));
+    const effectByWinner = (c.usedForEffectByWinner || (c.toTomeByWinner || 0) + (c.actionPlayedByWinner || 0));
+    if (effectUses < 5) continue;
+    const rate = effectByWinner / effectUses;
     winnerAffinity.push({
       number: c.number, name: c.name,
+      usedForEffect: effectUses, usedForEffectByWinner: effectByWinner,
       purchased: c.purchased, purchasedByWinner: c.purchasedByWinner,
       rate, flag: rate > 0.40 ? 'HIGH' : rate < 0.15 ? 'LOW' : '',
     });
@@ -181,14 +192,14 @@ function formatBalanceReport(totalGames, m) {
 
   // 1
   lines.push(THIN);
-  lines.push('  1. WINNER AFFINITY  (purchasedByWinner / purchased)');
+  lines.push('  1. WINNER AFFINITY  (usedForEffectByWinner / usedForEffect)');
   lines.push('     Flag: >40% HIGH, <15% LOW');
   lines.push(THIN);
-  lines.push('  Card                      Bought  ByWinner  Rate    Flag');
+  lines.push('  Card                      Effect  ByWinner  Rate    Flag');
   for (const c of m.winnerAffinity) {
     const name = `${c.name} (${c.number})`.padEnd(26);
     const flag = c.flag ? ` <<${c.flag}>>` : '';
-    lines.push(`  ${name} ${String(c.purchased).padStart(6)}  ${String(c.purchasedByWinner).padStart(8)}  ${(c.rate * 100).toFixed(1).padStart(5)}%${flag}`);
+    lines.push(`  ${name} ${String(c.usedForEffect).padStart(6)}  ${String(c.usedForEffectByWinner).padStart(8)}  ${(c.rate * 100).toFixed(1).padStart(5)}%${flag}`);
   }
   lines.push('');
 

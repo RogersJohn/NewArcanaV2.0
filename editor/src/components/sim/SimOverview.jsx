@@ -89,7 +89,7 @@ export default function SimOverview({ results, cardBalance, cardAnalytics }) {
     { key: 'bonusRate', label: 'Bonus Rate' },
     { key: 'avgBonusVp', label: 'Avg Bonus VP' },
     { key: 'wildPlayed', label: 'Wild Uses' },
-    { key: 'winnerAffinity', label: 'Winner Affinity' },
+    { key: 'winnerAffinity', label: 'Winner Affinity', title: 'Of all times this card was played to Tome or used as an Action, what % were by the winner? (excludes wild usage)' },
   ];
 
   return (
