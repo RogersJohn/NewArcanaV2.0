@@ -37,5 +37,11 @@ export function createSnapshot(state) {
     minorDiscardTop: state.minorDiscard.length > 0
       ? state.minorDiscard[state.minorDiscard.length - 1]
       : null,
+    // Top of major discard for display (buy target / Wheel of Fortune)
+    majorDiscardTop: state.majorDiscard.length > 0
+      ? state.majorDiscard[state.majorDiscard.length - 1]
+      : null,
+    // Buy prices from config
+    buyPrices: state.config?.buyPrices || null,
   };
 }

@@ -53,7 +53,13 @@ export default function GameScreen({ controller }) {
 
         <div className="middle-row">
           <div className="display-column">
-            <MajorDisplay display={gameState.display} majorDeckCount={gameState.majorDeckCount} />
+            <MajorDisplay
+              display={gameState.display}
+              majorDeckCount={gameState.majorDeckCount}
+              majorDiscardCount={gameState.majorDiscardCount}
+              majorDiscardTop={gameState.majorDiscardTop}
+              buyPrices={gameState.buyPrices}
+            />
             <MinorPiles
               minorDeckCount={gameState.minorDeckCount}
               minorDiscardCount={gameState.minorDiscardCount}
