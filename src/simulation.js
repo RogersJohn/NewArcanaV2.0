@@ -172,7 +172,7 @@ function extractGameResult(state, ais) {
     players: playerResults,
     vpDistribution: state.players.map(p => p.vp),
     cardEvents: summarizeCardEvents(state.events, winnerPi),
-    vpSources: summarizeVPSources(state.events, state.players),
+    vpSources: summarizeVPSources(state.events, state.players, state.config),
   };
 }
 
@@ -182,8 +182,10 @@ function extractGameResult(state, ais) {
  * @param {object[]} players - Final player states
  * @returns {object} VP breakdown by source
  */
-function summarizeVPSources(events, players) {
+function summarizeVPSources(events, players, config) {
   let potVp = 0, bonusVp = 0, celestialVp = 0;
+  const celestialVpPerCard = config?.scoring?.celestialVp ?? 2;
+
   for (const e of events) {
     if (e.type === 'POT_AWARDED') potVp += e.amount || 0;
     if (e.type === 'BONUS_SCORED') bonusVp += e.vp || 0;
@@ -191,7 +193,7 @@ function summarizeVPSources(events, players) {
   for (const p of players) {
     for (const c of [...p.tome, ...p.realm, ...p.vault]) {
       if (c.type === 'major' && c.keywords?.includes('celestial')) {
-        celestialVp += 2;
+        celestialVp += celestialVpPerCard;
       }
     }
   }
@@ -213,7 +215,9 @@ function summarizeCardEvents(events, winnerPi) {
         name: name || `Card ${num}`,
         purchased: 0, purchasedByWinner: 0,
         toTome: 0, toTomeByWinner: 0,
-        actionPlayed: 0, wildPlayed: 0,
+        actionPlayed: 0, actionPlayedByWinner: 0,
+        wildPlayed: 0,
+        usedForEffect: 0, usedForEffectByWinner: 0,
         bonusScored: 0, bonusFailed: 0, bonusVpTotal: 0,
         bonusScoredByWinner: 0,
         bonusScoredReal: 0, bonusScoredHierophant: 0,
@@ -237,10 +241,19 @@ function summarizeCardEvents(events, winnerPi) {
         break;
       case 'CARD_TO_TOME':
         c.toTome++;
-        if (isWinner) c.toTomeByWinner++;
+        c.usedForEffect++;
+        if (isWinner) {
+          c.toTomeByWinner++;
+          c.usedForEffectByWinner++;
+        }
         break;
       case 'CARD_ACTION_PLAYED':
         c.actionPlayed++;
+        c.usedForEffect++;
+        if (isWinner) {
+          c.actionPlayedByWinner++;
+          c.usedForEffectByWinner++;
+        }
         break;
       case 'CARD_WILD_PLAYED':
         c.wildPlayed++;
