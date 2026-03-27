@@ -9,12 +9,50 @@ export default function StartScreen({ onStart }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [buyPrices, setBuyPrices] = useState({ ...DEFAULT_PRICES });
   const [startingPot, setStartingPot] = useState('');
+  const [cardConfig, setCardConfig] = useState(null);
+  const [configName, setConfigName] = useState('Default');
 
   const updatePrice = (key, val) => {
     setBuyPrices(prev => ({ ...prev, [key]: Number(val) || 0 }));
   };
 
   const hasCustomPrices = Object.keys(DEFAULT_PRICES).some(k => buyPrices[k] !== DEFAULT_PRICES[k]);
+
+  const handleLoadConfig = async () => {
+    if (window.electronAPI?.openFile) {
+      const result = await window.electronAPI.openFile();
+      if (result.success) {
+        try {
+          const config = JSON.parse(result.content);
+          setCardConfig(config);
+          const name = result.filePath.split(/[/\\]/).pop().replace('.json', '');
+          setConfigName(name);
+        } catch (e) {
+          alert('Invalid config file: ' + e.message);
+        }
+      }
+    } else {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (ev) => {
+        const file = ev.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          try {
+            const config = JSON.parse(re.target.result);
+            setCardConfig(config);
+            setConfigName(file.name.replace('.json', ''));
+          } catch (err) {
+            alert('Invalid config file: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+  };
 
   const handleStart = () => {
     const scoring = startingPot !== '' ? { potInitialAbsolute: Number(startingPot) } : undefined;
@@ -24,6 +62,8 @@ export default function StartScreen({ onStart }) {
       seed: seed ? Number(seed) : undefined,
       buyPrices: hasCustomPrices ? buyPrices : undefined,
       scoring,
+      cardConfig,
+      configName: cardConfig ? configName : undefined,
     });
   };
 
@@ -85,6 +125,24 @@ export default function StartScreen({ onStart }) {
 
         {showAdvanced && (
           <div className="advanced-settings">
+            <div className="advanced-label">Card Configuration</div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+              <button className="action-button" onClick={handleLoadConfig}>
+                Load Card Config...
+              </button>
+              <span style={{ fontSize: '13px', color: '#8899aa' }}>
+                Current: {configName}
+              </span>
+              {cardConfig && (
+                <button
+                  className="action-button"
+                  style={{ fontSize: '11px', padding: '4px 8px' }}
+                  onClick={() => { setCardConfig(null); setConfigName('Default'); }}
+                >
+                  Reset to Default
+                </button>
+              )}
+            </div>
             <div className="advanced-label">Major Arcana Buy Prices</div>
             <div className="price-grid">
               <label className="price-label">

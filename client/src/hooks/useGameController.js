@@ -118,17 +118,22 @@ export function useGameController() {
   /**
    * Start a new game.
    */
-  const startGame = useCallback(({ playerCount, aiDifficulty, seed, buyPrices, scoring }) => {
+  const [configName, setConfigName] = useState(null);
+
+  const startGame = useCallback(({ playerCount, aiDifficulty, seed, buyPrices, scoring, cardConfig: loadedConfig, configName: cfgName }) => {
     // Clean up any pending AI timeout
     if (abortRef.current) {
       abortRef.current();
       abortRef.current = null;
     }
 
-    const cardConfig = {};
+    // Start with loaded config (from file), then overlay per-field overrides
+    const cardConfig = loadedConfig ? { ...loadedConfig } : {};
     if (buyPrices) cardConfig.buyPrices = buyPrices;
-    if (scoring) cardConfig.scoring = scoring;
+    if (scoring) cardConfig.scoring = { ...cardConfig.scoring, ...scoring };
     const hasConfig = Object.keys(cardConfig).length > 0;
+
+    setConfigName(cfgName || null);
 
     const ctrl = new GameController({
       players: playerCount,
@@ -227,6 +232,7 @@ export function useGameController() {
     toggleFastForward,
     roundTransition,
     dismissRoundTransition,
+    configName,
     startGame,
     submitDecision,
     resetGame,

@@ -23,6 +23,7 @@ export default function GameScreen({ controller }) {
     toggleFastForward,
     roundTransition,
     dismissRoundTransition,
+    configName,
   } = controller;
 
   if (!gameState) return <div className="loading">Loading...</div>;
@@ -43,6 +44,7 @@ export default function GameScreen({ controller }) {
           setAiDelay={setAiDelay}
           fastForward={fastForward}
           toggleFastForward={toggleFastForward}
+          configName={configName}
         />
 
         <div className="opponent-row">

@@ -2,12 +2,13 @@ import React from 'react';
 
 export default function GameHeader({
   roundNumber, pot, minorDeckCount, majorDeckCount, pitCount,
-  aiDelay, setAiDelay, fastForward, toggleFastForward,
+  aiDelay, setAiDelay, fastForward, toggleFastForward, configName,
 }) {
   return (
     <div className="game-header">
       <div className="header-stats">
         <span className="header-stat">Round {roundNumber}</span>
+        {configName && <span className="header-stat" style={{ color: '#88ccff' }}>Config: {configName}</span>}
         <span className="header-stat pot-display">Pot: {pot} VP</span>
         <span className="header-stat">Minor Deck: {minorDeckCount}</span>
         <span className="header-stat">Major Deck: {majorDeckCount}</span>
