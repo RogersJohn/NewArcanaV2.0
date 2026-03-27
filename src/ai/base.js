@@ -208,12 +208,39 @@ export class RandomAI {
 
   /**
    * Choose draw source: 'deck' or 'discard'.
+   * Smart default: takes from discard when the card matches hand/realm ranks,
+   * helps a flush, or is a high-value card.
    * @param {object} state
    * @param {number} playerIndex
    * @param {object} topDiscardCard - The visible top card of the discard pile
    * @returns {string} 'deck' or 'discard'
    */
   chooseDrawSource(state, playerIndex, topDiscardCard) {
+    if (!topDiscardCard || topDiscardCard.type !== 'minor') return 'deck';
+
+    const player = state.players[playerIndex];
+    const hand = player.hand;
+    const realm = player.realm;
+
+    // Matches a rank in hand → pair potential
+    if (hand.some(c => c.type === 'minor' && c.numericRank === topDiscardCard.numericRank)) {
+      return 'discard';
+    }
+
+    // Matches a rank in realm → set completion potential
+    if (realm.some(c => c.type === 'minor' && c.numericRank === topDiscardCard.numericRank)) {
+      return 'discard';
+    }
+
+    // Flush potential: same suit as 2+ minor cards in realm
+    const suitCount = realm.filter(c =>
+      c.type === 'minor' && c.suit === topDiscardCard.suit
+    ).length;
+    if (suitCount >= 2) return 'discard';
+
+    // High-value card (useful for buying Major Arcana)
+    if (topDiscardCard.numericRank >= 12) return 'discard';
+
     return 'deck';
   }
 
