@@ -314,6 +314,5 @@ Display buy prices in the default config: slot 0 (leftmost, newest card) = 9, sl
 
 ## Known Issues
 
-- Pot ties award to the first player found rather than splitting
 - Some rule ambiguities are documented awaiting designer decisions
 - The MCTS AI is significantly slower than heuristic AIs (~20s per game vs <0.1s)

@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { createInitialState } from '../src/state.js';
 import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS } from '../src/cards.js';
-import { setup, playGame } from '../src/engine.js';
+import { setup, playGame, checkAceBlockGen } from '../src/engine.js';
 import { driveWithAIs, scoreRoundEndGen } from '../src/scoring.js';
 import { createAIs, createAIPool } from '../src/ai/index.js';
 import { getLegalActions } from '../src/actions.js';
@@ -13,7 +13,6 @@ import { runSimulation } from '../src/simulation.js';
 import { aggregateStats } from '../src/stats.js';
 import { RandomAI } from '../src/ai/base.js';
 import { OpportunistAI } from '../src/ai/opportunist.js';
-import { checkAceBlock } from '../src/effects.js';
 
 function mc(suit, rank) { return createMinorCard(suit, rank); }
 
@@ -102,7 +101,7 @@ describe('Regression Tests (FIXES.md)', () => {
     const ais = [new RandomAI(), new AlwaysBlockAI()];
 
     const action = { type: 'PLAY_MAJOR_TOME', card: star, description: 'Play The Star (17) to Tome' };
-    checkAceBlock(state, ais, 0, action);
+    driveWithAIs(checkAceBlockGen(state, 0, action), ais);
 
     // Log should mention what was blocked (the description)
     const blockLog = state.log.find(l => l.includes('blocks'));

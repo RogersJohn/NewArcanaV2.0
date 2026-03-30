@@ -110,20 +110,24 @@ export function recordEvent(state, type, data) {
  * @returns {object} Deep copy
  */
 export function cloneState(state) {
-  const { rng, history, ...rest } = state;
-  const clone = JSON.parse(JSON.stringify(rest, setReplacer));
-  // Restore Sets that JSON doesn't handle
-  for (const player of clone.players) {
-    player.tomeProtections = new Set(player.tomeProtections);
-  }
-  // Rebuild the majorArcanaMap (Maps don't survive JSON serialization)
-  if (clone.config?.majorArcana) {
+  const { rng, history, config, ...rest } = state;
+
+  // structuredClone handles Sets, arrays, plain objects natively
+  const clone = structuredClone(rest);
+
+  // Config is read-only during gameplay — share reference instead of deep copying
+  clone.config = config;
+
+  // Rebuild the majorArcanaMap (Maps don't survive structuredClone)
+  if (config?.majorArcana) {
+    clone.config = { ...config };
     clone.config.majorArcanaMap = new Map();
-    for (const def of clone.config.majorArcana) {
+    for (const def of config.majorArcana) {
       clone.config.majorArcanaMap.set(def.number, def);
     }
   }
-  // Fork RNG so clone has independent state (doesn't consume main game's RNG)
+
+  // Fork RNG so clone has independent state
   clone.rng = rng.fork();
   // Share history reference — clones used for lookahead shouldn't bloat with duplicate history
   clone.history = history;
@@ -215,13 +219,3 @@ export function refillDisplay(state, takenSlot) {
   }
 }
 
-/**
- * Serialize Sets for JSON (used when cloning with JSON).
- * We store Set contents as arrays in JSON.
- */
-function setReplacer(key, value) {
-  if (value instanceof Set) {
-    return [...value];
-  }
-  return value;
-}

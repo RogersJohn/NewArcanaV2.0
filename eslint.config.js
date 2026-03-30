@@ -17,6 +17,7 @@ export default [
         window: 'readonly',
         document: 'readonly',
         performance: 'readonly',
+        structuredClone: 'readonly',
       },
     },
     rules: {

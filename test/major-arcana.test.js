@@ -2,13 +2,59 @@ import { describe, it, expect } from 'vitest';
 import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS, isCelestial } from '../src/cards.js';
 import { createInitialState, drawMinorCard, drawMajorCard, refillDisplay, log, cloneState } from '../src/state.js';
 import {
-  resolveChariot, resolveStrength, resolveWheelOfFortune,
-  resolveHangedMan, resolveTower, resolveJudgement, resolvePlague,
-  applyTomeEffect, resolveRoyalAttack, checkAceBlock, checkDeathRevealed
-} from '../src/effects.js';
-import { setup, playGame, drawPhase, executeAction } from '../src/engine.js';
-import { scoreGameEnd } from '../src/scoring.js';
+  setup, playGame, drawPhase, executeAction,
+  executeRoyalAttackGen, resolveChariotGen,
+  resolveStrength as _resolveStrength,
+  resolveWheelOfFortuneGen, resolveHangedManGen, resolveTowerGen,
+  resolveJudgement as _resolveJudgement,
+  resolvePlagueGen, applyTomeEffectGen, checkAceBlockGen,
+} from '../src/engine.js';
+import { scoreGameEnd, driveWithAIs } from '../src/scoring.js';
 import { RandomAI } from '../src/ai/base.js';
+import { isDeathCard } from '../src/effect-resolver.js';
+
+// Sync wrappers matching the old effects.js API
+function resolveRoyalAttack(state, attackerIndex, card, targetPlayerIndex, targetRealmIndex, ais) {
+  const action = { type: 'PLAY_ROYAL', card, target: { playerIndex: targetPlayerIndex, realmIndex: targetRealmIndex } };
+  driveWithAIs(executeRoyalAttackGen(state, attackerIndex, action), ais);
+}
+function resolveChariot(state, ais, playerIndex, targets) {
+  driveWithAIs(resolveChariotGen(state, playerIndex, targets), ais);
+}
+function resolveStrength(state, ais, playerIndex, targets) {
+  _resolveStrength(state, playerIndex, targets);
+}
+function resolveWheelOfFortune(state, ais, playerIndex) {
+  driveWithAIs(resolveWheelOfFortuneGen(state, playerIndex), ais);
+}
+function resolveHangedMan(state, ais, playerIndex, targets) {
+  driveWithAIs(resolveHangedManGen(state, playerIndex, targets), ais);
+}
+function resolveTower(state, ais, playerIndex, targets) {
+  driveWithAIs(resolveTowerGen(state, playerIndex, targets), ais);
+}
+function resolveJudgement(state, ais, playerIndex) {
+  _resolveJudgement(state, playerIndex);
+}
+function resolvePlague(state, ais, playerIndex, targets, plagueCard) {
+  driveWithAIs(resolvePlagueGen(state, playerIndex, targets, plagueCard), ais);
+}
+function applyTomeEffect(state, ais, playerIndex, card) {
+  driveWithAIs(applyTomeEffectGen(state, playerIndex, card), ais);
+}
+function checkAceBlock(state, ais, actorIndex, action) {
+  return driveWithAIs(checkAceBlockGen(state, actorIndex, action), ais);
+}
+function checkDeathRevealed(state) {
+  for (let i = 0; i < 3; i++) {
+    if (state.display[i] && isDeathCard(state, state.display[i])) {
+      state.gameEnded = true;
+      state.gameEndReason = 'death_revealed';
+      return true;
+    }
+  }
+  return false;
+}
 
 // Helper to create a minimal game state for testing
 function makeState(numPlayers = 2, seed = 42) {
@@ -162,10 +208,9 @@ describe('Major Arcana Effects', () => {
       const state = makeState(2, 99);
       state.config.extended = true;
       const plague = makeMajor(26);
-      state.pit.push(plague); // Plague goes to pit first (executeMajorAction puts it there)
       const ais = makeAIs(2);
 
-      resolvePlague(state, ais, 0, { playerIndex: 1 });
+      resolvePlague(state, ais, 0, { playerIndex: 1 }, plague);
 
       expect(state.players[1].tome.some(c => c.number === 26)).toBe(true);
     });
@@ -175,10 +220,9 @@ describe('Major Arcana Effects', () => {
       state.config.extended = true;
       state.players[1].tome = [makeMajor(5), makeMajor(6), makeMajor(9)]; // full
       const plague = makeMajor(26);
-      state.pit.push(plague);
       const ais = makeAIs(2);
 
-      resolvePlague(state, ais, 0, { playerIndex: 1 });
+      resolvePlague(state, ais, 0, { playerIndex: 1 }, plague);
 
       expect(state.players[1].tome.length).toBe(3); // one displaced, plague added
       expect(state.players[1].tome.some(c => c.number === 26)).toBe(true);
@@ -326,10 +370,9 @@ describe('Major Arcana Effects', () => {
       state.players[0].hand = [attacker];
       const ais = [new NeverBlockAI(), new NeverBlockAI()];
 
-      const result = resolveRoyalAttack(state, 0, attacker, 1, 0, ais);
+      resolveRoyalAttack(state, 0, attacker, 1, 0, ais);
 
-      expect(result).toBe(false);
-      // Target still in realm
+      // Target still in realm (attack was blocked by protection)
       expect(state.players[1].realm.length).toBe(1);
     });
 
@@ -396,9 +439,9 @@ describe('Major Arcana Effects', () => {
       // Defender always blocks with king, no ace blocks
       const ais = [new NeverBlockAI(), new AlwaysBlockAI()];
 
-      const result = resolveRoyalAttack(state, 0, attacker, 1, 0, ais);
+      resolveRoyalAttack(state, 0, attacker, 1, 0, ais);
 
-      expect(result).toBe(false);
+      // Attack was blocked by King
       expect(state.players[1].realm.length).toBe(1); // target safe
       expect(state.pit.some(c => c.id === king.id)).toBe(true);
       expect(state.pit.some(c => c.id === attacker.id)).toBe(true);

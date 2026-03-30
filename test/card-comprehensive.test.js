@@ -6,10 +6,57 @@ import { describe, it, expect } from 'vitest';
 import { createInitialState, getEffectiveHandLimit } from '../src/state.js';
 import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS } from '../src/cards.js';
 import { scoreRoundEnd, scoreGameEnd, resolveBonus, checkCelestialWin } from '../src/scoring.js';
-import { resolveRoyalAttack, resolveChariot, resolveStrength, resolveHangedMan,
-         resolveTower, resolveJudgement, resolvePlague, applyTomeEffect,
-         checkDeathRevealed, resolveWheelOfFortune } from '../src/effects.js';
-import { setup, playGame, executeAction } from '../src/engine.js';
+import {
+  setup, playGame, executeAction,
+  executeRoyalAttackGen, resolveChariotGen,
+  resolveStrength as _resolveStrength,
+  resolveHangedManGen, resolveTowerGen,
+  resolveJudgement as _resolveJudgement,
+  resolvePlagueGen, applyTomeEffectGen,
+  resolveWheelOfFortuneGen,
+} from '../src/engine.js';
+import { driveWithAIs } from '../src/scoring.js';
+import { isDeathCard } from '../src/effect-resolver.js';
+
+// Sync wrappers matching the old effects.js API signatures
+function resolveRoyalAttack(state, attackerIndex, card, targetPlayerIndex, targetRealmIndex, ais) {
+  const action = { type: 'PLAY_ROYAL', card, target: { playerIndex: targetPlayerIndex, realmIndex: targetRealmIndex } };
+  driveWithAIs(executeRoyalAttackGen(state, attackerIndex, action), ais);
+}
+function resolveChariot(state, ais, playerIndex, targets) {
+  driveWithAIs(resolveChariotGen(state, playerIndex, targets), ais);
+}
+function resolveStrength(state, ais, playerIndex, targets) {
+  _resolveStrength(state, playerIndex, targets);
+}
+function resolveHangedMan(state, ais, playerIndex, targets) {
+  driveWithAIs(resolveHangedManGen(state, playerIndex, targets), ais);
+}
+function resolveTower(state, ais, playerIndex, targets) {
+  driveWithAIs(resolveTowerGen(state, playerIndex, targets), ais);
+}
+function resolveJudgement(state, ais, playerIndex) {
+  _resolveJudgement(state, playerIndex);
+}
+function resolvePlague(state, ais, playerIndex, targets, plagueCard) {
+  driveWithAIs(resolvePlagueGen(state, playerIndex, targets, plagueCard), ais);
+}
+function applyTomeEffect(state, ais, playerIndex, card) {
+  driveWithAIs(applyTomeEffectGen(state, playerIndex, card), ais);
+}
+function resolveWheelOfFortune(state, ais, playerIndex) {
+  driveWithAIs(resolveWheelOfFortuneGen(state, playerIndex), ais);
+}
+function checkDeathRevealed(state) {
+  for (let i = 0; i < 3; i++) {
+    if (state.display[i] && isDeathCard(state, state.display[i])) {
+      state.gameEnded = true;
+      state.gameEndReason = 'death_revealed';
+      return true;
+    }
+  }
+  return false;
+}
 import { getLegalActions } from '../src/actions.js';
 import { evaluateHand, compareHands } from '../src/poker.js';
 import { createAIs } from '../src/ai/index.js';
@@ -485,9 +532,8 @@ describe('Action cards', () => {
     it('plays into target Tome', () => {
       const state = makeState(2);
       const plague = major(26);
-      // resolvePlague expects plague to already be in Pit (placed by executeMajorAction)
-      state.pit.push(plague);
-      resolvePlague(state, makeAIs(2), 0, { playerIndex: 1 });
+      // Plague card is passed directly (no longer goes through Pit)
+      resolvePlague(state, makeAIs(2), 0, { playerIndex: 1 }, plague);
       expect(state.players[1].tome.some(c => c.number === 26)).toBe(true);
     });
 

@@ -125,6 +125,26 @@ Usage: node index.js [options]
 
 const args = parseArgs(process.argv);
 
+// Validate CLI arguments
+if (args.players < 2 || args.players > 6) {
+  console.error(`Error: --players must be between 2 and 6 (got ${args.players})`);
+  process.exit(1);
+}
+if (args.games < 1) {
+  console.error(`Error: --games must be at least 1 (got ${args.games})`);
+  process.exit(1);
+}
+const validAIs = [
+  'diverse', 'random',
+  'all-random', 'all-builder', 'all-aggressor', 'all-celestial',
+  'all-controller', 'all-opportunist', 'all-passive', 'all-tactician',
+  'all-collector', 'all-scoring', 'all-mcts',
+];
+if (!validAIs.includes(args.ai)) {
+  console.error(`Error: unknown --ai type '${args.ai}'. Valid options: ${validAIs.join(', ')}`);
+  process.exit(1);
+}
+
 // Load card/game config if specified
 let cardConfig = args.config ? loadConfig(args.config) : undefined;
 

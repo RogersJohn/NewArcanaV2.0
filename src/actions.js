@@ -2,8 +2,7 @@
  * Enumerate legal actions for the active player.
  */
 
-import { SUITS, RANK_VALUES, cardName, canPlayToTome, isCelestial } from './cards.js';
-import { getHandSize, getEffectiveHandLimit } from './state.js';
+import { cardName, canPlayToTome, isCelestial } from './cards.js';
 import { evaluateHand, compareHands } from './poker.js';
 
 /**

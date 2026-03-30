@@ -66,7 +66,7 @@ export function isHermitCard(state, card) {
 
 /**
  * Action dispatch map: action string -> handler function name.
- * The actual handler functions live in engine.js (generators) and effects.js (sync).
+ * The actual handler functions live in engine.js (generators + sync wrappers).
  */
 const ACTION_DISPATCH = {
   MOVE_CELESTIAL_TO_TOME: 'resolveChariot',

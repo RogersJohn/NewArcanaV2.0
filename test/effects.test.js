@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS } from '../src/cards.js';
 import { createInitialState } from '../src/state.js';
-import { resolveRoyalAttack, checkAceBlock, resolveStrength, resolveChariot, applyTomeEffect } from '../src/effects.js';
+import {
+  checkAceBlockGen, executeRoyalAttackGen, resolveStrength,
+  resolveChariotGen, applyTomeEffectGen,
+} from '../src/engine.js';
+import { driveWithAIs } from '../src/scoring.js';
 import { RandomAI } from '../src/ai/base.js';
 
 function mc(suit, rank) { return createMinorCard(suit, rank); }
@@ -46,8 +50,9 @@ describe('Royal Attacks', () => {
     state.players[0].hand = [page];
     state.players[1].realm = [target];
     const ais = [new NeverBlockAI(), new NeverBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: page, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, page, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
     expect(state.players[1].realm.length).toBe(0);
     expect(state.pit.length).toBe(2);
@@ -62,8 +67,9 @@ describe('Royal Attacks', () => {
     state.players[0].hand = [knight];
     state.players[1].realm = [target];
     const ais = [new NeverBlockAI(), new NeverBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: knight, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, knight, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
     expect(state.players[1].realm.length).toBe(0);
     expect(state.players[0].hand.some(c => c.id === target.id)).toBe(true);
@@ -78,8 +84,9 @@ describe('Royal Attacks', () => {
     state.players[0].hand = [queen];
     state.players[1].realm = [target];
     const ais = [new NeverBlockAI(), new NeverBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: queen, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, queen, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
     expect(state.players[1].realm.length).toBe(0);
     expect(state.players[0].realm.some(c => c.id === target.id)).toBe(true);
@@ -94,8 +101,9 @@ describe('Royal Attacks', () => {
     state.players[0].hand = [page];
     state.players[1].realm = [wildCard]; // Wild in realm
     const ais = [new NeverBlockAI(), new NeverBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: page, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, page, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
     expect(state.players[1].realm.length).toBe(0);
     expect(state.pit.length).toBe(2);
@@ -107,13 +115,14 @@ describe('King Blocking', () => {
     const state = makeTestState();
     const page = mc('CUPS', 'PAGE');
     const target = mc('CUPS', 7);
-    const king = mc('SWORDS', 'KING'); // King of any suit blocks
+    const king = mc('SWORDS', 'KING');
     state.players[0].hand = [page];
     state.players[1].realm = [target];
     state.players[1].hand = [king];
     const ais = [new NeverBlockAI(), new AlwaysBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: page, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, page, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
     // Target should still be in realm (attack was blocked)
     expect(state.players[1].realm.length).toBe(1);
@@ -134,8 +143,9 @@ describe('Ace Blocking', () => {
     state.players[1].realm = [target];
     state.players[1].hand = [ace];
     const ais = [new NeverBlockAI(), new AlwaysBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: page, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, page, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
     expect(state.players[1].realm.length).toBe(1); // Target survives
     expect(state.pit.some(c => c.id === ace.id)).toBe(true);
@@ -150,23 +160,18 @@ describe('Ace Blocking', () => {
     state.players[0].hand = [chariot];
     state.players[1].tome = [celestial];
     state.players[1].hand = [ace];
-
     const ais = [new NeverBlockAI(), new AlwaysBlockAI()];
 
-    const blocked = checkAceBlock(state, ais, 0, {
+    const blocked = driveWithAIs(checkAceBlockGen(state, 0, {
       type: 'PLAY_MAJOR_ACTION',
       card: chariot,
-    });
+    }), ais);
 
     expect(blocked).toBe(true);
     expect(state.pit.some(c => c.id === ace.id)).toBe(true);
   });
 
   it('Ace chain: Ace2 blocks Ace1, original action completes', () => {
-    // Player 0 does an action
-    // Player 1 tries to Ace block
-    // Player 0 Ace-blocks the Ace (chain)
-    // Original action should proceed
     const state = createInitialState(3);
     state.minorDeck = [];
     state.majorDeck = [];
@@ -182,14 +187,12 @@ describe('Ace Blocking', () => {
     state.players[1].hand = [ace1]; // Player 1 will try to block
     state.players[2].hand = [ace2]; // Player 2 will block the block
 
-    // Custom AIs: player 1 always blocks, player 2 always blocks
     const ais = [new NeverBlockAI(), new AlwaysBlockAI(), new AlwaysBlockAI()];
 
-    const blocked = checkAceBlock(state, ais, 0, { type: 'TEST_ACTION' });
+    const blocked = driveWithAIs(checkAceBlockGen(state, 0, { type: 'TEST_ACTION' }), ais);
 
     // Player 1's Ace was blocked by Player 2's Ace -> original action proceeds
     expect(blocked).toBe(false);
-    // Both Aces should be in Pit
     expect(state.pit.some(c => c.id === ace1.id)).toBe(true);
     expect(state.pit.some(c => c.id === ace2.id)).toBe(true);
   });
@@ -207,13 +210,12 @@ describe('Tome Protections', () => {
     state.players[1].tome = [temperance];
     state.players[1].tomeProtections = new Set(['CUPS']);
     const ais = [new NeverBlockAI(), new NeverBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: page, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, page, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
-    // Attack fails, target survives
     expect(state.players[1].realm.length).toBe(1);
     expect(state.players[1].realm[0].id).toBe(cupsCard.id);
-    // Attacking card still goes to Pit
     expect(state.pit.some(c => c.id === page.id)).toBe(true);
   });
 
@@ -224,12 +226,12 @@ describe('Tome Protections', () => {
 
     state.players[0].hand = [page];
     state.players[1].realm = [swordsCard];
-    state.players[1].tomeProtections = new Set(['CUPS']); // Only cups protected
+    state.players[1].tomeProtections = new Set(['CUPS']);
     const ais = [new NeverBlockAI(), new NeverBlockAI()];
+    const action = { type: 'PLAY_ROYAL', card: page, target: { playerIndex: 1, realmIndex: 0 } };
 
-    resolveRoyalAttack(state, 0, page, 1, 0, ais);
+    driveWithAIs(executeRoyalAttackGen(state, 0, action), ais);
 
-    // Attack succeeds
     expect(state.players[1].realm.length).toBe(0);
   });
 });
@@ -240,7 +242,7 @@ describe('Strength', () => {
     const wildInRealm = major(18); // The Moon
     state.players[1].realm = [wildInRealm];
 
-    resolveStrength(state, [new NeverBlockAI(), new NeverBlockAI()], 0, {
+    resolveStrength(state, 0, {
       source: 'realm', playerIndex: 1, cardIndex: 0
     });
 
@@ -254,7 +256,7 @@ describe('Strength', () => {
     const tomeCard = major(5); // Hierophant
     state.players[1].tome = [tomeCard];
 
-    resolveStrength(state, [new NeverBlockAI(), new NeverBlockAI()], 0, {
+    resolveStrength(state, 0, {
       source: 'tome', playerIndex: 1, cardIndex: 0
     });
 
@@ -268,10 +270,11 @@ describe('Chariot', () => {
     const state = makeTestState();
     const star = major(17); // The Star - Celestial
     state.players[1].tome = [star];
+    const ais = [new NeverBlockAI(), new NeverBlockAI()];
 
-    resolveChariot(state, [new NeverBlockAI(), new NeverBlockAI()], 0, {
+    driveWithAIs(resolveChariotGen(state, 0, {
       source: 'tome', playerIndex: 1, cardIndex: 0
-    });
+    }), ais);
 
     expect(state.players[1].tome.length).toBe(0);
     expect(state.players[0].tome.length).toBe(1);
@@ -290,8 +293,9 @@ describe('Tome Effects', () => {
     for (let i = 0; i < 10; i++) {
       state.minorDeck.push(mc('COINS', 2));
     }
+    const ais = [new NeverBlockAI(), new NeverBlockAI()];
 
-    applyTomeEffect(state, [new NeverBlockAI(), new NeverBlockAI()], 0, devil);
+    driveWithAIs(applyTomeEffectGen(state, 0, devil), ais);
 
     // Should draw 7 - 3 = 4 cards
     const totalSize = state.players[0].hand.length + state.players[0].realm.length;
@@ -302,8 +306,9 @@ describe('Tome Effects', () => {
     const state = makeTestState();
     const temperance = major(14);
     state.players[0].tome = [temperance];
+    const ais = [new NeverBlockAI(), new NeverBlockAI()];
 
-    applyTomeEffect(state, [new NeverBlockAI(), new NeverBlockAI()], 0, temperance);
+    driveWithAIs(applyTomeEffectGen(state, 0, temperance), ais);
 
     expect(state.players[0].tomeProtections.has('CUPS')).toBe(true);
   });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS } from '../src/cards.js';
 import { createInitialState } from '../src/state.js';
-import { scoreRoundEnd, scoreGameEnd, checkCelestialWin, resolveBonus, resolveFool } from '../src/scoring.js';
+import { scoreRoundEnd, scoreGameEnd, checkCelestialWin, resolveBonus, resolveFool, driveWithAIs, scoreRoundEndGen } from '../src/scoring.js';
 import { RandomAI } from '../src/ai/base.js';
 import { runSimulation } from '../src/simulation.js';
 
@@ -489,5 +489,49 @@ describe('VP Source Reporting (Issue #10)', () => {
       expect(typeof game.vpSources.celestialVp).toBe('number');
       expect(game.vpSources.potVp).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('Pot tie splitting', () => {
+  it('splits pot equally between two players with identical hands', () => {
+    const state = createInitialState(4, false, 42);
+    state.roundNumber = 1;
+    state.roundEndMarkerHolder = 0;
+    state.pot = 10;
+
+    // Give players 0 and 1 identical pairs
+    state.players[0].realm = [mc('WANDS', 5), mc('CUPS', 5)];
+    state.players[1].realm = [mc('SWORDS', 5), mc('COINS', 5)];
+    state.players[2].realm = [mc('WANDS', 2)];
+    state.players[3].realm = [];
+
+    const vpBefore0 = state.players[0].vp;
+    const vpBefore1 = state.players[1].vp;
+
+    const ais = Array.from({ length: 4 }, () => new RandomAI());
+    driveWithAIs(scoreRoundEndGen(state), ais);
+
+    // Each tied player gets 5vp (10 / 2)
+    expect(state.players[0].vp - vpBefore0).toBe(5);
+    expect(state.players[1].vp - vpBefore1).toBe(5);
+    expect(state.pot).toBe(0);
+  });
+
+  it('carries over remainder when pot does not divide evenly', () => {
+    const state = createInitialState(3, false, 42);
+    state.roundNumber = 1;
+    state.roundEndMarkerHolder = 0;
+    state.pot = 7;
+
+    // Give players 0 and 1 identical pairs
+    state.players[0].realm = [mc('WANDS', 5), mc('CUPS', 5)];
+    state.players[1].realm = [mc('SWORDS', 5), mc('COINS', 5)];
+    state.players[2].realm = [mc('WANDS', 2)];
+
+    const ais = Array.from({ length: 3 }, () => new RandomAI());
+    driveWithAIs(scoreRoundEndGen(state), ais);
+
+    // 7 / 2 = 3 each, 1 remainder carries over
+    expect(state.pot).toBe(1);
   });
 });

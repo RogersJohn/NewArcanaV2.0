@@ -82,7 +82,7 @@ describe('improved attack scoring', () => {
     // Give player 1 a big realm with a strong hand
     state.players[1].realm = [
       { type: 'minor', suit: 'CUPS', rank: '10', numericRank: 10, id: 'target-0', purchaseValue: 10 },
-      { type: 'minor', suit: 'CUPS', rank: '10', numericRank: 10, id: 'target-1', purchaseValue: 10, suit: 'SWORDS' },
+      { type: 'minor', suit: 'SWORDS', rank: '10', numericRank: 10, id: 'target-1', purchaseValue: 10 },
       { type: 'minor', suit: 'WANDS', rank: '10', numericRank: 10, id: 'target-2', purchaseValue: 10 },
       { type: 'minor', suit: 'WANDS', rank: '5', numericRank: 5, id: 'target-3', purchaseValue: 5 },
     ];

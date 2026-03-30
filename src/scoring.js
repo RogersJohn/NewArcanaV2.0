@@ -127,27 +127,49 @@ export function scoreRoundEnd(state, ais) {
  * Award the pot to the player with the best poker hand.
  */
 function awardPot(state) {
-  let bestPi = -1;
   let bestEval = null;
+  const tiedPlayers = [];
 
   for (let pi = 0; pi < state.players.length; pi++) {
     if (state.players[pi].realm.length === 0) continue;
     const eval_ = evaluateHand(state.players[pi].realm, pokerOpts(state));
     if (!bestEval || compareHands(eval_, bestEval) > 0) {
       bestEval = eval_;
-      bestPi = pi;
+      tiedPlayers.length = 0;
+      tiedPlayers.push(pi);
+    } else if (bestEval && compareHands(eval_, bestEval) === 0) {
+      tiedPlayers.push(pi);
     }
   }
 
-  if (bestPi !== -1 && state.pot > 0) {
-    state.players[bestPi].vp += state.pot;
-    log(state, `${state.players[bestPi].name} wins pot of ${state.pot}vp with ${bestEval.type}`);
+  if (tiedPlayers.length === 0 || state.pot === 0) {
+    if (state.pot > 0) {
+      log(state, 'No player has cards in Realm. Pot not awarded.');
+    }
+    return;
+  }
+
+  if (tiedPlayers.length === 1) {
+    const pi = tiedPlayers[0];
+    state.players[pi].vp += state.pot;
+    log(state, `${state.players[pi].name} wins pot of ${state.pot}vp with ${bestEval.type}`);
     recordEvent(state, 'POT_AWARDED', {
-      player: bestPi, amount: state.pot, handType: bestEval.type,
+      player: pi, amount: state.pot, handType: bestEval.type,
     });
     state.pot = 0;
-  } else if (state.pot > 0) {
-    log(state, 'No player has cards in Realm. Pot not awarded.');
+  } else {
+    // Split pot among tied players, remainder carries over
+    const share = Math.floor(state.pot / tiedPlayers.length);
+    const remainder = state.pot - (share * tiedPlayers.length);
+    const names = tiedPlayers.map(pi => state.players[pi].name).join(', ');
+    for (const pi of tiedPlayers) {
+      state.players[pi].vp += share;
+      recordEvent(state, 'POT_AWARDED', {
+        player: pi, amount: share, handType: bestEval.type, tied: true,
+      });
+    }
+    log(state, `Pot of ${state.pot}vp split between ${names} (${share}vp each, ${bestEval.type})`);
+    state.pot = remainder;
   }
 }
 

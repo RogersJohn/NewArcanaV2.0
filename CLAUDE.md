@@ -231,7 +231,6 @@ These rules were wrong in the old project and must stay correct. Read RULES.md a
 
 ## Known Limitations
 
-- Pot ties award to the first player found rather than splitting
 - MCTS AI is ~200x slower than heuristic AIs (tree search with rollouts)
 - AI personality weights in `personality.js` are tuned for 4-player games — 3 or 5 player balance may differ
 - Wild card plays recirculate Major Arcana through the Minor deck, which can extend game length by keeping cards out of the Major deck depletion path
