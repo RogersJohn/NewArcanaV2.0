@@ -184,7 +184,8 @@ function extractGameResult(state, ais) {
  */
 function summarizeVPSources(events, players, config) {
   let potVp = 0, bonusVp = 0, celestialVp = 0;
-  const celestialVpPerCard = config?.scoring?.celestialVp ?? 2;
+  const globalCelestialVp = config?.scoring?.celestialVp ?? 2;
+  const majorMap = config?.majorArcanaMap;
 
   for (const e of events) {
     if (e.type === 'POT_AWARDED') potVp += e.amount || 0;
@@ -193,7 +194,8 @@ function summarizeVPSources(events, players, config) {
   for (const p of players) {
     for (const c of [...p.tome, ...p.realm, ...p.vault]) {
       if (c.type === 'major' && c.keywords?.includes('celestial')) {
-        celestialVp += celestialVpPerCard;
+        const def = majorMap?.get(c.number);
+        celestialVp += def?.effect?.vpAtGameEnd ?? globalCelestialVp;
       }
     }
   }

@@ -89,7 +89,7 @@ export function createMinorCard(suit, rank) {
  * @param {string[]} keywords - Card keywords
  * @returns {object} Major card object
  */
-export function createMajorCard(number, name, category, keywords) {
+export function createMajorCard(number, name, category, keywords, effect) {
   const def = MAJOR_ARCANA_DEFS.find(d => d.number === number);
   return {
     id: nextId++,
@@ -100,7 +100,7 @@ export function createMajorCard(number, name, category, keywords) {
     keywords: keywords || def?.keywords || [],
     suit: def?.suit || null,
     purchaseValue: number,
-    effect: def?.effect || null,
+    effect: effect || def?.effect || null,
   };
 }
 
@@ -129,7 +129,7 @@ export function createMajorDeck(extended = false, majorDefs) {
   const maxNumber = extended ? 26 : 21;
   return defs
     .filter(def => def.number <= maxNumber || def.keywords?.includes('jester'))
-    .map(def => createMajorCard(def.number, def.name, def.category, def.keywords));
+    .map(def => createMajorCard(def.number, def.name, def.category, def.keywords, def.effect));
 }
 
 /**

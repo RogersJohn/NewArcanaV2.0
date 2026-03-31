@@ -40,12 +40,16 @@ function parseArgs(argv) {
 
   for (let i = 2; i < argv.length; i++) {
     switch (argv[i]) {
-      case '--games':
-        args.games = parseInt(argv[++i]) || 1000;
+      case '--games': {
+        const g = parseInt(argv[++i]);
+        args.games = Number.isNaN(g) ? 1000 : g;
         break;
-      case '--players':
-        args.players = parseInt(argv[++i]) || 4;
+      }
+      case '--players': {
+        const p = parseInt(argv[++i]);
+        args.players = Number.isNaN(p) ? 4 : p;
         break;
+      }
       case '--extended':
         args.extended = true;
         break;

@@ -431,7 +431,7 @@ function resolveNoneOfSuitBonus(state, playerIndex, suit, vp) {
  * @param {object} state
  */
 export function scoreGameEnd(state) {
-  const celestialVp = state.config?.scoring?.celestialVp ?? 2;
+  const globalCelestialVp = state.config?.scoring?.celestialVp ?? 2;
   const plagueVp = state.config?.scoring?.plagueVp ?? -3;
 
   for (let pi = 0; pi < state.players.length; pi++) {
@@ -441,8 +441,11 @@ export function scoreGameEnd(state) {
     const allCards = [...player.tome, ...player.realm, ...player.vault];
     for (const card of allCards) {
       if (isCelestial(card)) {
-        player.vp += celestialVp;
-        log(state, `${player.name} earns ${celestialVp}vp for ${cardName(card)} (Celestial)`);
+        // Per-card vpAtGameEnd takes priority over global config
+        const def = state.config?.majorArcanaMap?.get(card.number);
+        const cardVp = def?.effect?.vpAtGameEnd ?? globalCelestialVp;
+        player.vp += cardVp;
+        log(state, `${player.name} earns ${cardVp}vp for ${cardName(card)} (Celestial)`);
       }
     }
 

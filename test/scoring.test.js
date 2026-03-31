@@ -535,3 +535,54 @@ describe('Pot tie splitting', () => {
     expect(state.pot).toBe(1);
   });
 });
+
+describe('Celestial VP per-card override (Issue #34)', () => {
+  it('uses vpAtGameEnd from card effect when set to 0', () => {
+    const state = createInitialState(4, false, 42, {
+      scoring: { celestialVp: 2 },
+      majorArcana: [
+        { number: 17, name: 'The Star', category: 'celestial', keywords: ['celestial'], suit: null,
+          effect: { type: 'celestial', vpAtGameEnd: 0, winConditionGroup: 'celestial' } },
+        { number: 13, name: 'Death', category: 'action', keywords: ['game-end'], suit: null,
+          effect: { type: 'game_end_trigger', trigger: 'death_revealed' } },
+      ]
+    });
+    state.gameEnded = true;
+    state.gameEndReason = 'death_revealed';
+    state.roundNumber = 3;
+
+    const star = createMajorCard(17, 'The Star', 'celestial', ['celestial']);
+    state.players[0].tome.push(star);
+
+    const vpBefore = state.players[0].vp;
+    scoreGameEnd(state);
+
+    // vpAtGameEnd is 0 on the card, so no VP should be awarded
+    expect(state.players[0].vp - vpBefore).toBe(0);
+  });
+
+  it('falls back to config.scoring.celestialVp when vpAtGameEnd not set on card', () => {
+    const state = createInitialState(4, false, 42, {
+      scoring: { celestialVp: 5 },
+      majorArcana: [
+        // Override Star with no vpAtGameEnd in effect
+        { number: 17, name: 'The Star', category: 'celestial', keywords: ['celestial'], suit: null,
+          effect: { type: 'celestial', winConditionGroup: 'celestial' } },
+        { number: 13, name: 'Death', category: 'action', keywords: ['game-end'], suit: null,
+          effect: { type: 'game_end_trigger', trigger: 'death_revealed' } },
+      ]
+    });
+    state.gameEnded = true;
+    state.gameEndReason = 'death_revealed';
+    state.roundNumber = 3;
+
+    const star = createMajorCard(17, 'The Star', 'celestial', ['celestial']);
+    state.players[0].tome.push(star);
+
+    const vpBefore = state.players[0].vp;
+    scoreGameEnd(state);
+
+    // No vpAtGameEnd on card effect, falls back to config.scoring.celestialVp = 5
+    expect(state.players[0].vp - vpBefore).toBe(5);
+  });
+});

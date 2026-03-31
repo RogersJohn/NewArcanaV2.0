@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS, isCelestial } from '../src/cards.js';
-import { createInitialState, drawMinorCard, drawMajorCard, refillDisplay, log, cloneState } from '../src/state.js';
+import { createMinorCard, createMajorCard, MAJOR_ARCANA_DEFS } from '../src/cards.js';
+import { createInitialState, drawMinorCard, drawMajorCard } from '../src/state.js';
 import {
-  setup, playGame, drawPhase, executeAction,
   executeRoyalAttackGen, resolveChariotGen,
   resolveStrength as _resolveStrength,
   resolveWheelOfFortuneGen, resolveHangedManGen, resolveTowerGen,
