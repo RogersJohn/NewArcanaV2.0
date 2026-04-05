@@ -436,14 +436,35 @@ export function registerLookahead(mod) {
  * Core scoring + selection logic (extracted for reuse by lookahead).
  */
 export function _scoreAndChoose(state, legalActions, playerIndex, weights) {
-  const threat = weights.celestialAware ? checkCelestialThreat(state, playerIndex) : null;
+  // Celestial threat check — ALWAYS active regardless of celestialAware weight.
+  // This matches human behavior: every player at the table responds to a celestial threat.
+  const threat = checkCelestialThreat(state, playerIndex);
 
   const scored = legalActions.map(action => {
     let score = scoreAction(state, playerIndex, action, weights);
 
-    // Celestial threat boost
-    if (threat && threat.threatening && targetsCelestialThreat(action, state, threat.threatPlayer)) {
-      score += 200;
+    if (threat.critical) {
+      // CRITICAL: opponent has 2 celestials, one card from winning.
+      // All personalities must prioritize disruption — this is survival, not strategy.
+      if (targetsCelestialThreat(action, state, threat.threatPlayer)) {
+        score += 300; // Overwhelming priority — higher than any normal action
+      } else if (action.type === 'PASS') {
+        score -= 20; // Don't pass when someone is about to win
+      }
+      // Block buying celestials that could end up with the threat player
+      if (action.type === 'BUY' && action.source?.startsWith('display')) {
+        const slot = parseInt(action.source.slice(-1));
+        const displayCard = state.display?.[slot];
+        if (displayCard && isCelestial(displayCard)) {
+          score += 100; // Deny celestials from the display — buy them ourselves
+        }
+      }
+    } else if (threat.threatening && weights.celestialAware) {
+      // AWARENESS: opponent has 1 celestial. Personality-dependent response.
+      // Aware AIs start watching and mildly prefer disruption actions only.
+      if (targetsCelestialThreat(action, state, threat.threatPlayer)) {
+        score += 50; // Moderate boost — not overwhelming, but noticeable
+      }
     }
 
     // Add noise for human-like variance

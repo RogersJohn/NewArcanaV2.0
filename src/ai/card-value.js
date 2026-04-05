@@ -224,11 +224,23 @@ function scoreCelestialValue(effect, player, state, playerIndex) {
   const myCelestials = countCelestials(player);
   const base = vpAtEnd * 5;
 
-  // Third celestial = instant win
-  if (myCelestials >= 2) return base + 500;
-  // Second celestial = very high
-  if (myCelestials >= 1) return base + 50;
-  return base + 15;
+  // Own value: how much does this celestial help me?
+  let ownValue;
+  if (myCelestials >= 2) ownValue = base + 500;  // Third = instant win
+  else if (myCelestials >= 1) ownValue = base + 50;  // Second = very high
+  else ownValue = base + 15;
+
+  // Denial value: does buying this deny a threatening opponent?
+  let denialValue = 0;
+  for (let pi = 0; pi < state.players.length; pi++) {
+    if (pi === playerIndex) continue;
+    const opCelestials = [...state.players[pi].tome, ...state.players[pi].realm, ...state.players[pi].vault]
+      .filter(c => isCelestial(c)).length;
+    if (opCelestials >= 2) denialValue = 200;  // Deny their winning card
+    else if (opCelestials >= 1) denialValue = Math.max(denialValue, 40);  // Slow them down
+  }
+
+  return ownValue + denialValue;
 }
 
 function scoreTomeValue(effect, card, player, state, playerIndex) {

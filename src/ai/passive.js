@@ -3,6 +3,7 @@
  * Used for isolating card power without combat interference.
  */
 
+import { isCelestial } from '../cards.js';
 import { RandomAI } from './base.js';
 import { chooseActionByScore, PASSIVE_WEIGHTS, createLearnableWeights } from './personality.js';
 import { aceBlockValue } from './awareness.js';
@@ -60,9 +61,24 @@ export class PassiveAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
-    // Only block actions directly targeting our realm or tome
+    // Even passive players must respond to celestial threats
+    if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
+      const actorPi = action.playerIndex ?? state.currentPlayerIndex;
+      if (actorPi !== undefined && actorPi !== playerIndex && state.players[actorPi]) {
+        const actorCelestials = [...state.players[actorPi].tome, ...state.players[actorPi].realm]
+          .filter(c => isCelestial(c)).length;
+        if (actorCelestials >= 1) return true;
+      }
+      for (let pi = 0; pi < state.players.length; pi++) {
+        if (pi === playerIndex) continue;
+        const cc = [...state.players[pi].tome, ...state.players[pi].realm].filter(c => isCelestial(c)).length;
+        if (cc >= 2) return true;
+      }
+    }
+
+    // Otherwise, passive only blocks serious direct threats
     const threat = aceBlockValue(state, playerIndex, action);
-    return threat >= 55; // High threshold — only block serious direct threats
+    return threat >= 55;
   }
 
   shouldBlockWithKing(state, playerIndex) {

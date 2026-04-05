@@ -25,9 +25,12 @@ export function estimateRemainingRounds(state) {
 
 /**
  * Check if any opponent is close to a Celestial win.
+ * Returns graduated threat levels to enable early awareness.
  * @param {object} state
  * @param {number} playerIndex - The AI making the decision
- * @returns {{threatening: boolean, threatPlayer: number, celestialCount: number}}
+ * @returns {{threatening: boolean, critical: boolean, threatPlayer: number, celestialCount: number}}
+ *   threatening: opponent has 1+ celestials (early awareness)
+ *   critical: opponent has 2+ celestials (one card from winning — all-hands-on-deck)
  */
 export function checkCelestialThreat(state, playerIndex) {
   let maxCelestials = 0;
@@ -44,7 +47,8 @@ export function checkCelestialThreat(state, playerIndex) {
   }
 
   return {
-    threatening: maxCelestials >= 2,
+    threatening: maxCelestials >= 1,
+    critical: maxCelestials >= 2,
     threatPlayer,
     celestialCount: maxCelestials,
   };

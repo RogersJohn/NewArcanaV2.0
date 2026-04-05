@@ -64,10 +64,20 @@ export class BuilderAI extends RandomAI {
   }
 
   shouldBlockWithAce(state, playerIndex, action) {
-    // Block Celestials being played to Tome by threat players
+    // Block celestial plays when actor already has 1+ celestials (would give them 2+)
     if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
-      const threat = checkCelestialThreat(state, playerIndex);
-      if (threat.threatening) return true;
+      const actorPi = action.playerIndex ?? state.currentPlayerIndex;
+      if (actorPi !== undefined && actorPi !== playerIndex && state.players[actorPi]) {
+        const actorCelestials = [...state.players[actorPi].tome, ...state.players[actorPi].realm]
+          .filter(c => isCelestial(c)).length;
+        if (actorCelestials >= 1) return true;
+      }
+      // Fallback: block if any opponent has 2+ celestials (critical threat)
+      for (let pi = 0; pi < state.players.length; pi++) {
+        if (pi === playerIndex) continue;
+        const cc = [...state.players[pi].tome, ...state.players[pi].realm].filter(c => isCelestial(c)).length;
+        if (cc >= 2) return true;
+      }
     }
     // Only block if attack targets our realm
     if (action.type === 'PLAY_ROYAL' && action.target?.playerIndex === playerIndex) {

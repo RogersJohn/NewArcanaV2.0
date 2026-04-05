@@ -2,6 +2,8 @@
  * Base AI interface and RandomAI implementation.
  */
 
+import { isCelestial } from '../cards.js';
+
 /**
  * RandomAI: Makes all choices randomly from legal options.
  */
@@ -45,6 +47,36 @@ export class RandomAI {
    * @returns {boolean}
    */
   shouldBlockWithAce(state, playerIndex, action) {
+    // CRITICAL CELESTIAL DEFENSE — always block, regardless of personality.
+    // A celestial being played to tome when the player already has 1+ is game-ending.
+    if (action.type === 'PLAY_MAJOR_TOME' && action.card && isCelestial(action.card)) {
+      const actorPi = action.playerIndex ?? state.currentPlayerIndex;
+      if (actorPi !== undefined && actorPi !== playerIndex && state.players[actorPi]) {
+        const actorCelestials = [...state.players[actorPi].tome, ...state.players[actorPi].realm]
+          .filter(c => isCelestial(c)).length;
+        if (actorCelestials >= 1) return true; // They already have 1+ — MUST block the 2nd/3rd
+      }
+      // Fallback: block if any opponent has 2+ celestials (critical threat)
+      for (let pi = 0; pi < state.players.length; pi++) {
+        if (pi === playerIndex) continue;
+        const cc = [...state.players[pi].tome, ...state.players[pi].realm].filter(c => isCelestial(c)).length;
+        if (cc >= 2) return true;
+      }
+    }
+
+    // Also block Chariot stealing a celestial during critical threat
+    if (action.type === 'PLAY_MAJOR_ACTION' && action.card) {
+      const eff = action.card.effect || {};
+      if (eff.action === 'MOVE_CELESTIAL_TO_TOME' || (eff.type === 'action' && eff.action === 'MOVE_CELESTIAL_TO_TOME')) {
+        const actorPi = action.playerIndex ?? state.currentPlayerIndex;
+        if (actorPi !== undefined && actorPi !== playerIndex && state.players[actorPi]) {
+          const actorCelestials = [...state.players[actorPi].tome, ...state.players[actorPi].realm]
+            .filter(c => isCelestial(c)).length;
+          if (actorCelestials >= 1) return true;
+        }
+      }
+    }
+
     const hasBlocker = state.players[playerIndex].hand.some(
       c => (c.type === 'minor' && c.rank === 'ACE') ||
            (c.type === 'major' && c.keywords?.includes('jester'))
