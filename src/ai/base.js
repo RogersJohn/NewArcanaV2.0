@@ -75,7 +75,15 @@ export class RandomAI {
     const hasKing = state.players[playerIndex].hand.some(
       c => c.type === 'minor' && c.rank === 'KING'
     );
-    return hasKing && state.rng.next() < 0.3;
+    if (!hasKing) return false;
+
+    const realmSize = state.players[playerIndex].realm.length;
+    // Block if we have a meaningful realm to protect
+    if (realmSize >= 3) return true;
+    // Block Queen attacks (they steal to opponent's realm — worst case)
+    if (attackCard?.rank === 'QUEEN' && realmSize >= 2) return true;
+    // Small realm — usually not worth spending a King
+    return false;
   }
 
   /**

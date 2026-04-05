@@ -42,6 +42,14 @@ export class AggressorAI extends RandomAI {
       if (card.rank === 'ACE') return { index: i, score: 95 };
       if (card.type === 'major' && card.keywords?.includes('jester')) return { index: i, score: 95 };
       if (card.type === 'major') return { index: i, score: 90 };
+
+      // Cards that form pairs/triples with other hand cards are valuable
+      const handMatches = hand.filter(h =>
+        h.type === 'minor' && h.numericRank === card.numericRank && h.id !== card.id
+      ).length;
+      if (handMatches >= 2) return { index: i, score: 85 }; // Part of a triple
+      if (handMatches >= 1) return { index: i, score: 70 }; // Part of a pair
+
       return { index: i, score: card.numericRank || 0 };
     });
 

@@ -49,6 +49,13 @@ export class TacticianAI extends RandomAI {
       const matchRealm = realm.some(r => r.type === 'minor' && r.numericRank === card.numericRank);
       if (matchRealm) return { index: i, score: 90 };
 
+      // Cards that form pairs/triples with other hand cards are valuable
+      const handMatches = hand.filter(h =>
+        h.type === 'minor' && h.numericRank === card.numericRank && h.id !== card.id
+      ).length;
+      if (handMatches >= 2) return { index: i, score: 95 }; // Part of a triple
+      if (handMatches >= 1) return { index: i, score: 75 }; // Part of a pair
+
       return { index: i, score: card.numericRank * 2 || 0 };
     });
 

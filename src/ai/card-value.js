@@ -6,7 +6,7 @@
 
 import { isCelestial } from '../cards.js';
 import { getCardEffect } from '../effect-resolver.js';
-import { estimateRemainingRounds } from './awareness.js';
+import { estimateRemainingRounds, getHandRanking } from './awareness.js';
 
 /**
  * Estimate the strategic value of a Major Arcana card.
@@ -200,8 +200,14 @@ function scoreActionValue(effect, player, state, playerIndex) {
       return 10 + affectedOpponents * 10;
     }
 
-    case 'CLAIM_ROUND_END_MARKER':
-      return player.realm.length >= 3 ? 25 : 12;
+    case 'CLAIM_ROUND_END_MARKER': {
+      const ranking = getHandRanking(state, playerIndex);
+      if (ranking.winning && player.realm.length >= 4) return 40; // Winning with strong realm — end it
+      if (ranking.winning && player.realm.length >= 3) return 30; // Winning — good time to end
+      if (player.realm.length >= 5) return 20; // Full realm but not winning — still want to end eventually
+      if (ranking.winning) return 15; // Winning with small realm — risky but possible
+      return 3; // Losing — don't end the round, you're giving the pot away
+    }
 
     case 'PLAGUE_TO_TOME': {
       const vpPenalty = Math.abs(effect.vpPenalty || state.config?.scoring?.plagueVp || 3);

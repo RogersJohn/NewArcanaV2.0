@@ -148,9 +148,12 @@ export function scoreAction(state, playerIndex, action, weights) {
   switch (action.type) {
     case 'PASS': {
       const potential = analyzeHandPotential(player.hand, player.realm);
-      // PASS is only good when hand has developing potential
-      // Base of 2 means PASS almost never wins over a real action
-      return (weights.pass + potential.holdScore * 0.3) * rush;
+
+      // Bonus income: if we have bonus cards in tome, passing still earns VP
+      const bonusCards = player.tome.filter(c => c.keywords?.includes('bonus')).length;
+      const bonusIncome = bonusCards * 2; // Approximate 2 VP per bonus card per round
+
+      return (weights.pass + potential.holdScore * 0.3 + bonusIncome) * rush;
     }
 
     case 'PLAY_SET': {
@@ -308,8 +311,23 @@ export function scoreAction(state, playerIndex, action, weights) {
     }
 
     case 'PLAY_MAJOR_ACTION': {
-      const cardVal = estimateCardValue(state, playerIndex, action.card, 'tome');
+      let cardVal = estimateCardValue(state, playerIndex, action.card, 'tome');
       const realmPenalty = player.realm.length < 2 ? 0.3 : 1.0;
+
+      // For targeted actions (Hanged Man, Tower, Chariot), evaluate the target quality
+      if (action.targets && action.targets.playerIndex !== undefined && action.targets.cardIndex !== undefined) {
+        const targetPlayer = state.players[action.targets.playerIndex];
+        if (targetPlayer) {
+          const targetCard = targetPlayer.tome?.[action.targets.cardIndex] ||
+                             targetPlayer.realm?.[action.targets.cardIndex];
+          if (targetCard && targetCard.type === 'major') {
+            // Value the target card — stealing a celestial or high-VP bonus is much better
+            const targetValue = estimateCardValue(state, playerIndex, targetCard, 'tome');
+            cardVal += targetValue * 0.5; // Boost score based on target quality
+          }
+        }
+      }
+
       return cardVal * weights.action * realmPenalty;
     }
 
@@ -356,8 +374,14 @@ export function scoreAction(state, playerIndex, action, weights) {
 
       // Display timing urgency: slot 2 ages off next round
       let urgency = 1.0;
-      if (action.source === 'display2') urgency = 1.3;
-      else if (action.source === 'display0') urgency = 0.85;
+      if (action.source === 'display2') {
+        // Last chance to buy — ages off at end of round
+        urgency = cardValue > 20 ? 2.0 : 1.5; // High-value cards get extra urgency
+      } else if (action.source === 'display1') {
+        urgency = 1.0; // One more round available
+      } else if (action.source === 'display0') {
+        urgency = 0.85; // Just arrived, plenty of time
+      }
 
       const netValue = (cardValue * urgency - paymentTotal * 0.5 - handDamage);
       return netValue * weights.buy;
