@@ -109,6 +109,36 @@ export function findCelestialDisruption(state, playerIndex, legalActions, threat
 }
 
 /**
+ * Estimate probability of winning the pot this round.
+ * Based on current realm strength relative to opponents.
+ * @param {object} state
+ * @param {number} playerIndex
+ * @returns {number} 0.0 to 1.0
+ */
+export function estimatePotWinProbability(state, playerIndex) {
+  const player = state.players[playerIndex];
+  const numPlayers = state.players.length;
+
+  // No realm = no chance
+  if (player.realm.length === 0) return 0.05;
+
+  const ranking = getHandRanking(state, playerIndex);
+
+  if (ranking.winning) {
+    // Currently winning — probability scales with margin
+    const margin = ranking.margin;
+    if (margin >= 3) return 0.7;     // Dominant hand
+    if (margin >= 1) return 0.5;     // Solid lead
+    return 0.35;                      // Narrow lead
+  } else {
+    // Currently losing — still some chance if realm is developing
+    if (player.realm.length >= 4) return 0.2;  // Close to completing
+    if (player.realm.length >= 2) return 0.15;
+    return 0.1;
+  }
+}
+
+/**
  * How urgent is contesting the current pot?
  * Returns 0.0-2.0 (0 = trivial pot, 1.0 = normal, 2.0 = critical pot).
  */
@@ -184,10 +214,19 @@ export function aceBlockValue(state, playerIndex, action) {
     const actorPi = action.playerIndex;
     const actorRealm = (actorPi != null && state.players[actorPi]?.realm) || [];
     const newSize = actorRealm.length + 1 + (action.withCards?.length || 0);
-    // Threatening if it gives them 4-5 cards
-    if (newSize >= 5) return 50 * urgency;
-    if (newSize >= 4) return 30 * urgency;
-    return 10;
+
+    // Check if this wild play would make them the pot leader
+    const myRanking = getHandRanking(state, playerIndex);
+
+    let threatScore = 0;
+    if (newSize >= 5) threatScore = 50;
+    else if (newSize >= 4) threatScore = 30;
+    else threatScore = 10;
+
+    // If we're currently winning the pot, block more aggressively
+    if (myRanking.winning) threatScore *= 1.5;
+
+    return Math.min(100, threatScore * urgency);
   }
 
   // Major Arcana being played to Tome

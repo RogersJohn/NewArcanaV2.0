@@ -281,6 +281,63 @@ function estimateWildValue(state, playerIndex) {
   return base;
 }
 
+/**
+ * Estimate the minimum expected VP from playing a bonus card to tome.
+ * This is the "floor" — if the card's strategic value somehow computes lower
+ * than this, the floor takes over. Prevents the AI from undervaluing
+ * obvious recurring-VP plays.
+ *
+ * @param {object} effect - Card effect from getCardEffect
+ * @param {object} player - Player state
+ * @param {object} state - Game state
+ * @param {number} playerIndex
+ * @param {number} remainingRounds
+ * @returns {number} Minimum expected value
+ */
+export function estimateBonusFloor(effect, player, state, playerIndex, remainingRounds) {
+  if (!effect) return 0;
+
+  const bonus = effect.bonus || (effect.type === 'tome' ? effect.bonus : null);
+  if (!bonus) return 0;
+
+  let vpPerRound = 0;
+  let triggerProb = 0.5; // Conservative default
+
+  switch (bonus.bonusType) {
+    case 'suitHighest':
+      vpPerRound = bonus.vp || 1;
+      triggerProb = 0.5;  // Allows ties, reasonably likely
+      break;
+    case 'suitMajority':
+      vpPerRound = bonus.vp || 1;
+      triggerProb = 0.3;  // Strict advantage required
+      break;
+    case 'pairCounting':
+      vpPerRound = (bonus.vpPerPair || 1) * 0.8; // ~0.8 pairs per round average
+      triggerProb = 0.7;  // Pairs are common
+      break;
+    case 'hermitExclusive':
+      vpPerRound = bonus.vp || 1;
+      triggerProb = player.tome.length <= 1 ? 0.8 : 0.2;
+      break;
+    case 'noSuitInRealm':
+      vpPerRound = bonus.vp || 1;
+      triggerProb = 0.6;  // 3/4 chance you avoid one suit
+      break;
+    case 'foolDuplicate':
+      vpPerRound = bonus.vp || 1;
+      triggerProb = 0.3;
+      break;
+    default:
+      return 0;
+  }
+
+  // Minimum expected cumulative VP over remaining game
+  // Use a conservative multiplier (not the full 5× from scoreBonusValue)
+  const expectedVP = vpPerRound * triggerProb * remainingRounds;
+  return expectedVP * 2.5; // Scale to match scoring units
+}
+
 // --- Helpers ---
 
 function countSuitInRealm(player, suit) {

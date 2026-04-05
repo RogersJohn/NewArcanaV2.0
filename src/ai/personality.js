@@ -7,10 +7,10 @@
 
 import { evaluateHand, compareHands } from '../poker.js';
 import { isCelestial } from '../cards.js';
-import { analyzeHandPotential, vpUrgency, checkCelestialThreat, getHandRanking, estimateRemainingRounds } from './awareness.js';
-import { estimateCardValue } from './card-value.js';
+import { analyzeHandPotential, vpUrgency, checkCelestialThreat, getHandRanking, estimateRemainingRounds, estimatePotWinProbability } from './awareness.js';
+import { estimateCardValue, estimateBonusFloor } from './card-value.js';
 import { createCardTracker } from './card-tracker.js';
-import { getMajorDef } from '../effect-resolver.js';
+import { getMajorDef, getCardEffect } from '../effect-resolver.js';
 
 /**
  * Default weight profile. Each AI overrides specific weights.
@@ -24,7 +24,7 @@ export const DEFAULT_WEIGHTS = {
   wild: 0.5,           // Wild card plays — last resort, not primary strategy
   attack: 0.3,         // Royal attacks
   buy: 0.6,            // Buying Major Arcana — helps deplete Major deck
-  tome: 0.4,           // Playing to Tome
+  tome: 0.7,           // Playing to Tome — raised to make tome plays compete with realm plays
   tomecelestial: 1.5,  // Playing Celestials to Tome (always high)
   action: 0.5,         // Major Arcana action plays
   pass: 0.0,           // Base PASS score (before hand potential)
@@ -46,7 +46,7 @@ export const PASSIVE_WEIGHTS = {
   setMulti: 1.3,
   attack: 0.0,
   buy: 0.4,
-  tome: 0.3,
+  tome: 0.6,
   noise: 0.05,
   aceBlockThreshold: 55,
 };
@@ -84,7 +84,7 @@ export const CONTROLLER_WEIGHTS = {
   setMulti: 1.1,
   buy: 0.5,
   attack: 0.2,
-  tome: 0.5,
+  tome: 0.75,
   noise: 0.08,
   aceBlockThreshold: 25,
   kingBlockMinRealm: 2,
@@ -113,7 +113,7 @@ export const OPPORTUNIST_WEIGHTS = {
   ...DEFAULT_WEIGHTS,
   setMulti: 1.1,
   attack: 0.35,
-  tome: 0.45,
+  tome: 0.65,
   action: 0.6,
   noise: 0.08,
   rushWhenAhead: true,
@@ -125,7 +125,7 @@ export const SCORING_WEIGHTS = {
   setMulti: 1.2,
   setSingle: 0.15,
   buy: 0.5,
-  tome: 0.35,
+  tome: 0.65,
   noise: 0.05,
   rushWhenAhead: true,
   useLookahead: true,
@@ -224,6 +224,11 @@ export function scoreAction(state, playerIndex, action, weights) {
       const targetRealmSize = targetPlayer.realm.length;
       if (targetRealmSize === 0) return -2;
 
+      // Fix 5: Check if target has tome protection for this suit — attack will be blocked
+      if (action.card && targetPlayer.tomeProtections?.has(action.card.suit)) {
+        return -5; // Attack will be blocked, don't waste the royal
+      }
+
       // 1. Compute impact: how much does removing target card hurt them?
       const targetRealm = targetPlayer.realm;
       const targetCard = targetRealm[action.target.realmIndex];
@@ -237,6 +242,17 @@ export function scoreAction(state, playerIndex, action, weights) {
       let potDenial = rankDelta * 3;
       if (targetRanking.winning) potDenial += (state.pot || 0) * 0.3;
       if (targetRealmSize >= 5) potDenial += 8; // Disrupting a complete realm
+
+      // 2b. VP leadership targeting: attacking the overall game leader is more valuable
+      const targetVp = targetPlayer.vp;
+      const myVp = player.vp;
+      const maxOpponentVp = Math.max(0, ...state.players
+        .filter((_, i) => i !== playerIndex).map(p => p.vp));
+      let leaderBonus = 0;
+      if (targetVp >= maxOpponentVp && targetVp > myVp) {
+        // Target is the game leader and ahead of us — priority target
+        leaderBonus = Math.min(15, (targetVp - myVp) * 1.5);
+      }
 
       // 3. Card type value: what does the attacker gain?
       let cardGainValue = 0;
@@ -260,7 +276,7 @@ export function scoreAction(state, playerIndex, action, weights) {
       } catch (_e) { /* ignore tracker errors */ }
 
       // 5. Final score
-      const rawScore = potDenial + cardGainValue + 2; // base of 2
+      const rawScore = potDenial + cardGainValue + leaderBonus + 2; // base of 2
       return rawScore * (1 - blockProb * 0.7) * weights.attack;
     }
 
@@ -269,12 +285,26 @@ export function scoreAction(state, playerIndex, action, weights) {
       if (action.card && isCelestial(action.card)) {
         return cardVal * weights.tomecelestial;
       }
-      // Bonus cards should not be penalized for small realm — they score every round
-      // regardless of when they're placed. Non-bonus cards (e.g., Devil for draw limit)
-      // are less useful without a realm to support.
+
+      // Compare tome play's cumulative VP against this round's pot opportunity.
+      // A bonus card scoring 2VP × 6 rounds = 12VP should beat a pot worth 4-5VP.
+      const remaining = estimateRemainingRounds(state);
+      const potWinProb = estimatePotWinProbability(state, playerIndex);
+      const potEV = (state.pot || 0) * potWinProb;
+
+      // Tome plays are investments: compare cumulative expected VP to pot EV
+      // Use weights.tome as a preference modifier, not a hard multiplier
       const hasBonus = action.card?.keywords?.includes('bonus');
-      const realmPenalty = hasBonus ? 1.0 : (player.realm.length < 3 ? 0.4 : 1.0);
-      return cardVal * weights.tome * realmPenalty;
+      let score = cardVal * weights.tome;
+
+      // Floor: bonus cards should never score below their expected per-round VP
+      if (hasBonus && remaining > 1) {
+        const effect = getCardEffect(state, action.card);
+        const bonusFloor = estimateBonusFloor(effect, player, state, playerIndex, remaining);
+        score = Math.max(score, bonusFloor);
+      }
+
+      return score;
     }
 
     case 'PLAY_MAJOR_ACTION': {
@@ -289,10 +319,30 @@ export function scoreAction(state, playerIndex, action, weights) {
       if (hasAce) return -10;
 
       let cardValue = 8;
+      let card = null;
       if (action.source.startsWith('display')) {
         const slot = parseInt(action.source.slice(-1));
-        const card = state.display[slot];
+        card = state.display[slot];
         if (card) cardValue = estimateCardValue(state, playerIndex, card, 'buy');
+      }
+
+      // Synergy: does this card work with our existing tome/strategy?
+      if (card?.type === 'major') {
+        const effect = getCardEffect(state, card);
+        if (effect) {
+          // Bonus card for a suit we're already building in realm
+          if (effect.bonus?.suit) {
+            const suitCount = player.realm.filter(c =>
+              c.type === 'minor' && c.suit === effect.bonus.suit
+            ).length;
+            if (suitCount >= 2) cardValue *= 1.5; // Strong synergy
+          }
+          // We have protections and this card's bonus matches
+          if (player.tomeProtections.size > 0 && effect.bonus?.suit &&
+              player.tomeProtections.has(effect.bonus.suit)) {
+            cardValue *= 1.3; // Protected suit = bonus more likely to trigger
+          }
+        }
       }
 
       // Hand damage: are payment cards part of a developing set?

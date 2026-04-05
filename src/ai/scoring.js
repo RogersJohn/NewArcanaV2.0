@@ -50,6 +50,13 @@ export class ScoringAI extends RandomAI {
       );
       if (matchesRealm) return { index: i, score: 80 };
 
+      // Cards that form pairs with other hand cards are valuable
+      const handMatches = hand.filter(h =>
+        h.type === 'minor' && h.numericRank === card.numericRank && h.id !== card.id
+      ).length;
+      if (handMatches >= 2) return { index: i, score: 95 }; // Part of a triple
+      if (handMatches >= 1) return { index: i, score: 75 }; // Part of a pair
+
       // Higher purchase value is more useful for buying
       return { index: i, score: (card.numericRank || 0) * 2 };
     });
